@@ -5,6 +5,7 @@ import { Topbar } from './Topbar';
 const SUBTITLES: Record<string, string> = {
   '/dashboard': "Here's what's happening with your SMS platform today.",
   '/projects': 'Manage your projects, clients and SMS integrations from one place.',
+  '/sms-logs': 'Monitor and manage all SMS activity across your projects.',
 };
 
 export function AppLayout() {

@@ -13,8 +13,10 @@ const STATUS_VARIANT: Record<string, Variant> = {
   Sent: 'success',
   Successful: 'success',
   Active: 'success',
+  Delivered: 'success',
   Failed: 'danger',
   Suspended: 'danger',
+  Rejected: 'danger',
   Pending: 'warning',
 };
 
@@ -22,7 +24,13 @@ export function StatusBadge({ status }: { status: string }) {
   const v = STATUS_VARIANT[status] ?? 'info';
   const style = VARIANTS[v];
   return (
-    <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 w-fit', style.bg, style.text)}>
+    <span
+      className={cn(
+        'px-2 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 w-fit',
+        style.bg,
+        style.text,
+      )}
+    >
       <span className={cn('w-1 h-1 rounded-full', style.dot)} />
       {status}
     </span>
