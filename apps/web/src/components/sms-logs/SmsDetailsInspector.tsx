@@ -5,7 +5,11 @@ import { cn } from '../../lib/utils';
 
 function CopyButton({ label }: { label: string }) {
   return (
-    <button aria-label={label} className="text-slate-400 hover:text-slate-600 shrink-0" type="button">
+    <button
+      aria-label={label}
+      className="text-slate-400 hover:text-slate-600 shrink-0"
+      type="button"
+    >
       <Copy className="w-3.5 h-3.5" />
     </button>
   );
@@ -13,9 +17,9 @@ function CopyButton({ label }: { label: string }) {
 
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between pt-2">
-      <span className="text-slate-400 font-normal">{label}</span>
-      {children}
+    <div className="flex items-center justify-between gap-3 pt-2">
+      <span className="text-slate-400 font-normal shrink-0">{label}</span>
+      <div className="min-w-0 text-right">{children}</div>
     </div>
   );
 }
@@ -40,33 +44,34 @@ export function SmsDetailsInspector() {
       </div>
 
       <div className="p-4 space-y-4 text-xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {d.statuses.map((s) => (
               <StatusBadge key={s.label} status={s.label} />
             ))}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500 font-medium">
-            <span>{d.messageId}</span>
+          <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500 font-medium min-w-0">
+            <span className="truncate">{d.messageId}</span>
             <CopyButton label="Copy message ID" />
           </div>
         </div>
 
-        <div className="border-b border-slate-200 flex gap-4 pt-1">
+        {/* Tabs — horizontal scroll on mobile */}
+        <div className="border-b border-slate-200 flex gap-4 pt-1 overflow-x-auto">
           <button
-            className="pb-2 text-xs font-semibold text-blue-600 border-b-2 border-blue-600"
+            className="pb-2 text-xs font-semibold text-blue-600 border-b-2 border-blue-600 whitespace-nowrap"
             type="button"
           >
             Message Details
           </button>
           <button
-            className="pb-2 text-xs font-medium text-slate-400 hover:text-slate-600"
+            className="pb-2 text-xs font-medium text-slate-400 hover:text-slate-600 whitespace-nowrap"
             type="button"
           >
             Provider Response
           </button>
           <button
-            className="pb-2 text-xs font-medium text-slate-400 hover:text-slate-600"
+            className="pb-2 text-xs font-medium text-slate-400 hover:text-slate-600 whitespace-nowrap"
             type="button"
           >
             Activity Log
@@ -75,7 +80,7 @@ export function SmsDetailsInspector() {
 
         <div>
           <span className="text-[11px] font-medium text-slate-500 block mb-1">Full Message</span>
-          <div className="relative bg-slate-50/70 border border-slate-200 rounded-lg p-3 text-slate-700 leading-relaxed text-xs">
+          <div className="relative bg-slate-50/70 border border-slate-200 rounded-lg p-3 pr-9 text-slate-700 leading-relaxed text-xs">
             {d.fullMessage}
             <button
               aria-label="Copy message text"
@@ -89,8 +94,8 @@ export function SmsDetailsInspector() {
 
         <div className="divide-y divide-slate-100 space-y-2.5 pt-1">
           <MetaRow label="Recipient">
-            <div className="flex items-center gap-1 font-mono font-medium text-slate-700">
-              <span>{d.recipient}</span>
+            <div className="flex items-center justify-end gap-1 font-mono font-medium text-slate-700">
+              <span className="truncate">{d.recipient}</span>
               <CopyButton label="Copy recipient number" />
             </div>
           </MetaRow>
@@ -100,7 +105,7 @@ export function SmsDetailsInspector() {
           </MetaRow>
 
           <MetaRow label="Project">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-end gap-1.5">
               <span
                 className={cn(
                   'w-4 h-4 rounded-full text-white font-bold text-[9px] flex items-center justify-center',
@@ -141,8 +146,8 @@ export function SmsDetailsInspector() {
           </MetaRow>
 
           <MetaRow label="Transaction / Reference ID">
-            <div className="flex items-center gap-1 font-mono text-slate-700">
-              <span>{d.referenceId}</span>
+            <div className="flex items-center justify-end gap-1 font-mono text-slate-700">
+              <span className="truncate">{d.txnReference}</span>
               <CopyButton label="Copy reference ID" />
             </div>
           </MetaRow>
