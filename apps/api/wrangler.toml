@@ -1,0 +1,19 @@
+name = "profjero-sms-api"
+main = "src/index.ts"
+compatibility_date = "2025-07-18"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+
+[env.staging]
+name = "profjero-sms-api-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.production]
+name = "profjero-sms-api-prod"
+
+[env.production.vars]
+ENVIRONMENT = "production"
