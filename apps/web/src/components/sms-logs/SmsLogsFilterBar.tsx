@@ -6,7 +6,6 @@ export function SmsLogsFilterBar() {
       className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs space-y-3"
       data-purpose="filter-bar"
     >
-      {/* Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         <div className="md:col-span-5 relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
@@ -52,7 +51,6 @@ export function SmsLogsFilterBar() {
         </div>
       </div>
 
-      {/* Row 2 */}
       <div className="flex flex-wrap items-center gap-3 pt-1">
         <div className="w-40">
           <select className="w-full text-xs px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-lg text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
@@ -85,10 +83,7 @@ export function SmsLogsFilterBar() {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
-          <button
-            className="text-xs text-blue-600 hover:text-blue-700 font-semibold px-2"
-            type="button"
-          >
+          <button className="text-xs text-blue-600 hover:text-blue-700 font-semibold px-2" type="button">
             Clear Filters
           </button>
           <button

@@ -5,23 +5,13 @@ import { cn } from '../../lib/utils';
 
 function CopyButton({ label }: { label: string }) {
   return (
-    <button
-      aria-label={label}
-      className="text-slate-400 hover:text-slate-600 shrink-0"
-      type="button"
-    >
+    <button aria-label={label} className="text-slate-400 hover:text-slate-600 shrink-0" type="button">
       <Copy className="w-3.5 h-3.5" />
     </button>
   );
 }
 
-function MetaRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between pt-2">
       <span className="text-slate-400 font-normal">{label}</span>
@@ -38,7 +28,6 @@ export function SmsDetailsInspector() {
       className="w-full xl:w-[410px] bg-white rounded-xl border border-slate-200/80 shadow-xs flex flex-col shrink-0"
       data-purpose="details-drawer"
     >
-      {/* Header */}
       <div className="p-4 border-b border-slate-200 flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-900">SMS Details</h3>
         <button
@@ -50,9 +39,7 @@ export function SmsDetailsInspector() {
         </button>
       </div>
 
-      {/* Content */}
       <div className="p-4 space-y-4 text-xs">
-        {/* Badges + ID */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             {d.statuses.map((s) => (
@@ -65,7 +52,6 @@ export function SmsDetailsInspector() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="border-b border-slate-200 flex gap-4 pt-1">
           <button
             className="pb-2 text-xs font-semibold text-blue-600 border-b-2 border-blue-600"
@@ -87,7 +73,6 @@ export function SmsDetailsInspector() {
           </button>
         </div>
 
-        {/* Full message */}
         <div>
           <span className="text-[11px] font-medium text-slate-500 block mb-1">Full Message</span>
           <div className="relative bg-slate-50/70 border border-slate-200 rounded-lg p-3 text-slate-700 leading-relaxed text-xs">
@@ -102,7 +87,6 @@ export function SmsDetailsInspector() {
           </div>
         </div>
 
-        {/* Metadata */}
         <div className="divide-y divide-slate-100 space-y-2.5 pt-1">
           <MetaRow label="Recipient">
             <div className="flex items-center gap-1 font-mono font-medium text-slate-700">
@@ -164,7 +148,6 @@ export function SmsDetailsInspector() {
           </MetaRow>
         </div>
 
-        {/* Close button */}
         <div className="pt-4">
           <button
             className="w-full py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-medium rounded-lg text-xs transition-colors"

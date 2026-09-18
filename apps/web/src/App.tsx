@@ -3,6 +3,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
 import { SmsLogsPage } from './features/sms-logs/SmsLogsPage';
+import { WalletsPage } from './features/wallets/WalletsPage';
 import { ComingSoon } from './features/ComingSoon';
 
 export default function App() {
@@ -14,7 +15,7 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/sms-logs" element={<SmsLogsPage />} />
-          <Route path="/wallets" element={<ComingSoon title="Wallets & Units" />} />
+          <Route path="/wallets" element={<WalletsPage />} />
           <Route path="/payments" element={<ComingSoon title="Payments" />} />
           <Route path="/arkesel" element={<ComingSoon title="Arkesel Account" />} />
           <Route path="/reports" element={<ComingSoon title="Reports" />} />

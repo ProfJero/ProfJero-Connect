@@ -8,12 +8,7 @@ export function MetricCard({ metric }: { metric: SmsMetric }) {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs flex items-start gap-3">
-      <div
-        className={cn(
-          'w-10 h-10 rounded-full text-white flex items-center justify-center shrink-0',
-          metric.iconBg,
-        )}
-      >
+      <div className={cn('w-10 h-10 rounded-full text-white flex items-center justify-center shrink-0', metric.iconBg)}>
         <Icon className="w-5 h-5" strokeWidth={2} />
       </div>
       <div className="min-w-0 flex-1">

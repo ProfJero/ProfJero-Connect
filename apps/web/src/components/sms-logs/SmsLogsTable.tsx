@@ -1,18 +1,12 @@
-import { Card } from '../ui/Card';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { StatusBadge } from '../ui/StatusBadge';
 import { smsLogs, totalLogCount, currentPageStart, currentPageEnd, totalPages } from '../../mock/smsLogs';
 import { cn } from '../../lib/utils';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function SortableTh({ label, align = 'left' }: { label: string; align?: 'left' | 'center' }) {
   return (
     <th className={cn('py-3 px-3 whitespace-nowrap', align === 'center' && 'text-center')}>
-      <div
-        className={cn(
-          'flex items-center gap-1 cursor-pointer',
-          align === 'center' && 'justify-center',
-        )}
-      >
+      <div className={cn('flex items-center gap-1 cursor-pointer', align === 'center' && 'justify-center')}>
         {label} <span className="text-slate-400">⇅</span>
       </div>
     </th>
@@ -63,14 +57,10 @@ export function SmsLogsTable() {
                   key={row.id}
                   className={cn(
                     'transition-colors cursor-pointer',
-                    isSelected
-                      ? 'bg-blue-50/40 hover:bg-blue-50/70'
-                      : 'hover:bg-slate-50',
+                    isSelected ? 'bg-blue-50/40 hover:bg-blue-50/70' : 'hover:bg-slate-50',
                   )}
                 >
-                  <td className="py-3.5 px-3 text-center text-slate-500 font-medium">
-                    {row.id}
-                  </td>
+                  <td className="py-3.5 px-3 text-center text-slate-500 font-medium">{row.id}</td>
                   <td className="py-3.5 px-3 whitespace-nowrap">
                     <div className="font-medium text-slate-800">{row.date}</div>
                     <div className="text-[11px] text-slate-400">{row.time}</div>
@@ -88,27 +78,17 @@ export function SmsLogsTable() {
                       <span className="font-medium">{row.project}</span>
                     </div>
                   </td>
-                  <td className="py-3.5 px-3 font-medium whitespace-nowrap text-slate-600">
-                    {row.senderId}
-                  </td>
-                  <td className="py-3.5 px-3 font-mono text-[11px] text-slate-700 whitespace-nowrap">
-                    {row.recipient}
-                  </td>
-                  <td className="py-3.5 px-3 text-slate-600 max-w-xs truncate">
-                    {row.messagePreview}
-                  </td>
-                  <td className="py-3.5 px-2 text-center font-semibold text-slate-700">
-                    {row.units}
-                  </td>
+                  <td className="py-3.5 px-3 font-medium whitespace-nowrap text-slate-600">{row.senderId}</td>
+                  <td className="py-3.5 px-3 font-mono text-[11px] text-slate-700 whitespace-nowrap">{row.recipient}</td>
+                  <td className="py-3.5 px-3 text-slate-600 max-w-xs truncate">{row.messagePreview}</td>
+                  <td className="py-3.5 px-2 text-center font-semibold text-slate-700">{row.units}</td>
                   <td className="py-3.5 px-3 whitespace-nowrap">
                     <StatusBadge status={row.status} />
                   </td>
                   <td className="py-3.5 px-3 whitespace-nowrap">
                     <StatusBadge status={row.providerStatus} />
                   </td>
-                  <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                    {row.messageId}
-                  </td>
+                  <td className="py-3.5 px-3 font-mono text-[11px] text-slate-600 whitespace-nowrap">{row.messageId}</td>
                   <td className="py-3.5 px-3 text-center">
                     <button
                       aria-label="More options"
@@ -125,11 +105,15 @@ export function SmsLogsTable() {
         </table>
       </div>
 
-      {/* Pagination footer */}
       <div className="p-3 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-3">
         <div>
-          Showing <span className="font-semibold text-slate-800">{currentPageStart} - {currentPageEnd}</span>{' '}
-          of <span className="font-semibold text-slate-800">{totalLogCount.toLocaleString()}</span> messages
+          Showing{' '}
+          <span className="font-semibold text-slate-800">
+            {currentPageStart} - {currentPageEnd}
+          </span>{' '}
+          of{' '}
+          <span className="font-semibold text-slate-800">{totalLogCount.toLocaleString()}</span>{' '}
+          messages
         </div>
         <div className="flex items-center gap-1">
           <button
