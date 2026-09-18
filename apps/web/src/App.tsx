@@ -4,6 +4,9 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
 import { SmsLogsPage } from './features/sms-logs/SmsLogsPage';
 import { WalletsPage } from './features/wallets/WalletsPage';
+import { PaymentsPage } from './features/payments/PaymentsPage';
+import { ArkeselPage } from './features/arkesel/ArkeselPage';
+import { ReportsPage } from './features/reports/ReportsPage';
 import { ComingSoon } from './features/ComingSoon';
 
 export default function App() {
@@ -16,9 +19,9 @@ export default function App() {
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/sms-logs" element={<SmsLogsPage />} />
           <Route path="/wallets" element={<WalletsPage />} />
-          <Route path="/payments" element={<ComingSoon title="Payments" />} />
-          <Route path="/arkesel" element={<ComingSoon title="Arkesel Account" />} />
-          <Route path="/reports" element={<ComingSoon title="Reports" />} />
+          <Route path="/payments" element={<PaymentsPage />} />
+          <Route path="/arkesel" element={<ArkeselPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<ComingSoon title="Settings" />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
