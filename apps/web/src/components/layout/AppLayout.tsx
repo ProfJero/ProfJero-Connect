@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -15,13 +16,29 @@ const SUBTITLES: Record<string, string> = {
 
 export function AppLayout() {
   const { pathname } = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const subtitle = SUBTITLES[pathname] ?? '';
+
+  // Close the drawer whenever the route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [sidebarOpen]);
 
   return (
     <div className="bg-[#f1f5f9] text-slate-800 antialiased h-screen flex overflow-hidden text-[13px]">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <Topbar subtitle={subtitle} />
+        <Topbar subtitle={subtitle} onMenuClick={() => setSidebarOpen(true)} />
         <Outlet />
       </div>
     </div>
