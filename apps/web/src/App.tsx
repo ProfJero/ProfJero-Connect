@@ -7,7 +7,7 @@ import { WalletsPage } from './features/wallets/WalletsPage';
 import { PaymentsPage } from './features/payments/PaymentsPage';
 import { ArkeselPage } from './features/arkesel/ArkeselPage';
 import { ReportsPage } from './features/reports/ReportsPage';
-import { ComingSoon } from './features/ComingSoon';
+import { SettingsPage } from './features/settings/SettingsPage';
 
 export default function App() {
   return (
@@ -22,7 +22,7 @@ export default function App() {
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/arkesel" element={<ArkeselPage />} />
           <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<ComingSoon title="Settings" />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>

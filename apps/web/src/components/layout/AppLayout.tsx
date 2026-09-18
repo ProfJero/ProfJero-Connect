@@ -10,6 +10,7 @@ const SUBTITLES: Record<string, string> = {
   '/payments': 'Track and manage all payments from your projects and clients.',
   '/arkesel': 'Monitor your SMS provider account and connection status.',
   '/reports': 'Analytics and insights for your SMS platform.',
+  '/settings': 'Manage your platform configuration, preferences and system settings.',
 };
 
 export function AppLayout() {
