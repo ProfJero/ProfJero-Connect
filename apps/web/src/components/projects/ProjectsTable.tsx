@@ -4,8 +4,11 @@ import { TableScroll } from '../ui/TableScroll';
 import { ProjectsFilterBar } from './ProjectsFilterBar';
 import { projects } from '../../mock/projects';
 import { cn } from '../../lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 export function ProjectsTable() {
+  const navigate = useNavigate();
+
   return (
     <Card className="overflow-hidden" data-purpose="projects-table-section">
       <ProjectsFilterBar />
@@ -36,6 +39,7 @@ export function ProjectsTable() {
               return (
                 <tr
                   key={p.id}
+                  onClick={() => navigate(`/projects/proj_${String(p.id).padStart(3, '0')}`)}
                   className={cn(
                     'transition-colors cursor-pointer',
                     isSelected ? 'bg-blue-50/40 hover:bg-blue-50/70' : 'hover:bg-slate-50/70',

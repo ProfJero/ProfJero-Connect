@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import {
   MessageSquare,
   Send,
@@ -15,23 +15,33 @@ function QuickAction({
   icon: Icon,
   label,
   variant = 'secondary',
+  to,
 }: {
   icon: LucideIcon;
   label: string;
   variant?: 'primary' | 'secondary';
+  to?: string;
 }) {
-  return (
-    <button
-      className={cn(
-        'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all',
-        variant === 'primary'
-          ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white shadow-md shadow-blue-900/30'
-          : 'bg-[#142646] hover:bg-[#1a315a] text-slate-200 border border-slate-700/60',
-      )}
-    >
+  const className = cn(
+    'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all',
+    variant === 'primary'
+      ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white shadow-md shadow-blue-900/30'
+      : 'bg-[#142646] hover:bg-[#1a315a] text-slate-200 border border-slate-700/60',
+  );
+
+  const content = (
+    <>
       <Icon className="w-4 h-4" />
       <span>{label}</span>
-    </button>
+    </>
+  );
+
+  return to ? (
+    <Link to={to} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button className={className}>{content}</button>
   );
 }
 
@@ -44,7 +54,6 @@ export function Sidebar({
 }) {
   return (
     <>
-      {/* Backdrop — mobile only, closes on tap */}
       <div
         className={cn(
           'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-200',
@@ -64,7 +73,6 @@ export function Sidebar({
         data-purpose="main-sidebar"
       >
         <div className="p-5">
-          {/* Branding row — close button visible only on mobile */}
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
               <MessageSquare className="w-5 h-5 fill-current" />
@@ -111,7 +119,7 @@ export function Sidebar({
               Quick Actions
             </span>
             <div className="space-y-2">
-              <QuickAction icon={Send} label="Send SMS" variant="primary" />
+              <QuickAction icon={Send} label="Send SMS" variant="primary" to="/send-sms" />
               <QuickAction icon={Plus} label="Add Project" />
               <QuickAction icon={CreditCard} label="Buy SMS Units" />
             </div>

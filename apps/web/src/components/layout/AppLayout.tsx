@@ -12,19 +12,26 @@ const SUBTITLES: Record<string, string> = {
   '/arkesel': 'Monitor your SMS provider account and connection status.',
   '/reports': 'Analytics and insights for your SMS platform.',
   '/settings': 'Manage your platform configuration, preferences and system settings.',
+  '/send-sms': 'Send SMS messages to your recipients quickly and easily.',
 };
+
+function resolveSubtitle(pathname: string): string {
+  if (SUBTITLES[pathname]) return SUBTITLES[pathname];
+  if (/^\/projects\/[^/]+$/.test(pathname)) {
+    return "Here's the complete overview of this project.";
+  }
+  return '';
+}
 
 export function AppLayout() {
   const { pathname } = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const subtitle = SUBTITLES[pathname] ?? '';
+  const subtitle = resolveSubtitle(pathname);
 
-  // Close the drawer whenever the route changes
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
 
-  // Close on Escape
   useEffect(() => {
     if (!sidebarOpen) return;
     const handler = (e: KeyboardEvent) => {
