@@ -4,7 +4,7 @@ import { projectDetailsPanel as d } from '../../mock/projects';
 
 export function ProjectDetailsPanel() {
   return (
-    <Card className="p-5 space-y-5" data-purpose="project-details-panel">
+    <Card className="p-4 sm:p-5 space-y-5" data-purpose="project-details-panel">
       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 className="font-bold text-sm text-slate-800">Project Details</h3>
         <button className="text-slate-400 hover:text-slate-600">
@@ -13,23 +13,23 @@ export function ProjectDetailsPanel() {
       </div>
 
       {/* Profile summary */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-blue-600 text-white font-bold text-xl flex items-center justify-center shadow-md shadow-blue-500/20">
+      <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-full bg-blue-600 text-white font-bold text-xl flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
             {d.name.charAt(0)}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-slate-900 text-base">{d.name}</span>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 {d.status}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">{d.client}</p>
+            <p className="text-xs text-slate-400 mt-0.5 truncate">{d.client}</p>
           </div>
         </div>
-        <button className="flex items-center gap-1.5 text-xs text-blue-600 border border-blue-200 hover:bg-blue-50 font-medium px-3 py-1.5 rounded-lg transition">
+        <button className="flex items-center gap-1.5 text-xs text-blue-600 border border-blue-200 hover:bg-blue-50 font-medium px-3 py-1.5 rounded-lg transition shrink-0">
           <Edit3 className="w-3.5 h-3.5" />
           <span>Edit</span>
         </button>
@@ -49,16 +49,16 @@ export function ProjectDetailsPanel() {
 
       <div className="space-y-4 text-xs">
         <div className="grid grid-cols-2 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="text-[11px] text-slate-400 font-medium">Sender ID</label>
             <div className="flex items-center gap-2 mt-1">
-              <span className="font-semibold text-slate-800">{d.senderId}</span>
-              <button className="text-slate-400 hover:text-slate-600">
+              <span className="font-semibold text-slate-800 truncate">{d.senderId}</span>
+              <button className="text-slate-400 hover:text-slate-600 shrink-0">
                 <Copy className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="text-[11px] text-slate-400 font-medium">API Status</label>
             <div className="flex items-center gap-1.5 mt-1 font-semibold text-emerald-600">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -69,14 +69,14 @@ export function ProjectDetailsPanel() {
 
         <div>
           <label className="text-[11px] text-slate-400 font-medium">API Key</label>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-2 font-mono text-xs text-slate-700">
-              <span>{d.apiKeyMasked}</span>
-              <button className="text-slate-400 hover:text-slate-600">
+          <div className="flex items-center justify-between gap-2 mt-1">
+            <div className="flex items-center gap-2 font-mono text-xs text-slate-700 min-w-0">
+              <span className="truncate">{d.apiKeyMasked}</span>
+              <button className="text-slate-400 hover:text-slate-600 shrink-0">
                 <Copy className="w-3.5 h-3.5" />
               </button>
             </div>
-            <button className="text-xs text-blue-600 hover:text-blue-700 font-medium border border-slate-200 rounded px-2.5 py-1">
+            <button className="text-xs text-blue-600 hover:text-blue-700 font-medium border border-slate-200 rounded px-2.5 py-1 whitespace-nowrap shrink-0">
               Manage Keys
             </button>
           </div>
@@ -141,22 +141,22 @@ export function ProjectDetailsPanel() {
 
         <div className="border-t border-slate-100 pt-4 mt-2">
           <h5 className="text-xs font-bold text-slate-900 mb-2">Project Information</h5>
-          <div className="grid grid-cols-2 gap-y-2.5 text-xs">
-            <div>
+          <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 text-xs">
+            <div className="min-w-0">
               <span className="text-slate-400 block text-[11px]">Project Name</span>
-              <span className="font-medium text-slate-800">{d.projectName}</span>
+              <span className="font-medium text-slate-800 truncate block">{d.projectName}</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="text-slate-400 block text-[11px]">Client</span>
-              <span className="font-medium text-slate-800">{d.clientLabel}</span>
+              <span className="font-medium text-slate-800 truncate block">{d.clientLabel}</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="text-slate-400 block text-[11px]">Created At</span>
-              <span className="font-medium text-slate-800">{d.createdAt}</span>
+              <span className="font-medium text-slate-800 text-[11px] block">{d.createdAt}</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <span className="text-slate-400 block text-[11px]">Last Activity</span>
-              <span className="font-medium text-slate-800">{d.lastActivity}</span>
+              <span className="font-medium text-slate-800 text-[11px] block">{d.lastActivity}</span>
             </div>
           </div>
         </div>
