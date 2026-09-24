@@ -29,7 +29,7 @@ export function ReportsFooterBanners() {
         <span className="text-slate-400 font-normal">→</span>
         <div className="flex items-center gap-1.5">
           <Radio className="w-4 h-4 text-blue-600" strokeWidth={2} />
-          <span>Arkesel</span>
+          <span>SMS Gateway 01</span>
         </div>
       </div>
     </section>

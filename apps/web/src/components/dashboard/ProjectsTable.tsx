@@ -1,62 +1,87 @@
-import { Plus, MoreVertical } from 'lucide-react';
-import { Card, CardHeader, CardTitle, ViewAllLink } from '../ui/Card';
-import { StatusDot } from '../ui/StatusDot';
+import { Card, ViewAllLink } from '../ui/Card';
 import { TableScroll } from '../ui/TableScroll';
-import { projects } from '../../mock/dashboard';
+import { cn } from '../../lib/utils';
+import type { DashboardResponse } from '@profjero/shared';
 
-export function ProjectsTable() {
+const AVATAR_COLORS = [
+  'bg-blue-600',
+  'bg-sky-600',
+  'bg-amber-500',
+  'bg-emerald-600',
+  'bg-purple-600',
+];
+
+function avatarColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+interface Props {
+  topProjects: DashboardResponse['topProjects'];
+  onProjectClick?: (projectId: string) => void;
+}
+
+export function ProjectsTable({ topProjects, onProjectClick }: Props) {
   return (
-    <Card className="overflow-hidden" data-purpose="platforms-table">
-      <CardHeader className="flex-wrap gap-3">
-        <CardTitle>Your Platforms / Projects</CardTitle>
-        <div className="flex items-center gap-3">
-          <ViewAllLink />
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors">
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Project</span>
-          </button>
-        </div>
-      </CardHeader>
+    <Card className="overflow-hidden" data-purpose="top-projects-table">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+        <h3 className="text-sm font-bold text-slate-900">
+          Top Projects by SMS Activity
+        </h3>
+        <ViewAllLink />
+      </div>
 
       <TableScroll>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-100 bg-slate-50/50 font-semibold">
-              <th className="py-3 px-4 font-semibold">#</th>
-              <th className="py-3 px-4 font-semibold">Project Name</th>
-              <th className="py-3 px-4 font-semibold">Sender ID</th>
-              <th className="py-3 px-4 font-semibold">Status</th>
-              <th className="py-3 px-4 font-semibold">Units</th>
-              <th className="py-3 px-4 font-semibold">SMS Sent</th>
-              <th className="py-3 px-4 font-semibold text-right">Actions</th>
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50/70 text-slate-500 font-semibold border-b border-slate-200/70">
+            <tr>
+              <th className="py-2.5 px-4">Project</th>
+              <th className="py-2.5 px-3 text-right">Submitted</th>
+              <th className="py-2.5 px-3 text-right">Failed</th>
+              <th className="py-2.5 px-3 text-right">Units Charged</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700 text-xs font-medium">
-            {projects.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
-                <td className="py-3.5 px-4 text-slate-400">{p.id}</td>
-                <td className="py-3.5 px-4">
-                  <div className="flex items-center gap-2.5 font-bold text-slate-800 whitespace-nowrap">
-                    <span
-                      className={`w-6 h-6 rounded-full ${p.avatarBg} text-white flex items-center justify-center text-[11px] font-bold`}
+          <tbody className="divide-y divide-slate-100 text-slate-700">
+            {topProjects.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-10 text-center text-slate-400 text-sm">
+                  No SMS activity yet.
+                </td>
+              </tr>
+            )}
+            {topProjects.map((p) => (
+              <tr
+                key={p.projectId}
+                onClick={() => onProjectClick?.(p.projectId)}
+                className={cn(
+                  'transition-colors',
+                  onProjectClick && 'cursor-pointer hover:bg-slate-50/70',
+                )}
+              >
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={cn(
+                        'w-6 h-6 rounded-full text-white text-[11px] font-bold flex items-center justify-center shrink-0',
+                        avatarColor(p.projectId),
+                      )}
                     >
-                      {p.name.charAt(0)}
+                      {p.projectName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-semibold text-slate-900 truncate">
+                      {p.projectName}
                     </span>
-                    {p.name}
                   </div>
                 </td>
-                <td className="py-3.5 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                  {p.senderId}
+                <td className="py-3 px-3 text-right font-medium text-emerald-600">
+                  {p.submitted.toLocaleString()}
                 </td>
-                <td className="py-3.5 px-4 whitespace-nowrap">
-                  <StatusDot status={p.status} />
+                <td className="py-3 px-3 text-right font-medium text-rose-600">
+                  {p.failed > 0 ? p.failed.toLocaleString() : '—'}
                 </td>
-                <td className="py-3.5 px-4 font-semibold text-slate-700">{p.units}</td>
-                <td className="py-3.5 px-4 text-slate-600">{p.smsSent}</td>
-                <td className="py-3.5 px-4 text-right">
-                  <button className="text-slate-400 hover:text-slate-600">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
+                <td className="py-3 px-3 text-right font-medium text-slate-800">
+                  {p.charged.toLocaleString()}
                 </td>
               </tr>
             ))}

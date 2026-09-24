@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
+import { Link } from 'react-router-dom';
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
@@ -21,13 +22,25 @@ export function CardTitle({ children }: { children: ReactNode }) {
   return <h3 className="font-bold text-slate-800 text-sm">{children}</h3>;
 }
 
-export function ViewAllLink({ label = 'View all' }: { label?: string }) {
+export function ViewAllLink({
+  label = 'View all',
+  href,
+}: {
+  label?: string;
+  href?: string;
+}) {
+  const className =
+    'text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1';
+  if (href) {
+    return (
+      <Link to={href} className={className}>
+        {label} →
+      </Link>
+    );
+  }
   return (
-    <a className="text-blue-600 hover:text-blue-700 text-xs font-semibold flex items-center gap-1" href="#">
-      {label}
-      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M5 12h14M12 5l7 7-7 7" />
-      </svg>
-    </a>
+    <button type="button" className={className}>
+      {label} →
+    </button>
   );
 }

@@ -32,7 +32,7 @@ export function LoginPage() {
             </div>
             <div>
               <h1 className="text-slate-900 font-bold text-base leading-tight">
-                ProfJero SMS
+                ProfJero Connect
               </h1>
               <p className="text-[11px] text-slate-500 font-medium">
                 One Platform. Multiple Projects.
@@ -45,7 +45,7 @@ export function LoginPage() {
           </div>
 
           <p className="text-center text-[11px] text-slate-400 mt-6">
-            ProfJero SMS v1.0.0 · © 2025 ProfJero Technologies
+            ProfJero Connect v1.0.0 · © 2025 ProfJero Digital Studio
           </p>
         </div>
       </div>

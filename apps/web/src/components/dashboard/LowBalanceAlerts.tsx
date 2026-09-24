@@ -1,49 +1,76 @@
-import { Bell } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Card, ViewAllLink } from '../ui/Card';
-import { lowBalanceAlerts } from '../../mock/dashboard';
+import { cn } from '../../lib/utils';
+import type { WalletListEntry } from '@profjero/shared';
 
-export function LowBalanceAlerts() {
+const DEFAULT_THRESHOLD = 500;
+const CRITICAL_THRESHOLD = 100;
+
+interface Props {
+  entries: WalletListEntry[];
+  onProjectClick?: (projectId: string) => void;
+}
+
+export function LowBalanceAlerts({ entries, onProjectClick }: Props) {
+  const flagged = entries
+    .filter((e) => {
+      const t = e.wallet.lowBalanceThreshold ?? DEFAULT_THRESHOLD;
+      return e.wallet.availableUnits > 0 && e.wallet.availableUnits < t;
+    })
+    .sort((a, b) => a.wallet.availableUnits - b.wallet.availableUnits)
+    .slice(0, 4);
+
   return (
-    <Card className="p-5" data-purpose="low-balance-widget">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-1.5 font-bold text-slate-800 text-sm">
-          <Bell className="w-4 h-4 text-rose-500" />
-          <span>Low Balance Alerts</span>
+    <Card className="p-4" data-purpose="low-balance-alerts">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-rose-500" strokeWidth={2} />
+          <h4 className="text-xs font-bold text-slate-800">Low Balance Alerts</h4>
         </div>
-        <ViewAllLink />
+        <ViewAllLink label="View all" href="/wallets" />
       </div>
-      <div className="space-y-3">
-        {lowBalanceAlerts.map((alert) => {
-          const isCritical = alert.severity === 'critical';
-          return (
-            <div
-              key={alert.project}
-              className="flex items-center justify-between p-2.5 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <div>
-                <div className="text-xs font-bold text-slate-800">{alert.project}</div>
-                <div className="text-[11px] text-slate-500">
-                  <span
-                    className={`font-semibold ${isCritical ? 'text-rose-600' : 'text-slate-700'}`}
-                  >
-                    {alert.units.toLocaleString()}
-                  </span>{' '}
-                  units remaining
-                </div>
-              </div>
-              <span
-                className={`px-2.5 py-0.5 rounded text-[10px] font-bold border ${
-                  isCritical
-                    ? 'bg-rose-50 text-rose-600 border-rose-200/60'
-                    : 'bg-amber-50 text-amber-600 border-amber-200/60'
-                }`}
+
+      {flagged.length === 0 ? (
+        <div className="py-6 text-center text-[11px] text-slate-400">
+          All wallets are healthy.
+        </div>
+      ) : (
+        <div className="divide-y divide-slate-100 mt-1">
+          {flagged.map((e) => {
+            const critical = e.wallet.availableUnits < CRITICAL_THRESHOLD;
+            return (
+              <button
+                key={e.project.id}
+                onClick={() => onProjectClick?.(e.project.id)}
+                disabled={!onProjectClick}
+                className={cn(
+                  'w-full py-2.5 flex items-center justify-between text-left',
+                  onProjectClick && 'hover:bg-slate-50 -mx-2 px-2 rounded transition',
+                )}
               >
-                {isCritical ? 'Critical' : 'Low'}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-800">
+                    {e.project.name}
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {e.wallet.availableUnits.toLocaleString()} units available
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    'px-2 py-0.5 text-[10px] font-semibold rounded border',
+                    critical
+                      ? 'text-rose-600 bg-rose-50 border-rose-200/50'
+                      : 'text-amber-600 bg-amber-50 border-amber-200/50',
+                  )}
+                >
+                  {critical ? 'Critical' : 'Low'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }

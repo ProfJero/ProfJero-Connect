@@ -6,10 +6,14 @@ import { LoginPage } from './features/auth/LoginPage';
 import { DashboardPage } from './features/dashboard/DashboardPage';
 import { ProjectsPage } from './features/projects/ProjectsPage';
 import { ProjectDetailsPage } from './features/projects/ProjectDetailsPage';
+import { ApiKeysPage } from './features/api-keys/ApiKeysPage';
+import { SenderIdsPage } from './features/sender-ids/SenderIdsPage';
+import { PricingPage } from './features/pricing/PricingPage';
 import { SmsLogsPage } from './features/sms-logs/SmsLogsPage';
 import { WalletsPage } from './features/wallets/WalletsPage';
 import { PaymentsPage } from './features/payments/PaymentsPage';
-import { ArkeselPage } from './features/arkesel/ArkeselPage';
+import { ProvidersListPage } from './features/providers/ProvidersListPage';
+import { ProviderDetailPage } from './features/providers/ProviderDetailPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { SendSmsPage } from './features/send-sms/SendSmsPage';
@@ -22,17 +26,27 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Protected — anything not logged in redirects to /login */}
+          {/* Protected */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+              <Route
+                path="/projects/:id/api-keys"
+                element={<ApiKeysPage />}
+              />
+              <Route path="/sender-ids" element={<SenderIdsPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
               <Route path="/sms-logs" element={<SmsLogsPage />} />
               <Route path="/wallets" element={<WalletsPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
-              <Route path="/arkesel" element={<ArkeselPage />} />
+              <Route path="/providers" element={<ProvidersListPage />} />
+              <Route
+                path="/providers/:providerId"
+                element={<ProviderDetailPage />}
+              />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/send-sms" element={<SendSmsPage />} />

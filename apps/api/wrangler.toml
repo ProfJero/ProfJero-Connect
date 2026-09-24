@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2025-07-18"
 compatibility_flags = ["nodejs_compat"]
 
+# Explicit defaults so future changes are deliberate.
+workers_dev = true
+preview_urls = true
+
 [vars]
 ENVIRONMENT = "development"
 

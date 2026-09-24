@@ -14,6 +14,8 @@ import {
 } from '../lib/firestore';
 import type { Env } from '../types/env';
 
+import { ensureWalletForProject } from './wallets';
+
 const COLLECTION = 'projects';
 
 function parseProject(doc: FirestoreDoc): Project {
@@ -85,6 +87,11 @@ export async function createProject(
     createdBy: adminUid,
     updatedBy: adminUid,
   });
+
+  // Give the project a wallet immediately so wallets list/detail endpoints
+  // never have to lazily create one.
+  await ensureWalletForProject(env, doc.id);
+
   return parseProject(doc);
 }
 

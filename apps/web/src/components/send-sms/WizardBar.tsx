@@ -1,16 +1,18 @@
 import { cn } from '../../lib/utils';
 
+export type WizardStep = 1 | 2 | 3;
+
 interface WizardBarProps {
-  currentStep?: 1 | 2 | 3;
+  currentStep: WizardStep;
 }
 
-const STEPS = [
-  { number: 1, label: 'Compose' },
-  { number: 2, label: 'Confirm' },
-  { number: 3, label: 'Send' },
+const STEPS: Array<{ number: WizardStep; label: string }> = [
+  { number: 1, label: 'Project' },
+  { number: 2, label: 'Compose' },
+  { number: 3, label: 'Review & Send' },
 ];
 
-export function WizardBar({ currentStep = 1 }: WizardBarProps) {
+export function WizardBar({ currentStep }: WizardBarProps) {
   return (
     <div className="bg-white border border-slate-200/90 rounded-xl py-3 px-4 sm:px-8 shadow-xs">
       <div className="max-w-2xl mx-auto flex items-center justify-between relative">
@@ -23,9 +25,7 @@ export function WizardBar({ currentStep = 1 }: WizardBarProps) {
           return (
             <div
               key={step.number}
-              className={cn(
-                'relative z-10 flex items-center gap-2.5 bg-white px-2 sm:px-4',
-              )}
+              className="relative z-10 flex items-center gap-2.5 bg-white px-2 sm:px-4"
             >
               <span
                 className={cn(

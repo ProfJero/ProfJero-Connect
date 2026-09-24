@@ -52,7 +52,7 @@ export function LoginBrandPanel() {
           </div>
           <div>
             <h1 className="font-bold text-[17px] leading-tight tracking-tight">
-              ProfJero SMS
+              ProfJero Connect
             </h1>
             <p className="text-[11px] text-slate-400 font-medium">
               One Platform. Multiple Projects.
@@ -89,8 +89,8 @@ export function LoginBrandPanel() {
 
         {/* Bottom: footer */}
         <div className="flex items-center justify-between text-[11px] text-slate-500">
-          <span>ProfJero SMS v1.0.0</span>
-          <span>© 2025 ProfJero Technologies</span>
+          <span>ProfJero Connect v2.0.0</span>
+          <span>© 2026 ProfJero Digital Studio</span>
         </div>
       </div>
     </div>

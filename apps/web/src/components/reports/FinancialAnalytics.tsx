@@ -1,19 +1,30 @@
 import { DollarSign } from 'lucide-react';
 import { Card } from '../ui/Card';
-import { financialCards } from '../../mock/reports';
 import { cn } from '../../lib/utils';
+import { formatGhs } from '../../lib/reportAggregation';
 
-export function FinancialAnalytics() {
+export interface FinancialCard {
+  label: string;
+  shortLabel: string;
+  shortBg: string;
+  value: string;
+}
+
+interface Props {
+  cards: FinancialCard[];
+}
+
+export function FinancialAnalytics({ cards }: Props) {
   return (
     <Card className="p-5 lg:col-span-4" data-purpose="financial-analytics">
       <div className="flex items-center gap-2 mb-1">
         <DollarSign className="w-4 h-4 text-blue-600" strokeWidth={2} />
         <h3 className="text-sm font-bold text-slate-900">Financial Analytics</h3>
       </div>
-      <p className="text-xs text-slate-400 mb-3.5">Revenue, costs and profitability.</p>
+      <p className="text-xs text-slate-400 mb-3.5">Revenue and payment metrics.</p>
 
       <div className="grid grid-cols-2 gap-3">
-        {financialCards.map((card) => (
+        {cards.map((card) => (
           <div
             key={card.label}
             className="bg-slate-50 border border-slate-100 rounded-lg p-2.5"
@@ -27,13 +38,16 @@ export function FinancialAnalytics() {
               >
                 {card.shortLabel}
               </span>
-              <span>{card.label}</span>
+              <span className="truncate">{card.label}</span>
             </div>
-            <div className="text-xs font-bold text-slate-800 leading-tight">{card.value}</div>
-            <div className="text-[10px] text-emerald-600 font-semibold mt-1">↑ {card.delta}</div>
+            <div className="text-xs font-bold text-slate-800 leading-tight">
+              {card.value}
+            </div>
           </div>
         ))}
       </div>
     </Card>
   );
 }
+
+export { formatGhs };

@@ -43,7 +43,7 @@ export function LoginForm() {
           Welcome back
         </h2>
         <p className="text-sm text-slate-500">
-          Sign in to your ProfJero SMS admin account.
+          Sign in to your ProfJero Connect admin account.
         </p>
       </div>
 

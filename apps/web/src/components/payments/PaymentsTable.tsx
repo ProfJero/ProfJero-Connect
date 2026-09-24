@@ -1,161 +1,231 @@
-import { Smartphone, CreditCard, Landmark } from 'lucide-react';
-import { Card } from '../ui/Card';
-import { StatusBadge } from '../ui/StatusBadge';
-import { PaymentsFilterBar } from './PaymentsFilterBar';
-import {
-  paymentRows,
-  paymentsPagination,
-  type PaymentMethod,
-} from '../../mock/payments';
+import { useNavigate } from 'react-router-dom';
+import { TableScroll } from '../ui/TableScroll';
 import { cn } from '../../lib/utils';
+import { splitDateTime } from '../../lib/datetime';
+import type { Payment, PaymentStatus } from '@profjero/shared';
 
-const METHOD_ICON: Record<PaymentMethod, typeof Smartphone> = {
-  'Mobile Money': Smartphone,
-  Card: CreditCard,
-  'Bank Transfer': Landmark,
+const STATUS_STYLES: Record<PaymentStatus, string> = {
+  success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200',
+  failed: 'bg-rose-50 text-rose-700 border-rose-200',
+  abandoned: 'bg-slate-100 text-slate-600 border-slate-200',
+  refunded: 'bg-purple-50 text-purple-700 border-purple-200',
 };
 
-export function PaymentsTable() {
-  const p = paymentsPagination;
+const STATUS_LABELS: Record<PaymentStatus, string> = {
+  success: 'Successful',
+  pending: 'Pending',
+  failed: 'Failed',
+  abandoned: 'Abandoned',
+  refunded: 'Refunded',
+};
+
+const AVATAR_COLORS = [
+  'bg-blue-600',
+  'bg-sky-600',
+  'bg-amber-500',
+  'bg-emerald-600',
+  'bg-purple-600',
+  'bg-indigo-600',
+];
+
+function avatarColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function formatGhs(pesewas: number): string {
+  return `GHS ${(pesewas / 100).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function shortRef(ref: string): string {
+  return ref.length > 20 ? `${ref.slice(0, 10)}…${ref.slice(-6)}` : ref;
+}
+
+interface Props {
+  payments: Payment[];
+  projectNames: Map<string, string>;
+  selectedReference: string | null;
+  onSelect: (reference: string) => void;
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  onPageChange: (p: number) => void;
+}
+
+export function PaymentsTable({
+  payments,
+  projectNames,
+  selectedReference,
+  onSelect,
+  total,
+  page,
+  pageSize,
+  totalPages,
+  onPageChange,
+}: Props) {
+  const navigate = useNavigate();
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = (page - 1) * pageSize + payments.length;
 
   return (
-    <Card className="overflow-hidden" data-purpose="table-container">
-      <PaymentsFilterBar />
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-[12px]">
-          <thead>
-            <tr className="border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/50">
+    <div
+      className="bg-white border border-slate-200/90 rounded-xl overflow-hidden flex flex-col"
+      data-purpose="payments-table"
+    >
+      <TableScroll>
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50/70 border-b border-slate-200/70 text-slate-500 font-semibold">
+            <tr>
               <th className="py-3 px-3 w-8 text-center">#</th>
-              <th className="py-3 px-3">Payment Reference</th>
-              <th className="py-3 px-3">Date &amp; Time</th>
-              <th className="py-3 px-3">Project / Client</th>
-              <th className="py-3 px-3">Package</th>
-              <th className="py-3 px-3">Units Purchased</th>
-              <th className="py-3 px-3">Amount</th>
-              <th className="py-3 px-3">Gateway</th>
-              <th className="py-3 px-3">Status</th>
-              <th className="py-3 px-3">Method</th>
-              <th className="py-3 px-3">Txn Reference</th>
-              <th className="py-3 px-3 text-right">Actions</th>
+              <th className="py-3 px-3 whitespace-nowrap">Reference</th>
+              <th className="py-3 px-3 whitespace-nowrap">Date</th>
+              <th className="py-3 px-3 whitespace-nowrap">Project</th>
+              <th className="py-3 px-3 whitespace-nowrap">Customer</th>
+              <th className="py-3 px-3 text-right whitespace-nowrap">Units</th>
+              <th className="py-3 px-3 text-right whitespace-nowrap">Amount</th>
+              <th className="py-3 px-3 whitespace-nowrap">Status</th>
+              <th className="py-3 px-3 text-center whitespace-nowrap">Credited</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-600 font-medium">
-            {paymentRows.map((row, idx) => {
-              const isSelected = idx === 0;
-              const MethodIcon = METHOD_ICON[row.method];
-              const gatewayColor =
-                row.gateway === 'Paystack' ? 'text-[#0ea5e9]' : 'text-slate-700';
+          <tbody className="divide-y divide-slate-100 text-slate-700">
+            {payments.length === 0 && (
+              <tr>
+                <td colSpan={9} className="py-12 text-center text-slate-400 text-sm">
+                  {total === 0 ? 'No payments yet.' : 'No payments match your filters.'}
+                </td>
+              </tr>
+            )}
+            {payments.map((p, idx) => {
+              const { date, time } = splitDateTime(p.createdAt);
+              const isSelected = p.reference === selectedReference;
+              const projectName = projectNames.get(p.projectId) ?? '—';
+              const rowNumber = (page - 1) * pageSize + idx + 1;
+
               return (
                 <tr
-                  key={row.id}
+                  key={p.reference}
+                  onClick={() => onSelect(p.reference)}
                   className={cn(
-                    'transition cursor-pointer',
-                    isSelected ? 'bg-blue-50/40 hover:bg-blue-50/60' : 'hover:bg-slate-50/70',
+                    'transition-colors cursor-pointer',
+                    isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/70',
                   )}
                 >
-                  <td className="py-3 px-3 text-center text-slate-400 font-normal">{row.id}</td>
-                  <td className="py-3 px-3 font-semibold text-slate-800">{row.reference}</td>
-                  <td className="py-3 px-3 text-slate-500">
-                    <div>{row.date}</div>
-                    <div className="text-[10px] text-slate-400">{row.time}</div>
+                  <td className="py-3 px-3 text-center text-slate-500 font-medium">
+                    {rowNumber}
                   </td>
-                  <td className="py-3 px-3">
-                    <div className="flex items-center gap-2">
+                  <td
+                    className="py-3 px-3 font-mono text-[11px] text-slate-700 whitespace-nowrap"
+                    title={p.reference}
+                  >
+                    {shortRef(p.reference)}
+                  </td>
+                  <td className="py-3 px-3 whitespace-nowrap">
+                    <div className="font-medium text-slate-800">{date}</div>
+                    <div className="text-[11px] text-slate-400">{time}</div>
+                  </td>
+                  <td className="py-3 px-3 whitespace-nowrap">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/projects/${p.projectId}`);
+                      }}
+                      className="flex items-center gap-1.5 hover:underline"
+                    >
                       <span
                         className={cn(
-                          'w-6 h-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center',
-                          row.projectAvatarBg,
+                          'w-5 h-5 rounded-full text-white font-bold text-[10px] flex items-center justify-center',
+                          avatarColor(p.projectId),
                         )}
                       >
-                        {row.project.charAt(0)}
+                        {projectName.charAt(0).toUpperCase()}
                       </span>
-                      <div>
-                        <div className="font-bold text-slate-800 leading-tight">
-                          {row.project}
-                        </div>
-                        <div className="text-[10px] text-slate-400">{row.projectClient}</div>
-                      </div>
-                    </div>
+                      <span className="font-medium text-slate-800">
+                        {projectName}
+                      </span>
+                    </button>
                   </td>
-                  <td className="py-3 px-3 text-slate-600">{row.package}</td>
-                  <td className="py-3 px-3 text-slate-600">{row.units}</td>
-                  <td className="py-3 px-3 font-bold text-slate-800">{row.amount}</td>
-                  <td className="py-3 px-3">
-                    <div className={cn('flex items-center gap-1 font-medium text-xs', gatewayColor)}>
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M3 6h18v3H3zm0 5h18v3H3zm0 5h18v3H3z" />
-                      </svg>
-                      {row.gateway}
-                    </div>
+                  <td className="py-3 px-3 text-slate-600 whitespace-nowrap max-w-[180px] truncate">
+                    {p.customerEmail ?? '—'}
                   </td>
-                  <td className="py-3 px-3">
-                    <StatusBadge status={row.status} />
+                  <td className="py-3 px-3 text-right font-semibold text-slate-800 whitespace-nowrap">
+                    {p.units.toLocaleString()}
                   </td>
-                  <td className="py-3 px-3">
-                    <div className="flex items-center gap-1.5 text-slate-500">
-                      <MethodIcon className="w-3.5 h-3.5" strokeWidth={2} />
-                      <span>{row.method}</span>
-                    </div>
+                  <td className="py-3 px-3 text-right font-semibold text-slate-900 whitespace-nowrap">
+                    {formatGhs(p.amountPesewas)}
                   </td>
-                  <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
-                    {row.txnReference}
+                  <td className="py-3 px-3 whitespace-nowrap">
+                    <span
+                      className={cn(
+                        'inline-block px-2 py-0.5 rounded-full text-[10px] font-medium border',
+                        STATUS_STYLES[p.status],
+                      )}
+                    >
+                      {STATUS_LABELS[p.status]}
+                    </span>
                   </td>
-                  <td className="py-3 px-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <button className="px-2.5 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-100 rounded transition">
-                        View
-                      </button>
-                      <button className="p-1 text-slate-400 hover:text-slate-600">
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="1.5" />
-                          <circle cx="12" cy="6" r="1.5" />
-                          <circle cx="12" cy="18" r="1.5" />
-                        </svg>
-                      </button>
-                    </div>
+                  <td className="py-3 px-3 text-center whitespace-nowrap">
+                    {p.walletCreditedAt ? (
+                      <span className="text-emerald-600 font-semibold">Yes</span>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
 
-      <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-        <p>
-          Showing{' '}
-          <span className="font-semibold text-slate-700">
-            {p.from} to {p.to}
-          </span>{' '}
-          of <span className="font-semibold text-slate-700">{p.total}</span> payments
-        </p>
-        <div className="flex items-center gap-1">
-          <button className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 text-slate-400 hover:bg-slate-50">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          {p.pages.map((n) => (
-            <button
-              key={n}
-              className={cn(
-                'w-7 h-7 flex items-center justify-center rounded text-xs',
-                n === 1
-                  ? 'bg-[#1976d2] text-white font-medium shadow-xs'
-                  : 'border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium',
-              )}
-            >
-              {n}
-            </button>
-          ))}
-          <button className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50">
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
+      <div className="p-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
+        <div>
+          {total === 0 ? (
+            'No payments'
+          ) : (
+            <>
+              Showing{' '}
+              <span className="font-semibold text-slate-800">
+                {rangeStart}–{rangeEnd}
+              </span>{' '}
+              of <span className="font-semibold text-slate-800">{total}</span>
+            </>
+          )}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1}
+              className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 hover:bg-slate-50 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Previous page"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <span className="text-[11px] text-slate-500 font-medium px-1">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages}
+              className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 hover:bg-slate-50 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Next page"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }

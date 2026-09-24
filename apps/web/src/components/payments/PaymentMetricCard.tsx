@@ -1,5 +1,13 @@
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { PaymentMetric } from '../../mock/payments';
+
+export interface PaymentMetric {
+  label: string;
+  value: string;
+  footnote: string;
+  icon: LucideIcon;
+  iconBg: string;
+}
 
 export function PaymentMetricCard({ metric }: { metric: PaymentMetric }) {
   const Icon = metric.icon;
@@ -17,20 +25,12 @@ export function PaymentMetricCard({ metric }: { metric: PaymentMetric }) {
         <span className="text-xs text-slate-500 font-medium">{metric.label}</span>
       </div>
       <div className="mt-3">
-        <div className="text-base font-bold text-slate-900 tracking-tight flex items-baseline gap-2">
+        <div className="text-base font-bold text-slate-900 tracking-tight">
           {metric.value}
-          {metric.trend && (
-            <span
-              className={cn(
-                'text-xs font-semibold',
-                metric.trend.color === 'emerald' ? 'text-emerald-600' : 'text-rose-500',
-              )}
-            >
-              {metric.trend.direction === 'up' ? '↑' : '↓'} {metric.trend.value}
-            </span>
-          )}
         </div>
-        <div className="text-[11px] text-slate-400 font-normal mt-0.5">{metric.footnote}</div>
+        <div className="text-[11px] text-slate-400 font-normal mt-0.5">
+          {metric.footnote}
+        </div>
       </div>
     </div>
   );

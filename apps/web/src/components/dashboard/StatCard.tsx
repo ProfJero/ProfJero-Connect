@@ -1,42 +1,75 @@
-import type { Stat } from '../../mock/dashboard';
+import {
+  FolderKanban,
+  FolderCheck,
+  Send,
+  XCircle,
+  HelpCircle,
+  Wallet,
+  Lock,
+  Package,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-export function StatCard({ stat }: { stat: Stat }) {
-  const Icon = stat.icon;
-  // For "Failed Messages" an upward arrow is bad news, so treat positive as default
-  const trendPositive = stat.trend?.direction === 'up' || stat.title === 'Failed Messages';
+export type StatIcon =
+  | 'projects'
+  | 'active'
+  | 'send'
+  | 'failed'
+  | 'unknown'
+  | 'wallet'
+  | 'lock'
+  | 'package';
 
+export interface Stat {
+  title: string;
+  subtitle?: string;
+  value: string;
+  icon: StatIcon;
+  iconBg: string;
+  footnote?: string;
+}
+
+const ICON_MAP: Record<StatIcon, LucideIcon> = {
+  projects: FolderKanban,
+  active: FolderCheck,
+  send: Send,
+  failed: XCircle,
+  unknown: HelpCircle,
+  wallet: Wallet,
+  lock: Lock,
+  package: Package,
+};
+
+export function StatCard({ stat }: { stat: Stat }) {
+  const Icon = ICON_MAP[stat.icon];
   return (
-    <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-      <div
-        className={cn(
-          'w-12 h-12 rounded-full text-white flex items-center justify-center shrink-0 shadow-sm',
-          stat.iconBg,
-        )}
-      >
-        <Icon className="w-5 h-5" />
-      </div>
-      <div>
-        <div className="text-xs text-slate-500 font-medium">
-          {stat.title} {stat.subtitle && <span className="text-slate-400">{stat.subtitle}</span>}
+    <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs">
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            'w-10 h-10 rounded-full text-white flex items-center justify-center shrink-0',
+            stat.iconBg,
+          )}
+        >
+          <Icon className="w-5 h-5" strokeWidth={2} />
         </div>
-        <div className="text-xl font-bold text-slate-800 mt-0.5">{stat.value}</div>
-        {stat.trend && (
-          <div
-            className={cn(
-              'text-[11px] font-semibold flex items-center gap-1 mt-0.5',
-              trendPositive ? 'text-emerald-600' : 'text-rose-500',
+        <div className="min-w-0 flex-1">
+          <div className="text-xs text-slate-500 font-medium">
+            {stat.title}
+            {stat.subtitle && (
+              <span className="text-slate-400 ml-1">{stat.subtitle}</span>
             )}
-          >
-            <span>
-              {stat.trend.direction === 'up' ? '↑' : '↓'} {stat.trend.value}
-            </span>
-            <span className="text-slate-400 font-normal">{stat.trend.label}</span>
           </div>
-        )}
-        {!stat.trend && stat.footnote && (
-          <div className="text-[11px] text-slate-400 font-normal mt-0.5">{stat.footnote}</div>
-        )}
+          <div className="text-xl font-bold text-slate-900 mt-1 tracking-tight">
+            {stat.value}
+          </div>
+          {stat.footnote && (
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              {stat.footnote}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

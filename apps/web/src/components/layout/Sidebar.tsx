@@ -79,7 +79,7 @@ export function Sidebar({
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-white font-bold text-[17px] leading-tight tracking-tight">
-                ProfJero SMS
+                ProfJero Connect
               </h1>
               <p className="text-[11px] text-slate-400 font-medium">
                 One Platform. Multiple Projects.
@@ -132,7 +132,7 @@ export function Sidebar({
               <Database className="w-5 h-5" />
             </div>
             <div className="overflow-hidden">
-              <div className="text-[11px] text-slate-400 font-medium">Arkesel Balance</div>
+              <div className="text-[11px] text-slate-400 font-medium">SMS Balance</div>
               <div className="text-white font-bold text-sm tracking-wide">
                 12,000{' '}
                 <span className="text-[11px] font-normal text-slate-300">SMS Credits</span>
@@ -144,8 +144,8 @@ export function Sidebar({
             </div>
           </div>
           <div className="px-1 text-[11px] text-slate-400 leading-snug">
-            <div>ProfJero SMS v1.0.0</div>
-            <div>© 2025 ProfJero Technologies</div>
+            <div>ProfJero Connect v2.0.0</div>
+            <div>© 2025 ProfJero Digital Studio</div>
           </div>
         </div>
       </aside>
