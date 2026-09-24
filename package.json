@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev:web": "npm run dev --workspace=@profjero/web",
+    "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=@profjero/api",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:customer": "npm run dev --workspace=apps/customer"
   },
   "keywords": [],
   "author": "",

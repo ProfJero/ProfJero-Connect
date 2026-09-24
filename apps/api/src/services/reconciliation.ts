@@ -105,7 +105,8 @@ export async function reconcileUnknownRecords(
 
   if (providerIds.length > 0 && env.ARKESEL_API_KEY) {
     try {
-      const results = await fetchBatchReports(env, providerIds);
+      const providerId = env.DEFAULT_SMS_PROVIDER_ID ?? 'sms_gw_01';
+      const results = await fetchBatchReports(env, providerId, providerIds);
       // Normalise to the shape we need.
       reports = new Map(
         [...results.entries()].map(([id, r]) => [id, { status: r.status }]),

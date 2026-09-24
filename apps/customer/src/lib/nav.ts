@@ -1,0 +1,52 @@
+import {
+  LayoutDashboard,
+  MessageSquare,
+  Users,
+  Store,
+  Wallet,
+  Receipt,
+  Code2,
+  Bell,
+  Settings,
+  type LucideIcon,
+} from 'lucide-react';
+
+export interface NavChild {
+  label: string;
+  path: string;
+}
+
+export interface NavItem {
+  label: string;
+  icon: LucideIcon;
+  path?: string; // leaf items
+  children?: NavChild[]; // expandable items
+  badge?: number; // notification badge
+}
+
+export const navItems: NavItem[] = [
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  {
+    label: 'Messaging',
+    icon: MessageSquare,
+    children: [
+      { label: 'SMS', path: '/messaging/sms' },
+      { label: 'Bulk SMS', path: '/messaging/bulk-sms' },
+      { label: 'Sender IDs', path: '/messaging/sender-ids' },
+    ],
+  },
+  { label: 'Contacts', icon: Users, path: '/contacts' },
+  {
+    label: 'Services',
+    icon: Store,
+    children: [
+      { label: 'Data', path: '/services/data' },
+      { label: 'Airtime', path: '/services/airtime' },
+    ],
+  },
+  { label: 'Wallet', icon: Wallet, path: '/wallet' },
+  { label: 'Transactions', icon: Receipt, path: '/transactions' },
+  { label: 'API & Integrations', icon: Code2, path: '/api' },
+  { label: 'Notifications', icon: Bell, path: '/notifications', badge: 3 },
+  { label: 'Settings', icon: Settings, path: '/settings' },
+];

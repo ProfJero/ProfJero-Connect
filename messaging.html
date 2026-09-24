@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ProfJero Connect - Messaging Dashboard</title>
+<!-- Tailwind CSS CDN with forms and container queries plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Font Awesome Icons -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<!-- Google Fonts Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              navy: '#09101d',
+              sidebar: '#0d1527',
+              sidebarHover: '#131e36',
+              sidebarActive: '#1b64da',
+              primary: '#1570ef',
+              primaryDark: '#0f5acc',
+              accentCyan: '#06b6d4',
+              pageBg: '#f8fafc',
+              borderLight: '#e2e8f0',
+              textMain: '#0f172a',
+              textMuted: '#64748b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scrollbars-and-fine-tuning">
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-800 flex h-screen overflow-hidden antialiased">
+<!-- BEGIN: Sidebar -->
+<aside class="w-64 bg-[#0d1527] text-slate-300 flex flex-col flex-shrink-0 h-full select-none z-20 border-r border-[#1a233a]" data-purpose="sidebar-navigation">
+<!-- Brand Logo Area -->
+<div class="h-20 px-5 flex items-center gap-3 border-b border-[#17223b]">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0284c7] via-[#0284c7] to-[#38bdf8] flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-bold text-2xl tracking-tighter">
+        P
+      </div>
+<div>
+<h1 class="text-white font-bold text-base tracking-tight leading-none">ProfJero Connect</h1>
+<p class="text-[11px] text-slate-400 mt-1 font-medium">Connect. Communicate. Grow.</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex-1 overflow-y-auto px-3.5 py-4 space-y-1 text-sm font-medium">
+<!-- Dashboard -->
+<a class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<i class="fa-solid fa-house text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>Dashboard</span>
+</a>
+<!-- Messaging (Active Section) -->
+<div class="space-y-1">
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#1570ef] text-white font-semibold shadow-sm transition-colors" href="#">
+<div class="flex items-center gap-3.5">
+<i class="fa-solid fa-comment-dots text-white text-[15px] w-4 text-center"></i>
+<span>Messaging</span>
+</div>
+</a>
+<!-- Submenu -->
+<div class="pl-7 pr-2 py-1.5 space-y-1">
+<a class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-[#1e293b]/70 rounded-md" href="#">
+<span class="w-1.5 h-1.5 rounded-full bg-[#38bdf8]"></span>
+<span>SMS</span>
+</a>
+<a class="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-[#131e36] rounded-md transition-colors" href="#">
+<span>Bulk SMS</span>
+</a>
+<a class="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-[#131e36] rounded-md transition-colors" href="#">
+<span>Sender IDs</span>
+</a>
+</div>
+</div>
+<!-- Contacts -->
+<a class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<i class="fa-solid fa-users text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>Contacts</span>
+</a>
+<!-- Services (Dropdown) -->
+<div>
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<div class="flex items-center gap-3.5">
+<i class="fa-solid fa-briefcase text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>Services</span>
+</div>
+<i class="fa-solid fa-chevron-down text-[11px] text-slate-400"></i>
+</a>
+<div class="pl-8 pr-2 py-1 space-y-1 text-xs text-slate-400">
+<a class="block px-2 py-1 hover:text-white transition-colors" href="#">Data</a>
+<a class="block px-2 py-1 hover:text-white transition-colors" href="#">Airtime</a>
+</div>
+</div>
+<!-- Wallet -->
+<a class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<i class="fa-solid fa-wallet text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>Wallet</span>
+</a>
+<!-- Transactions -->
+<a class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<i class="fa-solid fa-receipt text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>Transactions</span>
+</a>
+<!-- API & Integrations -->
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<div class="flex items-center gap-3.5">
+<i class="fa-solid fa-code text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>API &amp; Integrations</span>
+</div>
+<i class="fa-solid fa-chevron-down text-[11px] text-slate-400"></i>
+</a>
+<!-- Notifications -->
+<a class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<div class="flex items-center gap-3.5">
+<i class="fa-solid fa-bell text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>Notifications</span>
+</div>
+<span class="w-5 h-5 flex items-center justify-center rounded-full bg-rose-600 text-white text-[11px] font-bold">3</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-3.5 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-[#131e36] transition-colors group" href="#">
+<i class="fa-solid fa-gear text-slate-400 group-hover:text-white text-[15px] w-4 text-center"></i>
+<span>Settings</span>
+</a>
+</nav>
+<!-- Support / Help Card -->
+<div class="p-3.5 mt-auto">
+<div class="bg-[#121c33] border border-[#1e2d4d] rounded-xl p-3.5 text-center shadow-inner relative overflow-hidden">
+<div class="w-9 h-9 rounded-full bg-[#1570ef] mx-auto flex items-center justify-center text-white mb-2 shadow">
+<i class="fa-solid fa-headset text-sm"></i>
+</div>
+<h4 class="text-white text-xs font-semibold">Need help?</h4>
+<p class="text-[11px] text-slate-400 mt-0.5 leading-snug">Visit our documentation or contact support.</p>
+<button class="mt-2.5 w-full py-1.5 px-3 rounded-lg border border-slate-600 hover:border-slate-400 text-white text-xs font-medium flex items-center justify-center gap-1.5 transition-all hover:bg-white/5">
+<span>View Docs</span>
+<i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+</button>
+</div>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: Main Viewport Wrapper -->
+<div class="flex-1 flex flex-col h-full overflow-hidden">
+<!-- BEGIN: Top Navigation Header -->
+<header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between flex-shrink-0 z-10" data-purpose="top-header">
+<!-- Universal Search Bar -->
+<div class="w-96 relative">
+<i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+<input class="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-slate-700 placeholder-slate-400" placeholder="Search services, transactions, or anything..." type="text"/>
+</div>
+<!-- Header Right Actions -->
+<div class="flex items-center gap-4">
+<!-- Notification Bell -->
+<button class="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+<i class="fa-regular fa-bell text-base"></i>
+<span class="absolute top-1 right-1 bg-rose-500 text-white font-bold text-[9px] w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">3</span>
+</button>
+<!-- Wallet Balance Card Component -->
+<div class="flex items-center gap-2.5 bg-slate-50 border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg cursor-pointer transition-colors shadow-2xs">
+<div class="w-7 h-7 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+<i class="fa-solid fa-wallet"></i>
+</div>
+<div class="text-left leading-none">
+<div class="text-xs font-bold text-slate-800 tracking-tight">GHC 250.00</div>
+<div class="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+<span>Wallet Balance</span>
+<i class="fa-solid fa-arrow-right text-[8px]"></i>
+</div>
+</div>
+</div>
+<!-- Organization Switcher -->
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors">
+<i class="fa-regular fa-building text-slate-500"></i>
+<span>GABS Organization</span>
+<i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+</button>
+<!-- User Profile Dropdown -->
+<div class="flex items-center gap-2.5 pl-2 border-l border-slate-200 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-slate-300 overflow-hidden ring-1 ring-slate-200 flex-shrink-0">
+<img alt="Benjamin Admin" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXUQxVgmbPqqkkXsOFPBWKaitll9aPjaUOJI_0nIBRky-uFPN9RGHwLms4Tl6XE0QcEBwo7BE9vsvtOl1zVQTg0eDQLwhYexfygxAiQW7nucl8iDe_RErG-4qgU_NltaEWRY9cOYvN86PW5xsLPSrWkF49y3Fi5OM_qRa7cWDcoHTOd_BLb0Hz5_rTsMQT2l_fGXr7h34-PMQHfi68LXu8jYeBjwpLC-phfpZT3Pip"/>
+</div>
+<div class="text-left hidden sm:block">
+<p class="text-xs font-semibold text-slate-800 leading-tight">Benjamin</p>
+<p class="text-[11px] text-slate-400 font-medium leading-none">Admin</p>
+</div>
+<i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+</div>
+</div>
+</header>
+<!-- END: Top Navigation Header -->
+<!-- BEGIN: Main Page Content -->
+<main class="flex-1 overflow-y-auto px-8 py-6 space-y-6" data-purpose="messaging-view">
+<!-- Section: Page Title & Primary CTA -->
+<section class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex items-center gap-3.5">
+<div class="w-12 h-12 rounded-xl bg-[#1570ef] text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/10">
+<i class="fa-solid fa-comment-dots"></i>
+</div>
+<div>
+<h2 class="text-xl font-bold text-slate-900 leading-tight">Messaging</h2>
+<p class="text-xs text-slate-500 mt-0.5">Send messages and manage your SMS activity.</p>
+</div>
+</div>
+<!-- Primary CTA: Send SMS -->
+<button class="inline-flex items-center justify-center gap-2 bg-[#1570ef] hover:bg-[#0f5acc] text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm hover:shadow transition-all">
+<i class="fa-solid fa-paper-plane text-xs"></i>
+<span>Send SMS</span>
+</button>
+</section>
+<!-- Section: Sub Tabs Navigation -->
+<section class="border-b border-slate-200">
+<nav class="flex space-x-8 text-xs font-semibold">
+<a class="flex items-center gap-2 py-2.5 text-[#1570ef] border-b-2 border-[#1570ef] pb-2" href="#">
+<i class="fa-regular fa-paper-plane"></i>
+<span>Send SMS</span>
+</a>
+<a class="flex items-center gap-2 py-2.5 text-slate-500 hover:text-slate-800 transition-colors" href="#">
+<i class="fa-solid fa-bullhorn text-slate-400"></i>
+<span>Campaigns</span>
+</a>
+<a class="flex items-center gap-2 py-2.5 text-slate-500 hover:text-slate-800 transition-colors" href="#">
+<i class="fa-regular fa-clock text-slate-400"></i>
+<span>Message History</span>
+</a>
+</nav>
+</section>
+<!-- Section: SMS Overview Headline -->
+<section class="space-y-3">
+<h3 class="text-sm font-bold text-slate-900">SMS Overview</h3>
+<!-- Metrics Cards Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Card 1: Messages Sent -->
+<div class="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center text-lg flex-shrink-0">
+<i class="fa-solid fa-chart-simple"></i>
+</div>
+<div>
+<p class="text-xs text-slate-500 font-medium">Messages Sent</p>
+<div class="flex items-baseline gap-2 mt-0.5">
+<span class="text-xl font-bold text-slate-900">12,480</span>
+<span class="text-[11px] font-semibold text-emerald-600 flex items-center">
+<i class="fa-solid fa-arrow-up text-[9px] mr-0.5"></i>18%
+                </span>
+</div>
+<p class="text-[11px] text-slate-400 mt-0.5">vs. last 30 days</p>
+</div>
+</div>
+<!-- Card 2: Units Used -->
+<div class="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-[#0d9488] text-white flex items-center justify-center text-lg flex-shrink-0">
+<i class="fa-solid fa-coins"></i>
+</div>
+<div>
+<p class="text-xs text-slate-500 font-medium">Units Used</p>
+<div class="flex items-baseline gap-2 mt-0.5">
+<span class="text-xl font-bold text-slate-900">8,240</span>
+<span class="text-[11px] font-semibold text-emerald-600 flex items-center">
+<i class="fa-solid fa-arrow-up text-[9px] mr-0.5"></i>22%
+                </span>
+</div>
+<p class="text-[11px] text-slate-400 mt-0.5">vs. last 30 days</p>
+</div>
+</div>
+<!-- Card 3: Successful -->
+<div class="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-[#10b981] text-white flex items-center justify-center text-lg flex-shrink-0">
+<i class="fa-solid fa-circle-check"></i>
+</div>
+<div>
+<p class="text-xs text-slate-500 font-medium">Successful</p>
+<div class="flex items-baseline gap-2 mt-0.5">
+<span class="text-xl font-bold text-slate-900">7,860</span>
+<span class="text-[11px] font-semibold text-emerald-600 flex items-center">
+<i class="fa-solid fa-arrow-up text-[9px] mr-0.5"></i>20%
+                </span>
+</div>
+<p class="text-[11px] text-slate-400 mt-0.5">94.7% delivery rate</p>
+</div>
+</div>
+<!-- Card 4: Failed -->
+<div class="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-[#f43f5e] text-white flex items-center justify-center text-lg flex-shrink-0">
+<i class="fa-solid fa-triangle-exclamation"></i>
+</div>
+<div>
+<p class="text-xs text-slate-500 font-medium">Failed</p>
+<div class="flex items-baseline gap-2 mt-0.5">
+<span class="text-xl font-bold text-slate-900">380</span>
+<span class="text-[11px] font-semibold text-rose-600 flex items-center">
+<i class="fa-solid fa-arrow-up text-[9px] mr-0.5"></i>12%
+                </span>
+</div>
+<p class="text-[11px] text-slate-400 mt-0.5">4.6% failure rate</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Filters Bar -->
+<section class="flex flex-wrap items-center gap-3" data-purpose="table-filters">
+<!-- Search message bar -->
+<div class="flex-1 min-w-[260px] relative">
+<i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+<input class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="Search by recipient, message, or reference..." type="text"/>
+</div>
+<!-- Date Range Filter -->
+<button class="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium transition-colors">
+<i class="fa-regular fa-calendar text-slate-400 text-xs"></i>
+<span>Sep 15, 2025 - Sep 21, 2025</span>
+<i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+</button>
+<!-- Project Filter -->
+<button class="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium transition-colors">
+<span>All Projects</span>
+<i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+</button>
+<!-- Senders Filter -->
+<button class="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium transition-colors">
+<span>All Senders</span>
+<i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+</button>
+<!-- Status Filter -->
+<button class="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium transition-colors">
+<span>All Statuses</span>
+<i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+</button>
+<!-- Clear Link -->
+<button class="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 transition-colors">
+          Clear
+        </button>
+</section>
+<!-- BEGIN: Table Card Section -->
+<section class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs" data-purpose="recent-messages-card">
+<!-- Table Header Actions -->
+<div class="px-5 py-3.5 flex items-center justify-between border-b border-slate-100">
+<h3 class="text-sm font-bold text-slate-900">Recent Messages</h3>
+<button class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-lg transition-colors">
+<i class="fa-solid fa-arrow-down-to-bracket text-slate-500"></i>
+<span>Export</span>
+</button>
+</div>
+<!-- Table Data -->
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs text-slate-600">
+<thead class="bg-slate-50/80 text-slate-500 font-semibold uppercase text-[11px] border-b border-slate-200 tracking-wider">
+<tr>
+<th class="py-3 px-5 whitespace-nowrap cursor-pointer hover:text-slate-800" scope="col">
+<div class="flex items-center gap-1.5">
+<span>Date &amp; Time</span>
+<i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+</div>
+</th>
+<th class="py-3 px-4 whitespace-nowrap cursor-pointer hover:text-slate-800" scope="col">
+<div class="flex items-center gap-1.5">
+<span>Sender ID</span>
+<i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+</div>
+</th>
+<th class="py-3 px-4 whitespace-nowrap cursor-pointer hover:text-slate-800" scope="col">
+<div class="flex items-center gap-1.5">
+<span>Recipients</span>
+<i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+</div>
+</th>
+<th class="py-3 px-4 whitespace-nowrap cursor-pointer hover:text-slate-800 min-w-[280px]" scope="col">
+<div class="flex items-center gap-1.5">
+<span>Message</span>
+<i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+</div>
+</th>
+<th class="py-3 px-4 whitespace-nowrap cursor-pointer hover:text-slate-800" scope="col">
+<div class="flex items-center gap-1.5">
+<span>Units</span>
+<i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+</div>
+</th>
+<th class="py-3 px-4 whitespace-nowrap cursor-pointer hover:text-slate-800" scope="col">
+<div class="flex items-center gap-1.5">
+<span>Status</span>
+<i class="fa-solid fa-sort text-[10px] text-slate-400"></i>
+</div>
+</th>
+<th class="py-3 px-4 text-right" scope="col">
+<span class="sr-only">Actions</span>
+</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 21, 2025 10:42 AM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">GABS</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">245</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">Your verification code is 482931. Do not share i...</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">245</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Completed</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 21, 2025 09:17 AM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">DBI</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">1,200</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">Thank you for your registration. Welcome to DBI...</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">1,200</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Completed</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 20, 2025 04:36 PM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">CHURCH</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">87</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">Join us this Sunday for our special service...</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">87</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+<span>Submitted</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 20, 2025 11:22 AM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">GABS</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">560</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">Your prescription is ready for collection. Thank you.</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">560</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Completed</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 19, 2025 03:15 PM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">PHARMACY</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">430</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">Your medication is ready for pickup. Thank you.</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">430</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+<span>Partial</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 19, 2025 09:48 AM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">SCHOOL</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">250</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">School fees reminder: Please make payment...</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">250</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+<span>Failed</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 18, 2025 02:21 PM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">GABS</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">1,050</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">Monthly report is now available on your dashboard.</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">1,050</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Completed</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+<!-- Row 8 -->
+<tr class="hover:bg-slate-50/70 transition-colors">
+<td class="py-3.5 px-5 font-normal text-slate-600 whitespace-nowrap">Sep 18, 2025 10:12 AM</td>
+<td class="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">DBI</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">320</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 max-w-sm truncate">New opportunities available. Check our latest...</td>
+<td class="py-3.5 px-4 font-normal text-slate-600 whitespace-nowrap">320</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Completed</span>
+</span>
+</td>
+<td class="py-3.5 px-4 text-right text-slate-400 whitespace-nowrap">
+<button class="hover:text-slate-700 p-1"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="px-5 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+<p>Showing 1 - 8 of 124 messages</p>
+<nav aria-label="Pagination" class="inline-flex items-center space-x-1">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500">
+<i class="fa-solid fa-chevron-left text-[10px]"></i>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-[#1570ef] text-white font-semibold shadow-xs">
+              1
+            </button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-600 font-medium">
+              2
+            </button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-600 font-medium">
+              3
+            </button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-600 font-medium">
+              4
+            </button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-600 font-medium">
+              5
+            </button>
+<span class="px-1 text-slate-400">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-600 font-medium">
+              16
+            </button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500">
+<i class="fa-solid fa-chevron-right text-[10px]"></i>
+</button>
+</nav>
+</div>
+</section>
+<!-- END: Table Card Section -->
+</main>
+<!-- END: Main Page Content -->
+</div>
+<!-- END: Main Viewport Wrapper -->
+</body></html>

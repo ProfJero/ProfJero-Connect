@@ -287,7 +287,8 @@ adminSmsLogsRouter.post(
       .map((r) => r.providerMessageId)
       .filter((id): id is string => id !== null);
 
-    const reports = await fetchBatchReports(c.env, messageIds);
+    const providerId = c.env.DEFAULT_SMS_PROVIDER_ID ?? 'sms_gw_01';
+    const reports = await fetchBatchReports(c.env, providerId, messageIds);
 
     let updated = 0;
     let unchanged = 0;

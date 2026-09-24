@@ -3,7 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2025-07-18"
 compatibility_flags = ["nodejs_compat"]
 
-# Explicit defaults so future changes are deliberate.
 workers_dev = true
 preview_urls = true
 
@@ -21,3 +20,9 @@ name = "profjero-sms-api-prod"
 
 [env.production.vars]
 ENVIRONMENT = "production"
+
+[env.production.triggers]
+crons = [
+  "*/15 * * * *",
+  "0 4 * * *",
+]
