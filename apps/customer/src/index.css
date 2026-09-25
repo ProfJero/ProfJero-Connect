@@ -22,3 +22,23 @@ body {
   background: #cbd5e1;
   border-radius: 4px;
 }
+
+/* Login page handwriting accent */
+.handwritten-text {
+  font-family: 'Caveat', cursive;
+  transform: rotate(-3deg);
+}
+
+.swoosh-underline {
+  position: relative;
+}
+.swoosh-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 10%;
+  width: 80%;
+  height: 6px;
+  border-bottom: 3px solid #00d2ff;
+  border-radius: 50%;
+}

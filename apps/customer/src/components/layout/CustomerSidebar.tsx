@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ChevronDown, LifeBuoy, ExternalLink, X } from 'lucide-react';
 import { navItems, type NavItem } from '../../lib/nav';
 import { cn } from '../../lib/utils';
@@ -24,14 +24,13 @@ export function CustomerSidebar({
 
       <aside
         className={cn(
-          'w-[260px] bg-brand-navy text-slate-300 flex flex-col justify-between shrink-0 h-screen overflow-y-auto custom-scrollbar border-r border-slate-800/40',
+          'w-[260px] bg-[#0c192c] text-slate-300 flex flex-col justify-between shrink-0 h-screen overflow-y-auto custom-scrollbar border-r border-slate-800/40',
           'fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out',
           'lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         <div>
-          {/* Brand */}
           <div className="p-5 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
               <span className="font-extrabold text-2xl tracking-tighter italic">P</span>
@@ -53,7 +52,6 @@ export function CustomerSidebar({
             </button>
           </div>
 
-          {/* Nav */}
           <nav aria-label="Main Sidebar Navigation" className="mt-2 px-3 space-y-1">
             {navItems.map((item) => (
               <NavEntry key={item.label} item={item} onNavigate={onClose} />
@@ -61,9 +59,8 @@ export function CustomerSidebar({
           </nav>
         </div>
 
-        {/* Help card */}
         <div className="p-4 mb-2">
-          <div className="bg-brand-cardDark/80 border border-slate-700/60 rounded-xl p-3.5 text-xs">
+          <div className="bg-[#12233c]/80 border border-slate-700/60 rounded-xl p-3.5 text-xs">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-600/30 flex items-center justify-center text-blue-400 shrink-0">
                 <LifeBuoy className="w-4 h-4" strokeWidth={2} />
@@ -87,7 +84,16 @@ export function CustomerSidebar({
 }
 
 function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
-  const [expanded, setExpanded] = useState(false);
+  const location = useLocation();
+  const hasActiveChild =
+    item.children?.some((c) => location.pathname === c.path) ?? false;
+  const [expanded, setExpanded] = useState(hasActiveChild);
+
+  // Auto-expand the section when a child becomes active (e.g. on navigation)
+  useEffect(() => {
+    if (hasActiveChild) setExpanded(true);
+  }, [hasActiveChild]);
+
   const Icon = item.icon;
 
   if (item.path) {
@@ -99,13 +105,16 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
           cn(
             'flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-colors',
             isActive
-              ? 'bg-brand-blue text-white shadow-sm'
+              ? 'bg-[#1a6cf0] text-white shadow-sm'
               : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
           )
         }
       >
         <span className="flex items-center gap-3 min-w-0">
-          <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
+          <Icon
+            className={cn('w-4 h-4 shrink-0', hasActiveChild && 'text-white')}
+            strokeWidth={2}
+          />
           <span className="truncate">{item.label}</span>
         </span>
         {item.badge !== undefined && item.badge > 0 && (
@@ -122,7 +131,12 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3.5 py-2 rounded-lg text-sm font-medium transition-colors text-slate-300 hover:text-white hover:bg-slate-800/50"
+        className={cn(
+          'w-full flex items-center justify-between px-3.5 py-2 rounded-lg text-sm font-medium transition-colors',
+          hasActiveChild
+            ? 'bg-[#1a6cf0] text-white shadow-sm'
+            : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
+        )}
       >
         <span className="flex items-center gap-3 min-w-0">
           <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
@@ -130,7 +144,8 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
         </span>
         <ChevronDown
           className={cn(
-            'w-3.5 h-3.5 text-slate-400 transition-transform shrink-0',
+            'w-3.5 h-3.5 transition-transform shrink-0',
+            hasActiveChild ? 'text-white' : 'text-slate-400',
             expanded && 'rotate-180',
           )}
           strokeWidth={2}
@@ -138,16 +153,31 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
       </button>
 
       {expanded && item.children && (
-        <div className="pl-10 pr-2 py-1 space-y-1 text-xs">
+        <div className="mt-1 ml-4 pl-4 space-y-1 text-xs border-l border-slate-700/40">
           {item.children.map((child) => (
-            <Link
+            <NavLink
               key={child.path}
               to={child.path}
               onClick={onNavigate}
-              className="block py-1.5 text-slate-400 hover:text-white transition-colors"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center py-1.5 transition-colors',
+                  isActive ? 'text-white font-medium' : 'text-slate-400 hover:text-white',
+                )
+              }
             >
-              {child.label}
-            </Link>
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={cn(
+                      'w-1.5 h-1.5 rounded-full mr-2.5 shrink-0',
+                      isActive ? 'bg-[#1a6cf0]' : 'bg-transparent',
+                    )}
+                  />
+                  <span className="truncate">{child.label}</span>
+                </>
+              )}
+            </NavLink>
           ))}
         </div>
       )}
