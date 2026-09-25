@@ -8,6 +8,8 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { SendSmsPage } from './features/send-sms/SendSmsPage';
 import { PlaceholderPage } from './features/PlaceholderPage';
 import { SignupPage } from './features/auth/SignupPage';
+import { ContactsPage } from './features/contacts/ContactsPage';
+import { ContactGroupsPage } from './features/contacts/ContactGroupsPage';
 
 export default function App() {
   return (
@@ -27,7 +29,8 @@ export default function App() {
                 <Route path="/messaging/sms" element={<SendSmsPage />} />
                 <Route path="/messaging/bulk-sms" element={<PlaceholderPage title="Bulk SMS" />} />
                 <Route path="/messaging/sender-ids" element={<PlaceholderPage title="Sender IDs" />} />
-                <Route path="/contacts" element={<PlaceholderPage title="Contacts" />} />
+                <Route path="/contacts" element={<ContactsPage />} />
+                <Route path="/contacts/groups" element={<ContactGroupsPage />} />
                 <Route path="/services/data" element={<PlaceholderPage title="Data" />} />
                 <Route path="/services/airtime" element={<PlaceholderPage title="Airtime" />} />
                 <Route path="/wallet" element={<PlaceholderPage title="Wallet" />} />

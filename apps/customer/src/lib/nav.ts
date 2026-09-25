@@ -19,9 +19,9 @@ export interface NavChild {
 export interface NavItem {
   label: string;
   icon: LucideIcon;
-  path?: string; // leaf items
-  children?: NavChild[]; // expandable items
-  badge?: number; // notification badge
+  path?: string;
+  children?: NavChild[];
+  badge?: number;
 }
 
 export const navItems: NavItem[] = [
@@ -30,12 +30,19 @@ export const navItems: NavItem[] = [
     label: 'Messaging',
     icon: MessageSquare,
     children: [
-      { label: 'SMS', path: '/messaging/sms' },
+      { label: 'Send SMS', path: '/messaging/sms' },
       { label: 'Bulk SMS', path: '/messaging/bulk-sms' },
       { label: 'Sender IDs', path: '/messaging/sender-ids' },
     ],
   },
-  { label: 'Contacts', icon: Users, path: '/contacts' },
+  {
+    label: 'Contacts',
+    icon: Users,
+    children: [
+      { label: 'All Contacts', path: '/contacts' },
+      { label: 'Contact Groups', path: '/contacts/groups' },
+    ],
+  },
   {
     label: 'Services',
     icon: Store,
