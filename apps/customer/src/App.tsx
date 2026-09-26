@@ -15,6 +15,8 @@ import { ContactGroupsPage } from './features/contacts/ContactGroupsPage';
 import { PlaceholderPage } from './features/PlaceholderPage';
 import { WalletPage } from './features/wallet/WalletPage';
 import { ServicesPage } from './features/services/ServicesPage';
+import { RequestSenderIdPage } from './features/sender-ids/RequestSenderIdPage';
+import { SenderIdsPage } from './features/sender-ids/SenderIdsPage';
 
 export default function App() {
   return (
@@ -36,7 +38,8 @@ export default function App() {
                 <Route path="/messaging" element={<MessagingOverviewPage />} />
                 <Route path="/messaging/sms" element={<SendSmsPage />} />
                 <Route path="/messaging/bulk-sms" element={<PlaceholderPage title="Bulk SMS" />} />
-                <Route path="/messaging/sender-ids" element={<PlaceholderPage title="Sender IDs" />} />
+                <Route path="/messaging/sender-ids" element={<SenderIdsPage />} />
+                <Route path="/messaging/sender-ids/request" element={<RequestSenderIdPage />} />
                 <Route path="/messaging/campaigns" element={<CampaignsPage />} />
                 <Route path="/messaging/history" element={<MessageHistoryPage />} />
 
