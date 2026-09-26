@@ -17,10 +17,12 @@ import { WalletPage } from './features/wallet/WalletPage';
 import { ServicesPage } from './features/services/ServicesPage';
 import { RequestSenderIdPage } from './features/sender-ids/RequestSenderIdPage';
 import { SenderIdsPage } from './features/sender-ids/SenderIdsPage';
-import { AddFundsPage } from './features/wallet/AddFundsPage';
 import { TransactionsPage } from './features/transactions/TransactionsPage';
+import { AddFundsPage } from './features/wallet/AddFundsPage';
 import { ApiPage } from './features/api/ApiPage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
+import { SettingsPage } from './features/settings/SettingsPage';
+import { OrganisationProfilePage } from './features/settings/OrganisationProfilePage';
 
 export default function App() {
   return (
@@ -62,7 +64,8 @@ export default function App() {
                 <Route path="/transactions" element={<TransactionsPage />} />
                 <Route path="/api" element={<ApiPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/organisation" element={<OrganisationProfilePage />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Route>
