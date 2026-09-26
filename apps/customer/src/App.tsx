@@ -19,6 +19,8 @@ import { RequestSenderIdPage } from './features/sender-ids/RequestSenderIdPage';
 import { SenderIdsPage } from './features/sender-ids/SenderIdsPage';
 import { AddFundsPage } from './features/wallet/AddFundsPage';
 import { TransactionsPage } from './features/transactions/TransactionsPage';
+import { ApiPage } from './features/api/ApiPage';
+import { NotificationsPage } from './features/notifications/NotificationsPage';
 
 export default function App() {
   return (
@@ -58,8 +60,8 @@ export default function App() {
                 <Route path="/wallet" element={<WalletPage />} />
                 <Route path="/wallet/add-funds" element={<AddFundsPage />} />
                 <Route path="/transactions" element={<TransactionsPage />} />
-                <Route path="/api" element={<PlaceholderPage title="API & Integrations" />} />
-                <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />
+                <Route path="/api" element={<ApiPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Route>
