@@ -85,18 +85,20 @@ export function CustomerSidebar({
 
 function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const location = useLocation();
-  const hasActiveChild =
-    item.children?.some((c) => location.pathname === c.path) ?? false;
-  const [expanded, setExpanded] = useState(hasActiveChild);
+  const hasActiveChild = item.children?.some((c) => location.pathname === c.path) ?? false;
+  const isParentActive = item.path ? location.pathname === item.path : false;
+  const isHighlighted = hasActiveChild || isParentActive;
 
-  // Auto-expand the section when a child becomes active (e.g. on navigation)
+  const [expanded, setExpanded] = useState(isHighlighted);
+
   useEffect(() => {
-    if (hasActiveChild) setExpanded(true);
-  }, [hasActiveChild]);
+    if (isHighlighted) setExpanded(true);
+  }, [isHighlighted]);
 
   const Icon = item.icon;
 
-  if (item.path) {
+  // Leaf item — no children
+  if (item.path && !item.children) {
     return (
       <NavLink
         to={item.path}
@@ -111,10 +113,7 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
         }
       >
         <span className="flex items-center gap-3 min-w-0">
-          <Icon
-            className={cn('w-4 h-4 shrink-0', hasActiveChild && 'text-white')}
-            strokeWidth={2}
-          />
+          <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
           <span className="truncate">{item.label}</span>
         </span>
         {item.badge !== undefined && item.badge > 0 && (
@@ -126,31 +125,59 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
     );
   }
 
+  // Section with children
   return (
     <div className="pt-0.5">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
+      <div
         className={cn(
-          'w-full flex items-center justify-between px-3.5 py-2 rounded-lg text-sm font-medium transition-colors',
-          hasActiveChild
+          'flex items-center rounded-lg text-sm font-medium transition-colors',
+          isHighlighted
             ? 'bg-[#1a6cf0] text-white shadow-sm'
             : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
         )}
       >
-        <span className="flex items-center gap-3 min-w-0">
-          <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
-          <span className="truncate">{item.label}</span>
-        </span>
-        <ChevronDown
-          className={cn(
-            'w-3.5 h-3.5 transition-transform shrink-0',
-            hasActiveChild ? 'text-white' : 'text-slate-400',
-            expanded && 'rotate-180',
-          )}
-          strokeWidth={2}
-        />
-      </button>
+        {item.path ? (
+          <NavLink
+            to={item.path}
+            onClick={onNavigate}
+            className="flex-1 flex items-center gap-3 px-3.5 py-2.5 rounded-l-lg min-w-0"
+          >
+            <Icon
+              className={cn('w-4 h-4 shrink-0', isHighlighted && 'text-white')}
+              strokeWidth={2}
+            />
+            <span className="truncate">{item.label}</span>
+          </NavLink>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="flex-1 flex items-center gap-3 px-3.5 py-2.5 rounded-l-lg min-w-0 text-left"
+          >
+            <Icon
+              className={cn('w-4 h-4 shrink-0', isHighlighted && 'text-white')}
+              strokeWidth={2}
+            />
+            <span className="truncate">{item.label}</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="px-2.5 py-2.5 rounded-r-lg shrink-0"
+          aria-label={expanded ? 'Collapse section' : 'Expand section'}
+        >
+          <ChevronDown
+            className={cn(
+              'w-3.5 h-3.5 transition-transform',
+              isHighlighted ? 'text-white' : 'text-slate-400',
+              expanded && 'rotate-180',
+            )}
+            strokeWidth={2}
+          />
+        </button>
+      </div>
 
       {expanded && item.children && (
         <div className="mt-1 ml-4 pl-4 space-y-1 text-xs border-l border-slate-700/40">
