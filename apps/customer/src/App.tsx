@@ -18,7 +18,7 @@ import { ServicesPage } from './features/services/ServicesPage';
 import { RequestSenderIdPage } from './features/sender-ids/RequestSenderIdPage';
 import { SenderIdsPage } from './features/sender-ids/SenderIdsPage';
 import { AddFundsPage } from './features/wallet/AddFundsPage';
-import { AddFundsPage } from './features/wallet/AddFundsPage';
+import { TransactionsPage } from './features/transactions/TransactionsPage';
 
 export default function App() {
   return (
@@ -57,7 +57,7 @@ export default function App() {
                 {/* Other */}
                 <Route path="/wallet" element={<WalletPage />} />
                 <Route path="/wallet/add-funds" element={<AddFundsPage />} />
-                <Route path="/transactions" element={<PlaceholderPage title="Transactions" />} />
+                <Route path="/transactions" element={<TransactionsPage />} />
                 <Route path="/api" element={<PlaceholderPage title="API & Integrations" />} />
                 <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />
                 <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
