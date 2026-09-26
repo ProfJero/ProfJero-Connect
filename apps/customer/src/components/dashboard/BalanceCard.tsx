@@ -1,5 +1,6 @@
 import { Wallet, Mail, Clock, Plus } from 'lucide-react';
 import { balanceCard } from '../../mock/dashboard';
+import { Link } from 'react-router-dom';
 
 export function BalanceCard() {
   return (
@@ -20,10 +21,13 @@ export function BalanceCard() {
               Available Balance
             </span>
           </div>
-          <button className="bg-white hover:bg-blue-50 text-[#1a6cf0] font-semibold px-3 py-1.5 rounded-lg text-xs shadow-sm flex items-center gap-1 transition-all">
+          <Link
+            to="/wallet/add-funds"
+            className="bg-white hover:bg-blue-50 text-[#1a6cf0] font-semibold px-3 py-1.5 rounded-lg text-xs shadow-sm flex items-center gap-1 transition-all"
+          >
             <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
             <span>Add Funds</span>
-          </button>
+          </Link>
         </div>
 
         <div className="mt-4">

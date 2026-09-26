@@ -43,10 +43,13 @@ export function BalanceCard() {
 
       {/* Actions */}
       <div className="grid grid-cols-2 gap-3 mt-6">
-        <button className="bg-[#1a6cf0] hover:bg-[#155cd0] text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition">
-          <Plus className="w-4 h-4" strokeWidth={2.5} />
-          <span>Add Funds</span>
-        </button>
+        <Link
+            to="/wallet/add-funds"
+            className="bg-[#1a6cf0] hover:bg-[#155cd0] text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition"
+        >
+            <Plus className="w-4 h-4" strokeWidth={2.5} />
+            <span>Add Funds</span>
+            </Link>
         <Link
           to="/transactions"
           className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition"

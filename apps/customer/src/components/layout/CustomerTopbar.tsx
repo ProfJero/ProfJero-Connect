@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Search,
   Bell,
@@ -66,7 +66,10 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
           </span>
         </button>
 
-        <button className="hidden md:flex items-center gap-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+        <Link
+          to="/wallet/add-funds"
+          className="hidden md:flex items-center gap-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        >
           <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
             <Wallet className="w-3.5 h-3.5" strokeWidth={2} />
           </div>
@@ -76,7 +79,7 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
               Wallet Balance <span className="text-blue-600 dark:text-blue-400 font-semibold">→</span>
             </div>
           </div>
-        </button>
+        </Link>
 
         <button className="hidden lg:flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs text-slate-700 dark:text-slate-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
           <Building2 className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={2} />
