@@ -47,6 +47,7 @@ export const navItems: NavItem[] = [
   {
     label: 'Services',
     icon: Store,
+    path: '/services',
     children: [
       { label: 'Data', path: '/services/data' },
       { label: 'Airtime', path: '/services/airtime' },

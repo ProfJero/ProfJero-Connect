@@ -14,6 +14,7 @@ import { ContactsPage } from './features/contacts/ContactsPage';
 import { ContactGroupsPage } from './features/contacts/ContactGroupsPage';
 import { PlaceholderPage } from './features/PlaceholderPage';
 import { WalletPage } from './features/wallet/WalletPage';
+import { ServicesPage } from './features/services/ServicesPage';
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
                 <Route path="/contacts/groups" element={<ContactGroupsPage />} />
 
                 {/* Services */}
+                <Route path="/services" element={<ServicesPage />} />
                 <Route path="/services/data" element={<PlaceholderPage title="Data" />} />
                 <Route path="/services/airtime" element={<PlaceholderPage title="Airtime" />} />
 
