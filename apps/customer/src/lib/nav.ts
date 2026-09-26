@@ -32,7 +32,6 @@ export const navItems: NavItem[] = [
     path: '/messaging',
     children: [
       { label: 'Send SMS', path: '/messaging/sms' },
-      { label: 'Bulk SMS', path: '/messaging/bulk-sms' },
       { label: 'Sender IDs', path: '/messaging/sender-ids' },
     ],
   },

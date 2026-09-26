@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Megaphone, Clock } from 'lucide-react';
+import { LayoutDashboard, Send, AtSign, Megaphone, Clock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const TABS = [
   { label: 'Overview', path: '/messaging', icon: LayoutDashboard, end: true },
+  { label: 'Send SMS', path: '/messaging/sms', icon: Send, end: false },
+  { label: 'Sender IDs', path: '/messaging/sender-ids', icon: AtSign, end: false },
   { label: 'Campaigns', path: '/messaging/campaigns', icon: Megaphone, end: false },
   { label: 'Message History', path: '/messaging/history', icon: Clock, end: false },
 ];
@@ -11,7 +13,7 @@ const TABS = [
 export function MessagingTabs() {
   return (
     <section className="border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
-      <nav className="flex gap-8 text-xs font-semibold whitespace-nowrap">
+      <nav className="flex gap-6 sm:gap-8 text-xs font-semibold whitespace-nowrap">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           return (

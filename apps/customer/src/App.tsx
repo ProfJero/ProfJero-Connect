@@ -43,7 +43,7 @@ export default function App() {
                 {/* Messaging */}
                 <Route path="/messaging" element={<MessagingOverviewPage />} />
                 <Route path="/messaging/sms" element={<SendSmsPage />} />
-                <Route path="/messaging/bulk-sms" element={<PlaceholderPage title="Bulk SMS" />} />
+                <Route path="/messaging/bulk-sms" element={<Navigate to="/messaging/sms" replace />} />
                 <Route path="/messaging/sender-ids" element={<SenderIdsPage />} />
                 <Route path="/messaging/sender-ids/request" element={<RequestSenderIdPage />} />
                 <Route path="/messaging/campaigns" element={<CampaignsPage />} />
