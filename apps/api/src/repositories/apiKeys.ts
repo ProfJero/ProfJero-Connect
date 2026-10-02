@@ -3,6 +3,7 @@ import {
   firestoreGetDoc,
   firestoreQuery,
   firestoreUpdateDoc,
+  runTransaction,
 } from '../lib/firestore';
 import {
   generateApiKey,
@@ -92,24 +93,16 @@ export async function findApiKeysByPrefix(
 
 // ---------- Secret keys (existing behaviour) ----------
 
-export async function createApiKey(
-  env: Env,
-  projectId: string,
-  name: string,
-  adminUid: string,
-): Promise<ApiKeyWithSecret> {
-  const generated = await generateApiKey();
-  const now = new Date().toISOString();
-
-  const doc = await firestoreCreateDoc(env, COLLECTION, {
+function secretKeyFields(projectId: string, name: string, createdBy: string, prefix: string, hash: string) {
+  return {
     projectId,
     name,
     kind: 'secret',
-    keyPrefix: generated.prefix,
-    keyHash: generated.hash,
+    keyPrefix: prefix,
+    keyHash: hash,
     status: 'active',
-    createdAt: now,
-    createdBy: adminUid,
+    createdAt: new Date().toISOString(),
+    createdBy,
     revokedAt: null,
     revokedBy: null,
     lastUsedAt: null,
@@ -128,10 +121,56 @@ export async function createApiKey(
     rateHourCount: 0,
     rateDayBucket: null,
     rateDayCount: 0,
-  });
+  };
+}
 
+export async function createApiKey(
+  env: Env,
+  projectId: string,
+  name: string,
+  adminUid: string,
+): Promise<ApiKeyWithSecret> {
+  const generated = await generateApiKey();
+  const doc = await firestoreCreateDoc(
+    env,
+    COLLECTION,
+    secretKeyFields(projectId, name, adminUid, generated.prefix, generated.hash),
+  );
   const apiKey = parseApiKey(doc.id, doc.data);
   return { ...apiKey, plaintext: generated.plaintext };
+}
+
+/**
+ * Create a secret key only if the project has fewer than `maxActive`
+ * active keys — atomically. A per-project lock document is written in the
+ * same commit as the key, so concurrent requests serialize: the loser's
+ * commit fails its precondition, retries, and re-counts. Returns null when
+ * the cap is reached.
+ */
+export async function createApiKeyCapped(
+  env: Env,
+  projectId: string,
+  name: string,
+  createdBy: string,
+  maxActive: number,
+): Promise<ApiKeyWithSecret | null> {
+  return runTransaction(env, async (txn) => {
+    const lockId = `apikeys__${projectId}`;
+    const lock = await txn.get('locks', lockId);
+    const active = (await listApiKeysForProject(env, projectId)).filter((k) => k.status === 'active');
+    if (active.length >= maxActive) return null;
+
+    const generated = await generateApiKey();
+    const id = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+    const fields = secretKeyFields(projectId, name, createdBy, generated.prefix, generated.hash);
+    txn.write({ path: `${COLLECTION}/${id}`, fields, precondition: { exists: false } });
+    txn.write({
+      path: `locks/${lockId}`,
+      fields: { kind: 'apiKeys', projectId, updatedAt: fields.createdAt },
+      precondition: lock?.updateTime ? { updateTime: lock.updateTime } : { exists: false },
+    });
+    return { ...parseApiKey(id, fields), plaintext: generated.plaintext };
+  });
 }
 
 // ---------- Publishable keys ----------

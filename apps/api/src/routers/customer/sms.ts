@@ -22,11 +22,11 @@ import {
   requireIdempotencyKey,
   scopedId,
 } from './helpers';
+import { durableLimit } from '../../lib/rateLimit';
+import { getSettings } from '../../services/settings';
 import type { AuthVariables, Env } from '../../types/env';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
-
-const MAX_RECIPIENTS = 1000;
 
 /**
  * Customer-safe batch projection. `source` tells the dashboard apart from
@@ -95,12 +95,20 @@ router.post('/sms/send', async (c) => {
   // groups whose membership has since changed.
   const existing = await getBatch(c.env, batchId);
   if (existing) {
+    // Same key must mean the same request (api.md §7).
+    if (existing.message !== body.message || existing.senderId !== body.senderId) {
+      throw new HTTPException(409, { message: 'This Idempotency-Key was already used for a different message.' });
+    }
     const records = await listRecordsForBatch(c.env, batchId);
     return c.json(
       { batch: toCustomerBatch(existing), records: records.map(toCustomerRecord) },
       200,
     );
   }
+
+  const settings = await getSettings(c.env);
+  const MAX_RECIPIENTS = settings.sms.maxRecipientsPerSend;
+  await durableLimit(c.env, `send:${projectId}`, settings.security.customerSendsPerMinute, 60, 'sends');
 
   const invalid: string[] = [];
   const phones: string[] = [];

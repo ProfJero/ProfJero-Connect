@@ -15,6 +15,9 @@ export function errorHandler(err: Error, c: Context): Response {
 
   // Explicit HTTP errors (thrown by routers with HTTPException) — pass through.
   if (err instanceof HTTPException) {
+    // Rate limits attach Retry-After on err.res; keep it.
+    const retryAfter = err.res?.headers.get('Retry-After');
+    if (retryAfter) c.header('Retry-After', retryAfter);
     return c.json<ApiErrorBody>(
       {
         error: {

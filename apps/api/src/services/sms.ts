@@ -11,6 +11,7 @@ import {
   updateRecord,
 } from '../repositories/sms';
 import { getSmsProvider } from '../providers';
+import { getProject } from '../repositories/projects';
 import { assertSenderIdAllowed } from './senderIds';
 import { getSegmentInfo } from '@profjero/shared';
 import { DomainError } from '../lib/domainError';
@@ -63,10 +64,33 @@ export async function sendSmsBatch(
   const existing = await getBatch(env, batchId);
   if (existing) {
     const records = await listRecordsForBatch(env, batchId);
+    // api.md §7: same key + different body → 409. Recipients are compared
+    // as a set; records may be incomplete if the first attempt crashed
+    // mid-creation, so only compare when the counts line up.
+    const sameRecipients =
+      records.length !== existing.totalRecipients ||
+      sameSet(records.map((r) => r.recipient), args.recipients);
+    if (
+      existing.projectId !== args.projectId ||
+      existing.message !== args.message ||
+      existing.senderId !== args.senderId ||
+      !sameRecipients
+    ) {
+      throw new DomainError('This Idempotency-Key was already used with a different request.', 409);
+    }
     return { batch: existing, records, replayed: true };
   }
 
-    // ---- Step 1.5: Sender ID authorization ----
+  // ---- Step 1.2: the project must be allowed to send ----
+  // Suspending a project in the admin dashboard has to stop sending from
+  // every surface (API keys, customer app, admin), not just hide it.
+  const project = await getProject(env, args.projectId);
+  if (!project) throw new DomainError('Project not found.', 404);
+  if (project.status !== 'active') {
+    throw new DomainError(`This project is ${project.status}; sending is disabled. Contact support.`, 403);
+  }
+
+  // ---- Step 1.5: Sender ID authorization ----
   // Runs before any wallet reservation. If the sender isn't approved for
   // this project, we fail cleanly with no side effects.
   if (!args.senderId) {
@@ -88,7 +112,9 @@ export async function sendSmsBatch(
   const segmentInfo = getSegmentInfo(args.message);
   const unitsPerMessage = segmentInfo.segmentCount;
 
-  const { batch, records } = await createBatchWithRecords(env, {
+  let created: Awaited<ReturnType<typeof createBatchWithRecords>>;
+  try {
+    created = await createBatchWithRecords(env, {
     batchId,
     projectId: args.projectId,
     apiKeyId: args.apiKeyId,
@@ -100,6 +126,23 @@ export async function sendSmsBatch(
     messageEncoding: segmentInfo.encoding,
     messageSegments: segmentInfo.segmentCount,
   });
+  } catch (err) {
+    // A concurrent request with the same Idempotency-Key created the batch
+    // between our existence check and this create. That request owns the
+    // send; this one is a replay of it.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('(409)') || msg.includes('ALREADY_EXISTS')) {
+      const winner = await getBatch(env, batchId);
+      if (winner) {
+        if (winner.projectId !== args.projectId || winner.message !== args.message || winner.senderId !== args.senderId) {
+          throw new DomainError('This Idempotency-Key was already used with a different request.', 409);
+        }
+        return { batch: winner, records: await listRecordsForBatch(env, batchId), replayed: true };
+      }
+    }
+    throw err;
+  }
+  const { batch, records } = created;
 
   const totalUnits = args.recipients.length * unitsPerMessage;
 
@@ -295,4 +338,11 @@ async function maybeNotifyLowBalance(
     link: '/wallet/add-funds',
     email: true,
   });
+}
+function sameSet(a: string[], b: string[]): boolean {
+  const sa = new Set(a);
+  const sb = new Set(b);
+  if (sa.size !== sb.size) return false;
+  for (const x of sa) if (!sb.has(x)) return false;
+  return true;
 }

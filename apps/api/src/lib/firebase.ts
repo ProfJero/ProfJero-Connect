@@ -182,3 +182,94 @@ export async function setCustomUserClaims(
 export async function setCustomerClaim(env: Env, uid: string): Promise<void> {
   return setCustomUserClaims(env, uid, { customer: true });
 }
+// ─────────────────────────────────────────────────────────────────────
+// Firebase Auth admin operations used by Settings → Team
+// ─────────────────────────────────────────────────────────────────────
+
+async function identityToolkit<T>(
+  env: Env,
+  path: string,
+  body: Record<string, unknown>,
+): Promise<T> {
+  const accessToken = await getAuthAccessToken(env);
+  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    // Firebase puts a code like EMAIL_EXISTS in error.message.
+    let code = `HTTP_${res.status}`;
+    try {
+      code = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? code;
+    } catch {
+      /* keep HTTP code */
+    }
+    throw new Error(`identitytoolkit ${path} failed: ${code}`);
+  }
+  return (text ? JSON.parse(text) : {}) as T;
+}
+
+export interface AuthUserRecord {
+  uid: string;
+  email: string | null;
+  disabled: boolean;
+}
+
+/** Find a Firebase Auth user by email, or null. */
+export async function lookupAuthUserByEmail(
+  env: Env,
+  email: string,
+): Promise<AuthUserRecord | null> {
+  const res = await identityToolkit<{ users?: Array<{ localId: string; email?: string; disabled?: boolean }> }>(
+    env,
+    `projects/${env.FIREBASE_PROJECT_ID}/accounts:lookup`,
+    { email: [email] },
+  );
+  const u = res.users?.[0];
+  return u ? { uid: u.localId, email: u.email ?? null, disabled: !!u.disabled } : null;
+}
+
+/**
+ * Create a Firebase Auth user with no usable password. The person sets
+ * their own password through the link from generatePasswordSetupLink.
+ */
+export async function createAuthUser(
+  env: Env,
+  args: { email: string; displayName: string },
+): Promise<AuthUserRecord> {
+  const res = await identityToolkit<{ localId: string; email?: string }>(
+    env,
+    `projects/${env.FIREBASE_PROJECT_ID}/accounts`,
+    { email: args.email, displayName: args.displayName, emailVerified: false },
+  );
+  return { uid: res.localId, email: res.email ?? args.email, disabled: false };
+}
+
+/** Disable/enable sign-in. Disabling also invalidates refresh tokens. */
+export async function setAuthUserDisabled(
+  env: Env,
+  uid: string,
+  disabled: boolean,
+): Promise<void> {
+  await identityToolkit(env, `projects/${env.FIREBASE_PROJECT_ID}/accounts:update`, {
+    localId: uid,
+    disableUser: disabled,
+    ...(disabled ? { validSince: String(Math.floor(Date.now() / 1000)) } : {}),
+  });
+}
+
+/** Password reset link (also used as the "set your password" invite). */
+export async function generatePasswordSetupLink(env: Env, email: string): Promise<string> {
+  const res = await identityToolkit<{ oobLink?: string }>(
+    env,
+    `projects/${env.FIREBASE_PROJECT_ID}/accounts:sendOobCode`,
+    { requestType: 'PASSWORD_RESET', email, returnOobLink: true },
+  );
+  if (!res.oobLink) throw new Error('identitytoolkit did not return a reset link');
+  return res.oobLink;
+}

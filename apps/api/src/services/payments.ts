@@ -57,6 +57,12 @@ export async function initiatePayment(
       if (existing.projectId !== args.projectId || !existing.authorizationUrl) {
         throw new DomainError('Payment reference conflict.', 409);
       }
+      const samePurchase = args.packageId
+        ? existing.packageId === args.packageId
+        : existing.packageId === null && existing.units === args.units;
+      if (!samePurchase) {
+        throw new DomainError('This Idempotency-Key was already used for a different purchase.', 409);
+      }
       return { payment: existing, authorizationUrl: existing.authorizationUrl };
     }
   }

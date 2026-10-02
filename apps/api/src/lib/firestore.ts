@@ -1,5 +1,6 @@
 import { importPKCS8, SignJWT } from 'jose';
 import type { Env } from '../types/env';
+import { DomainError } from './domainError';
 
 // ---------- OAuth2 access token ----------
 
@@ -166,6 +167,29 @@ function docFromFs(doc: FsDocument): FirestoreDoc {
   };
 }
 
+// ---------- Document ID safety ----------
+
+/**
+ * Firestore's own document-ID rules, enforced before any request. IDs often
+ * come from URLs and request bodies; a "/" or ".." would otherwise let a
+ * caller address a different collection (e.g. packageId="../../admins/x").
+ */
+export function isValidDocId(id: string): boolean {
+  return (
+    typeof id === 'string' &&
+    id.length > 0 &&
+    id.length <= 1500 &&
+    !id.includes('/') &&
+    id !== '.' &&
+    id !== '..' &&
+    !/^__.*__$/.test(id)
+  );
+}
+
+function assertDocId(id: string): void {
+  if (!isValidDocId(id)) throw new DomainError('Not found.', 404);
+}
+
 // ---------- Simple operations (non-transactional) ----------
 
 export async function firestoreGetDoc(
@@ -173,6 +197,7 @@ export async function firestoreGetDoc(
   collection: string,
   docId: string,
 ): Promise<FirestoreDoc | null> {
+  if (!isValidDocId(docId)) return null;
   const res = await fsFetch(
     env,
     baseUrl(env, `${collection}/${encodeURIComponent(docId)}`),
@@ -217,7 +242,10 @@ export async function firestoreCreateDoc(
   opts: { docId?: string } = {},
 ): Promise<FirestoreDoc> {
   const url = new URL(baseUrl(env, collection));
-  if (opts.docId) url.searchParams.set('documentId', opts.docId);
+  if (opts.docId) {
+    if (!isValidDocId(opts.docId)) throw new DomainError('Invalid identifier.', 400);
+    url.searchParams.set('documentId', opts.docId);
+  }
 
   const res = await fsFetch(env, url.toString(), {
     method: 'POST',
@@ -238,6 +266,7 @@ export async function firestoreUpdateDoc(
   docId: string,
   data: Record<string, unknown>,
 ): Promise<FirestoreDoc> {
+  assertDocId(docId);
   const url = new URL(
     baseUrl(env, `${collection}/${encodeURIComponent(docId)}`),
   );
@@ -263,6 +292,7 @@ export async function firestoreDeleteDoc(
   collection: string,
   docId: string,
 ): Promise<void> {
+  if (!isValidDocId(docId)) return;
   const res = await fsFetch(
     env,
     baseUrl(env, `${collection}/${encodeURIComponent(docId)}`),
@@ -402,6 +432,7 @@ async function getDocInTransaction(
   collection: string,
   docId: string,
 ): Promise<FirestoreDoc | null> {
+  if (!isValidDocId(docId)) return null;
   const token = await getFirestoreAccessToken(env);
   const url = new URL(
     baseUrl(env, `${collection}/${encodeURIComponent(docId)}`),

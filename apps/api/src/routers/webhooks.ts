@@ -8,7 +8,9 @@ import {
   markPaymentSuccessful,
 } from '../services/payments';
 import { verifyPaystackSignature } from '../providers/paystackClient';
+import { getPaymentByReference } from '../repositories/payments';
 import { notifyProject } from '../services/notifications';
+import { timingSafeEqual } from '../services/apiKeys';
 import type { Env } from '../types/env';
 
 export const webhooksRouter = new Hono<{ Bindings: Env }>();
@@ -18,6 +20,15 @@ export const webhooksRouter = new Hono<{ Bindings: Env }>();
 // =================================================================
 
 webhooksRouter.post('/arkesel', async (c) => {
+  // The provider doesn't sign callbacks; a shared token in the callback
+  // URL stops anyone else from marking messages delivered/failed (which
+  // would charge or refund units).
+  const secret = c.env.ARKESEL_WEBHOOK_SECRET;
+  if (secret && !timingSafeEqual(c.req.query('token') ?? '', secret)) {
+    console.warn('[arkesel webhook] rejected: bad or missing token');
+    return c.json({ ok: false, reason: 'unauthorized' }, 401);
+  }
+
   const smsId = c.req.query('sms_id');
   const rawStatus = c.req.query('status');
 
@@ -133,6 +144,26 @@ webhooksRouter.post('/paystack', async (c) => {
 
   try {
     if (event === 'charge.success') {
+      // The signature proves the gateway sent this, but we still check it
+      // is the charge we asked for: same amount and currency. A mismatch is
+      // never credited — it's held for an operator to look at.
+      const payment = await getPaymentByReference(c.env, reference);
+      if (payment && !payment.walletCreditedAt) {
+        const paidAmount = Number(data.amount);
+        const paidCurrency = String(data.currency ?? payment.currency).toUpperCase();
+        if (paidAmount !== payment.amountPesewas || paidCurrency !== payment.currency) {
+          console.error(
+            `[paystack webhook] amount mismatch for ${reference}: expected ${payment.amountPesewas} ${payment.currency}, got ${data.amount} ${data.currency}`,
+          );
+          await markPaymentFailed(
+            c.env,
+            reference,
+            `Amount mismatch: expected ${payment.amountPesewas} ${payment.currency}, gateway reported ${data.amount} ${data.currency}. Not credited — needs review.`,
+            payload,
+          );
+          return c.json({ ok: false, reference, reason: 'amount_mismatch' });
+        }
+      }
       const result = await markPaymentSuccessful(c.env, reference, payload);
       return c.json({
         ok: true,

@@ -4,6 +4,10 @@ import { RegisterCustomerRequestSchema } from '@profjero/shared';
 import { verifyFirebaseIdToken } from '../../lib/firebase';
 import { setCustomerClaim } from '../../lib/firebase';
 import { createCustomerAndProject } from '../../services/customerService';
+import { getSettings } from '../../services/settings';
+import { notifyAdmins } from '../../services/adminNotify';
+import { durableLimit } from '../../lib/rateLimit';
+import { firestoreGetDoc } from '../../lib/firestore';
 import type { AuthVariables, Env } from '../../types/env';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
@@ -53,13 +57,44 @@ router.post('/register', async (c) => {
     });
   }
 
+  // Admin and customer are separate surfaces: an operator's Firebase
+  // account can't also become a tenant.
+  if (await firestoreGetDoc(c.env, 'admins', verified.uid)) {
+    throw new HTTPException(403, { message: 'This account is an administrator account and cannot register as a customer.' });
+  }
+
+  const settings = await getSettings(c.env);
+  const existing = await firestoreGetDoc(c.env, 'customers', verified.uid);
+  if (!existing) {
+    if (!settings.security.customerSignupsEnabled) {
+      return c.json(
+        { error: { code: 'signups_closed', message: 'New sign-ups are paused right now. Please try again later.', requestId: c.get('requestId') } },
+        403,
+      );
+    }
+    // Account creation is cheap to abuse; cap it per network address.
+    const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
+    await durableLimit(c.env, `register:${ip}`, 10, 3600, 'sign-ups from this network');
+  }
+
   const result = await createCustomerAndProject(c.env, {
     uid: verified.uid,
     email: verified.email ?? '',
     displayName: parsed.data.displayName,
     organisationName: parsed.data.organisationName,
     phone: parsed.data.phone,
+    starterUnits: settings.sms.starterUnits,
+    lowBalanceThreshold: settings.sms.defaultLowBalanceThreshold,
   });
+
+  if (result.isNew) {
+    await notifyAdmins(
+      c.env,
+      'emailOnNewCustomer',
+      `New customer: ${result.projectName}`,
+      `${result.customer.displayName} (${result.customer.email}) signed up as "${result.projectName}". Project ID: ${result.projectId}.`,
+    );
+  }
 
   // Set the claim AFTER the doc exists. Self-healing: if this call fails,
   // the next call to /customer/register will see the existing doc and

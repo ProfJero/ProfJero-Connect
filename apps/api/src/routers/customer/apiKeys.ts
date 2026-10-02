@@ -2,13 +2,14 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { CustomerCreateApiKeySchema, type ApiKey } from '@profjero/shared';
 import {
-  createApiKey,
+  createApiKeyCapped,
   getApiKeyById,
   listApiKeysForProject,
   revokeApiKey,
 } from '../../repositories/apiKeys';
 import { notifyProject } from '../../services/notifications';
 import { parseBody } from './helpers';
+import { durableLimit } from '../../lib/rateLimit';
 import type { AuthVariables, Env } from '../../types/env';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
@@ -47,15 +48,14 @@ router.post('/api-keys', async (c) => {
   const customer = c.get('customer')!;
   const projectId = c.get('projectId')!;
   const { name } = await parseBody(c, CustomerCreateApiKeySchema);
+  await durableLimit(c.env, `apikey:${projectId}`, 10, 3600, 'API keys created');
 
-  const existing = await listApiKeysForProject(c.env, projectId);
-  if (existing.filter((k) => k.status === 'active').length >= MAX_ACTIVE_KEYS) {
+  const key = await createApiKeyCapped(c.env, projectId, name, `customer:${customer.uid}`, MAX_ACTIVE_KEYS);
+  if (!key) {
     throw new HTTPException(409, {
       message: `You can have at most ${MAX_ACTIVE_KEYS} active API keys. Revoke one you no longer use first.`,
     });
   }
-
-  const key = await createApiKey(c.env, projectId, name, `customer:${customer.uid}`);
   await notifyProject(c.env, {
     projectId,
     type: 'api_key',
