@@ -2,7 +2,12 @@
 
 _Last updated: 2026-09-24. Read this alongside `docs/state.md`. State.md
 covers the admin dashboard (built). This doc covers the customer platform
-(not yet built) — the second product surface._
+— the second product surface._
+
+> **Status 2026-10-02:** CP1–CP7 are built (auth, dashboard, purchase,
+> send, history, Sender ID requests, notifications), plus contacts/groups
+> and self-service API keys, which the operator moved into v1 (overriding
+> §9). Implementation notes and the deploy checklist: `docs/state.md` §14.
 
 ---
 

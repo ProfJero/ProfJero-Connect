@@ -28,6 +28,7 @@ apps/api/.dev.vars
 .wrangler/
 apps/api/.wrangler/
 .dev.vars.*
+!.dev.vars.example
 
 # ── Firebase ─────────────────────────────────────────────────
 .firebase/

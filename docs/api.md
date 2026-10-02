@@ -440,9 +440,11 @@ pending	Requested, awaiting admin approval
 approved	Usable in POST /v1/sms/send
 rejected	Request was denied. See notes for reason.
 revoked	Previously approved, since withdrawn by admin
-To request a new Sender ID: there is no public endpoint for this in
-v1. Requests are made through the admin dashboard. A client-facing request
-endpoint will be added in the customer platform milestone.
+To request a new Sender ID: there is no /v1 endpoint for this.
+Customers request Sender IDs from the customer platform (Messaging →
+Sender IDs), which calls POST /customer/sender-ids; integrators without
+a customer login ask the operator. Either way the request lands in the
+admin approval queue. See docs/state.md §14 for the /customer/* surface.
 
 Pricing (public)
 GET /v1/pricing
@@ -599,6 +601,7 @@ have 160 (single segment) or 153 per segment (split).
 
 9. Changelog
 Date	Change
+2026-10-02	Customers can create/revoke their own secret keys in the customer platform (API & Integrations). /v1 behaviour unchanged.
 2026-09-26	Initial public API reference.
 2026-09-23	GET /v1/pricing added.
 2026-09-21	Delivery webhooks + polling added.
