@@ -1,13 +1,18 @@
 import { ShieldCheck, Check, Eye, Info } from 'lucide-react';
+import { usePlatformConfig } from '../../lib/account';
 
-const senderIdRequirements = [
+const baseRequirements = [
   { title: 'Maximum 11 characters', description: 'Letters, numbers and spaces only — spaces count toward the limit.' },
   { title: 'Must represent your business or organisation', description: 'Use a name that clearly identifies who the message is from.' },
   { title: 'Cannot impersonate another organisation', description: 'Names of banks, telcos, government agencies or other brands you don\'t own are rejected.' },
-  { title: 'Approval is required before use', description: 'Each request is registered with the networks, usually within 1 business day.' },
 ];
 
 export function RequirementsCard() {
+  const { senderIdReviewSla } = usePlatformConfig();
+  const senderIdRequirements = [
+    ...baseRequirements,
+    { title: 'Approval is required before use', description: `Each request is registered with the networks; this usually takes ${senderIdReviewSla}.` },
+  ];
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs p-5 sm:p-6">
       <div className="flex items-center gap-2.5 mb-5">

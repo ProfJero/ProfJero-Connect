@@ -3,7 +3,7 @@ import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ChevronDown, LifeBuoy, ExternalLink, X } from 'lucide-react';
 import { navItems, type NavItem } from '../../lib/nav';
 import { useAccount } from '../../lib/account';
-import { SUPPORT_EMAIL } from '../../lib/config';
+import { usePlatformConfig } from '../../lib/account';
 import { cn } from '../../lib/utils';
 
 export function CustomerSidebar({
@@ -13,6 +13,7 @@ export function CustomerSidebar({
   open?: boolean;
   onClose?: () => void;
 }) {
+  const { supportEmail } = usePlatformConfig();
   return (
     <>
       <div
@@ -70,15 +71,15 @@ export function CustomerSidebar({
               <div>
                 <h4 className="text-white font-semibold text-xs leading-snug">Need help?</h4>
                 <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
-                  {SUPPORT_EMAIL
-                    ? `Email us at ${SUPPORT_EMAIL} and we'll get back to you.`
+                  {supportEmail
+                    ? `Email us at ${supportEmail} and we'll get back to you.`
                     : 'See the API guide or reply to any email from us.'}
                 </p>
               </div>
             </div>
-            {SUPPORT_EMAIL ? (
+            {supportEmail ? (
               <a
-                href={`mailto:${SUPPORT_EMAIL}`}
+                href={`mailto:${supportEmail}`}
                 className="mt-3 w-full py-1.5 px-3 bg-slate-800/80 hover:bg-slate-700/80 text-white rounded-lg border border-slate-700 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors"
               >
                 <span>Contact Support</span>

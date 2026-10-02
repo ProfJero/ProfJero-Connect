@@ -8,12 +8,10 @@ import { SendResult } from '../../components/send-sms/SendResult';
 import { ErrorState, SkeletonRows } from '../../components/ui/States';
 import { api, errorMessage, newIdempotencyKey } from '../../lib/api';
 import { useApi } from '../../lib/useApi';
-import { useRefreshAccount, useWallet } from '../../lib/account';
+import { usePlatformConfig, useRefreshAccount, useWallet } from '../../lib/account';
 import { parsePhoneList } from '../../lib/phone';
 import { emptyRecipients, summarizeRecipients, type RecipientDraft } from '../../lib/recipients';
 import type { BatchWithRecords, ContactGroup, CustomerSenderId } from '../../lib/types';
-
-const MAX_RECIPIENTS = 1000;
 
 /**
  * CP4 — compose and send. Uses the same reserve → send → confirm/release
@@ -21,6 +19,7 @@ const MAX_RECIPIENTS = 1000;
  * calculator, the same code the server bills with.
  */
 export function SendSmsPage() {
+  const { maxRecipientsPerSend } = usePlatformConfig();
   const senderIds = useApi<{ senderIds: CustomerSenderId[] }>('/customer/sender-ids');
   const groupsRes = useApi<{ groups: ContactGroup[] }>('/customer/contact-groups');
   const { data: wallet } = useWallet();
@@ -56,8 +55,8 @@ export function SendSmsPage() {
   if (summary.count === 0) blockers.push('Add at least one recipient.');
   if (summary.invalidManual.length > 0) blockers.push('Fix or remove the invalid phone numbers.');
   if (!message.trim()) blockers.push('Write a message.');
-  if (summary.count > MAX_RECIPIENTS && !summary.isUpperBound)
-    blockers.push(`Up to ${MAX_RECIPIENTS.toLocaleString()} recipients per send — split your list.`);
+  if (summary.count > maxRecipientsPerSend && !summary.isUpperBound)
+    blockers.push(`Up to ${maxRecipientsPerSend.toLocaleString()} recipients per send — split your list.`);
   if (balance !== null && !summary.isUpperBound && units > balance) blockers.push('Top up your wallet to cover this send.');
 
   const touch = <T,>(setter: (v: T) => void) => (v: T) => {

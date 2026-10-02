@@ -10,7 +10,7 @@ import { ErrorState, Notice, SkeletonRows, Spinner } from '../../components/ui/S
 import { inputClass } from '../../components/ui/buttons';
 import { api, errorMessage, newIdempotencyKey } from '../../lib/api';
 import { useApi } from '../../lib/useApi';
-import { useWallet } from '../../lib/account';
+import { usePlatformConfig, useWallet } from '../../lib/account';
 import { formatGhs } from '../../lib/format';
 import { cn } from '../../lib/utils';
 import type { CustomerPayment, PricingCatalog, PricingPackage } from '../../lib/types';
@@ -26,6 +26,7 @@ type Selection = { kind: 'package'; pkg: PricingPackage } | { kind: 'custom' };
 export function AddFundsPage() {
   const pricing = useApi<PricingCatalog>('/v1/pricing');
   const { data: wallet } = useWallet();
+  const { topupsEnabled, topupsDisabledMessage } = usePlatformConfig();
   const sms = pricing.data?.services.find((s) => s.service === 'sms') ?? null;
   const packages = useMemo(
     () => [...(sms?.packages ?? [])].sort((a, b) => a.displayOrder - b.displayOrder || a.priceGhs - b.priceGhs),
@@ -109,6 +110,12 @@ export function AddFundsPage() {
             Buy units for your wallet. 1 unit sends one SMS page to one recipient.
           </p>
         </div>
+
+        {!topupsEnabled && (
+          <Notice tone="warning" className="mb-6">
+            {topupsDisabledMessage ?? 'Top-ups are temporarily unavailable. Please try again later.'}
+          </Notice>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           <div className="lg:col-span-7 space-y-7">
@@ -218,7 +225,7 @@ export function AddFundsPage() {
 
             <button
               onClick={handleContinue}
-              disabled={!summary || submitting}
+              disabled={!summary || submitting || !topupsEnabled}
               className="w-full bg-[#1a6cf0] hover:bg-[#155cd0] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 shadow-xs transition text-xs tracking-wide disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (

@@ -12,6 +12,7 @@ import { formatDateTime } from '../../lib/format';
 import { SENDER_ID_STATUS } from '../../lib/statusLabels';
 import { cn } from '../../lib/utils';
 import type { CustomerSenderId, SenderIdStatus } from '../../lib/types';
+import { usePlatformConfig } from '../../lib/account';
 
 const FILTERS: Array<{ id: SenderIdStatus | 'all'; label: string }> = [
   { id: 'all', label: 'All' },
@@ -22,6 +23,7 @@ const FILTERS: Array<{ id: SenderIdStatus | 'all'; label: string }> = [
 ];
 
 export function SenderIdsPage() {
+  const { senderIdReviewSla } = usePlatformConfig();
   const { data, loading, error, refresh } = useApi<{ senderIds: CustomerSenderId[] }>('/customer/sender-ids');
   const [filter, setFilter] = useState<SenderIdStatus | 'all'>('all');
   const all = data?.senderIds ?? [];
@@ -52,7 +54,7 @@ export function SenderIdsPage() {
             Every Sender ID is reviewed before it can be used.
           </p>
           <p>
-            Our team registers each request with the mobile networks, which usually takes up to 1 business day.
+            Our team registers each request with the mobile networks, which usually takes {senderIdReviewSla}.
             You'll get a notification and an email as soon as it's approved. In the meantime you can buy units,
             add contacts, and prepare your messages.
           </p>

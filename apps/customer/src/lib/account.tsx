@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useApi } from './useApi';
 import type { NotificationsResponse } from './types';
+import { SUPPORT_EMAIL } from './config';
 
 /**
  * Account-wide data several screens show at once: the wallet balance
@@ -26,7 +27,31 @@ interface AccountContextValue {
   };
   unreadCount: number;
   refreshNotifications: () => void;
+  config: PlatformConfig;
 }
+
+/** Operator-controlled settings (admin dashboard → Settings). */
+export interface PlatformConfig {
+  platformName: string;
+  supportEmail: string | null;
+  supportPhone: string | null;
+  /** Completes "usually takes …", e.g. "up to 1 business day". */
+  senderIdReviewSla: string;
+  maxRecipientsPerSend: number;
+  topupsEnabled: boolean;
+  topupsDisabledMessage: string | null;
+}
+
+/** Used until /customer/config answers (and if it can't be reached). */
+const DEFAULT_CONFIG: PlatformConfig = {
+  platformName: 'ProfJero Connect',
+  supportEmail: SUPPORT_EMAIL,
+  supportPhone: null,
+  senderIdReviewSla: 'up to 1 business day',
+  maxRecipientsPerSend: 1000,
+  topupsEnabled: true,
+  topupsDisabledMessage: null,
+};
 
 const AccountContext = createContext<AccountContextValue | null>(null);
 
@@ -36,6 +61,7 @@ const NOTIFICATION_POLL_MS = 60_000;
 export function AccountProvider({ children }: { children: ReactNode }) {
   const wallet = useApi<WalletData>('/customer/wallet');
   const notifications = useApi<NotificationsResponse>('/customer/notifications?limit=1');
+  const configApi = useApi<Partial<PlatformConfig>>('/customer/config');
   const refreshNotifications = notifications.refresh;
 
   useEffect(() => {
@@ -56,8 +82,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       },
       unreadCount: notifications.data?.unreadCount ?? 0,
       refreshNotifications,
+      config: {
+        ...DEFAULT_CONFIG,
+        ...configApi.data,
+        // An unset support email in Settings falls back to the build-time one.
+        supportEmail: configApi.data?.supportEmail ?? DEFAULT_CONFIG.supportEmail,
+      },
     }),
-    [wallet.data, wallet.loading, wallet.error, refreshWallet, notifications.data, refreshNotifications],
+    [wallet.data, wallet.loading, wallet.error, refreshWallet, notifications.data, refreshNotifications, configApi.data],
   );
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
@@ -85,4 +117,10 @@ export function useRefreshAccount() {
     refreshWallet();
     refreshNotifications();
   }, [refreshWallet, refreshNotifications]);
+}
+
+/** Operator-controlled platform settings (support contact, limits, …). */
+// eslint-disable-next-line react-refresh/only-export-components
+export function usePlatformConfig(): PlatformConfig {
+  return useAccount().config;
 }

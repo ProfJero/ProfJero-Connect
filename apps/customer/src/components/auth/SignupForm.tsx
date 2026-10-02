@@ -13,11 +13,15 @@ import {
   Check,
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
+import { useApi } from '../../lib/useApi';
 import { cn } from '../../lib/utils';
 
 export function SignupForm() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  // Operators can pause new sign-ups from the admin dashboard.
+  const platform = useApi<{ customerSignupsEnabled: boolean }>('/v1/platform');
+  const signupsClosed = platform.data?.customerSignupsEnabled === false;
 
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -90,6 +94,13 @@ export function SignupForm() {
         <div className="mb-5 flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />
           <span className="font-medium leading-relaxed">{error}</span>
+        </div>
+      )}
+
+      {signupsClosed && (
+        <div role="status" className="mb-5 flex items-start gap-2.5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />
+          <span className="font-medium leading-relaxed">New sign-ups are paused right now. Please check back later — existing customers can still sign in.</span>
         </div>
       )}
 
@@ -243,7 +254,7 @@ export function SignupForm() {
         <div className="pt-2">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || signupsClosed}
             className={cn(
               'w-full bg-[#1a6cf0] hover:bg-[#155cd0] active:bg-[#124db0] text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150 flex items-center justify-center gap-2 group',
               'disabled:opacity-70 disabled:cursor-not-allowed',

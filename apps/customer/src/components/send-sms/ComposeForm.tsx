@@ -6,6 +6,7 @@ import { inputClass } from '../ui/buttons';
 import { cn } from '../../lib/utils';
 import type { RecipientDraft } from '../../lib/recipients';
 import type { ContactGroup, CustomerSenderId } from '../../lib/types';
+import { usePlatformConfig } from '../../lib/account';
 
 const MAX_MESSAGE_LENGTH = 1000;
 
@@ -30,6 +31,7 @@ export function ComposeForm({
   onMessageChange: (v: string) => void;
   segments: SegmentInfo;
 }) {
+  const { senderIdReviewSla } = usePlatformConfig();
   const approved = senderIds.filter((s) => s.status === 'approved');
   const pending = senderIds.filter((s) => s.status === 'pending');
   const perSegment = segments.encoding === 'GSM-7' ? (segments.segmentCount > 1 ? 153 : 160) : segments.segmentCount > 1 ? 67 : 70;
@@ -50,7 +52,7 @@ export function ComposeForm({
               {pending.length > 0 ? (
                 <>
                   Your Sender ID <strong>{pending.map((p) => p.value).join(', ')}</strong> is awaiting approval —
-                  usually within 1 business day. You'll be notified as soon as it's ready. Meanwhile you can prepare
+                  this usually takes {senderIdReviewSla}. You'll be notified as soon as it's ready. Meanwhile you can prepare
                   your contacts and top up your wallet.
                 </>
               ) : (
