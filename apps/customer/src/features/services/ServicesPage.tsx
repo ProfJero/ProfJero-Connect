@@ -2,7 +2,7 @@ import { ShieldCheck } from 'lucide-react';
 import { FeaturedServiceBanner } from '../../components/services/FeaturedServiceBanner';
 import { ServiceCard } from '../../components/services/ServiceCard';
 import { WhyChooseSection } from '../../components/services/WhyChooseSection';
-import { serviceCards, trustBadges } from '../../mock/services';
+import { serviceCards, trustBadges } from '../../lib/servicesContent';
 
 export function ServicesPage() {
   return (

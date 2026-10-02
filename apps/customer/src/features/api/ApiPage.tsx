@@ -1,35 +1,50 @@
-import { Code2 } from 'lucide-react';
-import { ApiStatusCard } from '../../components/api/ApiStatusCard';
-import { ApiKeyCard } from '../../components/api/ApiKeyCard';
-import { UsageMetrics } from '../../components/api/UsageMetrics';
-import { IntegrationCards } from '../../components/api/IntegrationCards';
+import { Code2, MessageSquare, Package, AlertTriangle, Link2 } from 'lucide-react';
+import { PageHeader } from '../../components/ui/PageHeader';
+import { ApiKeysCard } from '../../components/api/ApiKeysCard';
+import { QuickStart } from '../../components/api/QuickStart';
+import { MessagingStatCard } from '../../components/messaging/MessagingStatCard';
+import { ErrorState } from '../../components/ui/States';
+import { useApi } from '../../lib/useApi';
+import type { CustomerSenderId, SmsStats } from '../../lib/types';
 
 export function ApiPage() {
+  const stats = useApi<SmsStats>('/customer/sms/stats?days=30');
+  const senderIds = useApi<{ senderIds: CustomerSenderId[] }>('/customer/sender-ids');
+  const api = stats.data?.bySource.api;
+  const firstApproved = senderIds.data?.senderIds.find((s) => s.status === 'approved')?.value ?? null;
+
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 max-w-[1400px] w-full mx-auto">
-      {/* Page header */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-[#1a6cf0] flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
-          <Code2 className="w-6 h-6" strokeWidth={2.5} />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            API &amp; Integrations
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Connect your applications and systems to ProfJero Connect.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={Code2}
+        title="API & Integrations"
+        subtitle="Send SMS from your own website, app or system using the ProfJero Connect API."
+      />
 
-      {/* Top row: status + key */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <ApiStatusCard />
-        <ApiKeyCard />
-      </div>
+      <section className="space-y-3">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">API usage — last 30 days</h2>
+        {stats.error ? (
+          <ErrorState error={stats.error} onRetry={stats.refresh} className="m-0" />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <MessagingStatCard
+              loading={stats.loading && !stats.data}
+              stat={{ label: 'API sends', value: (api?.batches ?? 0).toLocaleString(), footnote: 'Requests that created a send', icon: Link2, iconBg: 'bg-purple-500' }}
+            />
+            <MessagingStatCard
+              loading={stats.loading && !stats.data}
+              stat={{ label: 'SMS sent via API', value: (api?.messages ?? 0).toLocaleString(), footnote: `${(api?.unitsUsed ?? 0).toLocaleString()} units used`, icon: MessageSquare, iconBg: 'bg-blue-500' }}
+            />
+            <MessagingStatCard
+              loading={stats.loading && !stats.data}
+              stat={{ label: 'Failed via API', value: (api?.failed ?? 0).toLocaleString(), footnote: 'Units returned to wallet', icon: api && api.failed > 0 ? AlertTriangle : Package, iconBg: 'bg-rose-500' }}
+            />
+          </div>
+        )}
+      </section>
 
-      <UsageMetrics />
-      <IntegrationCards />
+      <ApiKeysCard />
+      <QuickStart senderId={firstApproved} />
     </main>
   );
 }

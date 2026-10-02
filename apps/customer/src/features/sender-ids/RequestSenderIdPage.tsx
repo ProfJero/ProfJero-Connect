@@ -6,11 +6,10 @@ import {
   RequirementsCard,
   PreviewCard,
 } from '../../components/sender-ids/RequirementsAndPreview';
-import { requestFormDefaults } from '../../mock/requestSenderId';
 
 export function RequestSenderIdPage() {
   // Live-updated sender ID for the preview card
-  const [previewValue, setPreviewValue] = useState(requestFormDefaults.senderId);
+  const [previewValue, setPreviewValue] = useState('');
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-6 flex-1 max-w-[1400px] w-full mx-auto">
@@ -29,8 +28,8 @@ export function RequestSenderIdPage() {
           </h2>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 pl-9">
-          Submit a request for a Sender ID. Our team will review and register it before
-          activation.
+          Submit a request for a Sender ID. Our team reviews and registers it with the networks
+          before activation — usually within 1 business day.
         </p>
       </div>
 

@@ -1,10 +1,9 @@
+import { Link } from 'react-router-dom';
 import {
   FileText,
   MessageSquare,
-  Smartphone,
   Plus,
-  MessageCircle,
-  ArrowUp,
+  RotateCcw,
   Settings as SettingsIcon,
   Inbox,
   type LucideIcon,
@@ -17,8 +16,8 @@ import {
   getDisplayDescription,
   getAmount,
   getStatus,
+  getTxLink,
   formatDateTime,
-  shortRef,
   type DisplayTxType,
 } from '../../lib/format';
 import { cn } from '../../lib/utils';
@@ -26,7 +25,7 @@ import { cn } from '../../lib/utils';
 const TYPE_ICON: Record<DisplayTxType, { icon: LucideIcon; bg: string }> = {
   'Wallet Funding': { icon: Plus, bg: 'bg-emerald-500' },
   SMS: { icon: MessageSquare, bg: 'bg-blue-500' },
-  Refund: { icon: ArrowUp, bg: 'bg-amber-500' },
+  Refund: { icon: RotateCcw, bg: 'bg-amber-500' },
   Adjustment: { icon: SettingsIcon, bg: 'bg-slate-500' },
 };
 
@@ -110,7 +109,13 @@ export function WalletActivityTable() {
                             {displayType}
                           </div>
                           <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
-                            {getDisplayDescription(tx)}
+                            {getTxLink(tx) ? (
+                              <Link to={getTxLink(tx)!} className="hover:text-[#1a6cf0] hover:underline">
+                                {getDisplayDescription(tx)}
+                              </Link>
+                            ) : (
+                              getDisplayDescription(tx)
+                            )}
                           </div>
                         </div>
                       </div>

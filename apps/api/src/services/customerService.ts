@@ -67,12 +67,19 @@ export async function createCustomerAndProject(
   const projectId = newProjectId();
   const ledgerId = `manual_credit__signup__${uid}`;
 
+  // Same shape as admin-created projects (ProjectSchema) plus `origin`, so
+  // the admin dashboard lists customer accounts like any other client.
   const projectDoc = {
     name: organisationName,
+    description: null,
+    contactEmail: email || null,
+    contactPhone: phone ?? null,
     origin: 'customer',
     status: 'active',
     createdAt: now,
     updatedAt: now,
+    createdBy: `customer:${uid}`,
+    updatedBy: `customer:${uid}`,
   };
 
   const walletDoc = {

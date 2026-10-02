@@ -21,7 +21,8 @@ export interface NavItem {
   icon: LucideIcon;
   path?: string;
   children?: NavChild[];
-  badge?: number;
+  /** Live counter shown next to the item (resolved in CustomerSidebar). */
+  badge?: 'unreadNotifications';
 }
 
 export const navItems: NavItem[] = [
@@ -32,6 +33,7 @@ export const navItems: NavItem[] = [
     path: '/messaging',
     children: [
       { label: 'Send SMS', path: '/messaging/sms' },
+      { label: 'Message History', path: '/messaging/history' },
       { label: 'Sender IDs', path: '/messaging/sender-ids' },
     ],
   },
@@ -55,6 +57,6 @@ export const navItems: NavItem[] = [
   { label: 'Wallet', icon: Wallet, path: '/wallet' },
   { label: 'Transactions', icon: Receipt, path: '/transactions' },
   { label: 'API & Integrations', icon: Code2, path: '/api' },
-  { label: 'Notifications', icon: Bell, path: '/notifications', badge: 3 },
+  { label: 'Notifications', icon: Bell, path: '/notifications', badge: 'unreadNotifications' },
   { label: 'Settings', icon: Settings, path: '/settings' },
 ];

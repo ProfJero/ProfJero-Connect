@@ -1,12 +1,22 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
-import {
-  requestFormDefaults,
-  purposeOptions,
-  senderIdMaxLength,
-  descriptionMaxLength,
-} from '../../mock/requestSenderId';
+import { Notice } from '../ui/States';
+import { api, errorMessage } from '../../lib/api';
+import { useAuth } from '../../lib/auth';
+import { useAccount } from '../../lib/account';
+
+const senderIdMaxLength = 11;
+const descriptionMinLength = 10;
+const descriptionMaxLength = 500;
+
+// Must match SenderIdPurposeSchema in packages/shared.
+const purposeOptions = [
+  'Business Notifications',
+  'Marketing & Promotional',
+  'Transactional & Alerts',
+  'Authentication & OTP',
+];
 
 export function RequestForm({
   onSenderIdChange,
@@ -14,24 +24,42 @@ export function RequestForm({
   onSenderIdChange?: (value: string) => void;
 }) {
   const navigate = useNavigate();
-  const [senderId, setSenderId] = useState(requestFormDefaults.senderId);
-  const [purpose, setPurpose] = useState(requestFormDefaults.purpose);
-  const [orgName, setOrgName] = useState(requestFormDefaults.organisationName);
-  const [description, setDescription] = useState(requestFormDefaults.description);
+  const { user } = useAuth();
+  const { refreshNotifications } = useAccount();
+  const [senderId, setSenderId] = useState('');
+  const [purpose, setPurpose] = useState(purposeOptions[0]);
+  const [orgName, setOrgName] = useState(user?.companyName ?? '');
+  const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSenderIdChange = (value: string) => {
-    setSenderId(value);
-    onSenderIdChange?.(value);
+    // Letters, digits, spaces, hyphens, underscores only (network rule).
+    const clean = value.toUpperCase().replace(/[^A-Z0-9 _-]/g, '');
+    setSenderId(clean);
+    onSenderIdChange?.(clean);
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (description.trim().length < descriptionMinLength) {
+      setError(`Please describe how you'll use this Sender ID (at least ${descriptionMinLength} characters).`);
+      return;
+    }
     setIsSubmitting(true);
-    // ⚠️ STUB — replace with POST to /customer/sender-ids/request
-    await new Promise((r) => setTimeout(r, 700));
-    setIsSubmitting(false);
-    navigate('/messaging/sender-ids');
+    try {
+      await api.post('/customer/sender-ids', {
+        value: senderId.trim(),
+        purpose,
+        description: `${description.trim()}${orgName.trim() ? `\n\nOrganisation: ${orgName.trim()}` : ''}`.slice(0, descriptionMaxLength),
+      });
+      refreshNotifications();
+      navigate('/messaging/sender-ids');
+    } catch (err) {
+      setError(errorMessage(err));
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -50,13 +78,13 @@ export function RequestForm({
           required
           maxLength={senderIdMaxLength}
           value={senderId}
-          onChange={(e) => handleSenderIdChange(e.target.value.toUpperCase())}
+          onChange={(e) => handleSenderIdChange(e.target.value)}
           placeholder="e.g. YOURBRAND"
           className="w-full text-sm font-normal text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2.5 focus:ring-2 focus:ring-[#1a6cf0]/20 focus:border-[#1a6cf0] transition-all outline-none placeholder-slate-400 dark:placeholder-slate-500"
         />
         <div className="flex justify-between items-center mt-1.5 text-xs text-slate-400 dark:text-slate-500 gap-3">
           <span>
-            Enter the name you want to use as your sender ID (e.g. YOURBRAND).
+            Letters, numbers and spaces. Use your business or brand name.
           </span>
           <span className="font-medium text-slate-500 dark:text-slate-400 shrink-0">
             {senderId.length}/{senderIdMaxLength}
@@ -124,8 +152,10 @@ export function RequestForm({
         <textarea
           id="description"
           required
-          maxLength={descriptionMaxLength}
+          minLength={descriptionMinLength}
+          maxLength={descriptionMaxLength - 150}
           rows={4}
+          placeholder="e.g. Appointment reminders and service updates to our registered customers."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className="w-full text-sm font-normal text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3.5 focus:ring-2 focus:ring-[#1a6cf0]/20 focus:border-[#1a6cf0] transition-all outline-none resize-none leading-relaxed"
@@ -133,10 +163,12 @@ export function RequestForm({
         <div className="flex justify-between items-center mt-1 text-xs text-slate-400 dark:text-slate-500 gap-3">
           <span>Provide a brief description of how you will use this Sender ID.</span>
           <span className="font-medium text-slate-500 dark:text-slate-400 shrink-0">
-            {description.length}/{descriptionMaxLength}
+            {description.length}/{descriptionMaxLength - 150}
           </span>
         </div>
       </div>
+
+      {error && <Notice tone="error">{error}</Notice>}
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">

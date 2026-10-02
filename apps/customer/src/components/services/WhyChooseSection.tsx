@@ -1,4 +1,4 @@
-import { whyChoose } from '../../mock/services';
+import { whyChoose } from '../../lib/servicesContent';
 import { cn } from '../../lib/utils';
 
 export function WhyChooseSection() {

@@ -1,4 +1,5 @@
-import { ExternalLink } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function ApiBanner() {
   return (
@@ -10,10 +11,13 @@ export function ApiBanner() {
         <p className="text-slate-600 dark:text-slate-400 text-[11px] mt-1 leading-snug">
           Build powerful communication and digital services into your application.
         </p>
-        <button className="mt-3 px-3 py-1.5 bg-[#1a6cf0] hover:bg-[#155cd0] text-white rounded-lg text-xs font-medium inline-flex items-center gap-1.5 shadow-sm transition-colors">
-          <span>View Documentation</span>
-          <ExternalLink className="w-3.5 h-3.5" strokeWidth={2} />
-        </button>
+        <Link
+          to="/api"
+          className="mt-3 px-3 py-1.5 bg-[#1a6cf0] hover:bg-[#155cd0] text-white rounded-lg text-xs font-medium inline-flex items-center gap-1.5 shadow-sm transition-colors"
+        >
+          <span>Get an API key</span>
+          <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
+        </Link>
       </div>
 
       <div className="w-full md:w-56 bg-slate-900 rounded-xl p-3 text-slate-300 font-mono text-[10px] shadow-md border border-slate-800 select-none shrink-0">
@@ -33,10 +37,13 @@ export function ApiBanner() {
           </p>
           <p className="text-slate-400">{'{'}</p>
           <p className="pl-2 text-slate-300">
-            "to": <span className="text-emerald-400">"233246789012"</span>,
+            "recipients": [<span className="text-emerald-400">"233246789012"</span>],
           </p>
           <p className="pl-2 text-slate-300">
-            "message": <span className="text-emerald-400">"Hello!"</span>
+            "message": <span className="text-emerald-400">"Hello!"</span>,
+          </p>
+          <p className="pl-2 text-slate-300">
+            "senderId": <span className="text-emerald-400">"MYBRAND"</span>
           </p>
           <p className="text-slate-400">{'}'}</p>
         </div>

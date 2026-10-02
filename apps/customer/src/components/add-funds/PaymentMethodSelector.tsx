@@ -1,20 +1,52 @@
-import { Check } from 'lucide-react';
-import { paymentMethods, type PaymentMethod } from '../../mock/addFunds';
+import { Check, CreditCard, Smartphone, type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+// Checkout channels. RULE: no gateway names in customer copy.
+export interface PaymentMethod {
+  id: 'mobile_money' | 'card';
+  name: string;
+  description: string;
+  icon: LucideIcon;
+  telcos?: Array<{ label: string; tone: 'mtn' | 'telecel' | 'airteltigo' }>;
+  cardBrands?: boolean;
+}
+
+const paymentMethods: PaymentMethod[] = [
+  {
+    id: 'mobile_money',
+    name: 'Mobile Money',
+    description: 'MTN, Telecel, AirtelTigo',
+    icon: Smartphone,
+    telcos: [
+      { label: 'MTN', tone: 'mtn' },
+      { label: 'Telecel', tone: 'telecel' },
+      { label: 'AirtelTigo', tone: 'airteltigo' },
+    ],
+  },
+  {
+    id: 'card',
+    name: 'Card',
+    description: 'Visa, Mastercard',
+    icon: CreditCard,
+    cardBrands: true,
+  },
+];
 
 export function PaymentMethodSelector({
   selected,
   onSelect,
+  step = 2,
 }: {
   selected: PaymentMethod['id'];
   onSelect: (id: PaymentMethod['id']) => void;
+  step?: number;
 }) {
   return (
     <section>
       {/* Header */}
       <div className="flex items-start gap-3 mb-3.5">
         <span className="w-6 h-6 rounded-full bg-[#1a6cf0] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-          2
+          {step}
         </span>
         <div>
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
@@ -75,7 +107,7 @@ export function PaymentMethodSelector({
                 {method.telcos && (
                   <div className="flex items-center gap-2.5 flex-wrap">
                     {method.telcos.map((telco) => (
-                      <TelcoBadge key={telco.tone} label={telco.label} tone={telco.tone} />
+                      <TelcoBadge key={telco.tone} tone={telco.tone} />
                     ))}
                   </div>
                 )}
@@ -99,7 +131,7 @@ export function PaymentMethodSelector({
   );
 }
 
-function TelcoBadge({ label, tone }: { label: string; tone: 'mtn' | 'telecel' | 'airteltigo' }) {
+function TelcoBadge({ tone }: { tone: 'mtn' | 'telecel' | 'airteltigo' }) {
   if (tone === 'mtn') {
     return (
       <span className="inline-block px-1.5 py-0.5 bg-[#FFCC00] text-slate-900 font-black text-[9px] rounded tracking-tight">

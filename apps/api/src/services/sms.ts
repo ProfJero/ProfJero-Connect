@@ -14,6 +14,7 @@ import { getSmsProvider } from '../providers';
 import { assertSenderIdAllowed } from './senderIds';
 import { getSegmentInfo } from '@profjero/shared';
 import { DomainError } from '../lib/domainError';
+import { notifyProject } from './notifications';
 import type { SendResult } from '../providers/sms';
 import type { Env } from '../types/env';
 import type {
@@ -107,8 +108,9 @@ export async function sendSmsBatch(
   // the batch is left in 'queued' state and we surface the error. The caller
   // can retry with the same Idempotency-Key; the replay path will find the
   // half-created batch and return it.
+  let reserved: Awaited<ReturnType<typeof reserveUnits>>;
   try {
-    await reserveUnits(env, {
+    reserved = await reserveUnits(env, {
       projectId: args.projectId,
       batchId,
       units: totalUnits,
@@ -128,6 +130,8 @@ export async function sendSmsBatch(
     });
     throw err;
   }
+
+  await maybeNotifyLowBalance(env, args.projectId, batchId, reserved);
 
   await updateBatch(env, batchId, { status: 'submitting' });
 
@@ -244,6 +248,51 @@ export async function sendSmsBatch(
     completedAt: new Date().toISOString(),
   });
 
+  if (failedCount > 0) {
+    await notifyProject(env, {
+      projectId: args.projectId,
+      id: `sms__${batchId}`,
+      type: 'sms',
+      severity: submittedCount === 0 ? 'error' : 'warning',
+      title:
+        submittedCount === 0
+          ? 'SMS could not be sent'
+          : `${failedCount} of ${records.length} messages failed`,
+      body: `${failedCount} recipient${failedCount === 1 ? '' : 's'} could not be reached from Sender ID "${args.senderId}". Units for failed messages have been returned to your wallet.`,
+      link: `/messaging/history/${encodeURIComponent(batchId)}`,
+    });
+  }
+
   const finalRecords = await listRecordsForBatch(env, batchId);
   return { batch: finalBatch, records: finalRecords, replayed: false };
+}
+
+/**
+ * Fire a low-balance alert when this reservation moved the wallet from at
+ * or above its threshold to below it. Firing only on the crossing (not on
+ * every send while low) keeps the alert meaningful. No threshold set → no
+ * alerts.
+ */
+async function maybeNotifyLowBalance(
+  env: Env,
+  projectId: string,
+  batchId: string,
+  reserved: Awaited<ReturnType<typeof reserveUnits>>,
+): Promise<void> {
+  const threshold = reserved.wallet.lowBalanceThreshold;
+  if (threshold === null) return;
+  const after = reserved.transaction.availableAfter;
+  const before = after - reserved.transaction.availableDelta;
+  if (!(before >= threshold && after < threshold)) return;
+
+  await notifyProject(env, {
+    projectId,
+    id: `low_balance__${batchId}`,
+    type: 'low_balance',
+    severity: 'warning',
+    title: 'Your wallet balance is low',
+    body: `You have ${after.toLocaleString('en-US')} units left, below your alert level of ${threshold.toLocaleString('en-US')}. Top up to keep your messages flowing.`,
+    link: '/wallet/add-funds',
+    email: true,
+  });
 }

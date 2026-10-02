@@ -19,7 +19,7 @@ export function LoginForm() {
     setError(null);
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, remember);
       // Success. Do NOT call navigate() here and do NOT reset isLoading.
       //
       // Navigation is owned by LoginPage's effect, which watches
@@ -144,12 +144,12 @@ export function LoginForm() {
             />
             <span className="ml-2 font-normal">Remember me</span>
           </label>
-          <a
-            href="#"
+          <Link
+            to="/forgot-password"
             className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline"
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
 
         {/* Submit */}

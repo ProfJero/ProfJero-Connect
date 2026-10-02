@@ -1,6 +1,6 @@
 # ProfJero SMS — Project State
 
-_Last updated: 2026-09-26. This is the single source of truth for anyone
+_Last updated: 2026-10-02. This is the single source of truth for anyone
 continuing this project — human developer or AI assistant. If you're picking
 up from a fresh chat, read this file first._
 
@@ -62,7 +62,7 @@ text
 
 **Status:**
 - Admin platform: **built, deployed, functional**.
-- Customer platform: **frontend complete, backend not started**.
+- Customer platform: **built end to end (CP1–CP7), awaiting deploy** — see §14.
 
 ---
 
@@ -78,11 +78,11 @@ text
 | **Paystack webhook** | ✅ Done |
 | **Arkesel integration** | ✅ Done |
 | **Wallet ledger logic** | ✅ Done |
-| **Customer frontend** (React, 13 screens) | ✅ Done, desktop + mobile |
-| **Customer backend** (`/customer/*` surface) | ❌ Not started |
-| **Customer auth** (self-signup, Firebase) | ❌ Not started |
-| **Customer-facing Paystack flow** | ❌ Not started |
-| **Notifications system** (in-app + email) | ❌ Not started |
+| **Customer frontend** (React, 13 screens) | ✅ Done, all screens on live `/customer/*` data — no mocks |
+| **Customer backend** (`/customer/*` surface) | ✅ Done (§14), e2e-tested, not yet deployed |
+| **Customer auth** (self-signup, Firebase) | ✅ Done — signup, login, reset/change password |
+| **Customer-facing Paystack flow** | ✅ Done — packages + custom amount, MoMo/card |
+| **Notifications system** (in-app + email) | ✅ Done — in-app + Resend email (optional) |
 | **Arkesel delivery receipts** | ⚠️ Not firing in production (see §10.5) |
 
 ---
@@ -147,28 +147,18 @@ profjero-sms/
 │ │ │ ├── notifications/
 │ │ │ ├── services/
 │ │ │ ├── settings/ # SettingsPage, OrganisationProfilePage
-│ │ │ └── PlaceholderPage.tsx
+│ │ │ └── ComingSoonPage.tsx # Data / Airtime
 │ │ ├── lib/
 │ │ │ ├── utils.ts
 │ │ │ ├── nav.ts
-│ │ │ ├── auth.tsx # Customer auth context (stubbed)
+│ │ │ ├── auth.tsx # Customer auth (Firebase) — signup/login/reset
+│ │ │ ├── api.ts # fetch wrapper, ApiError, idempotency keys
+│ │ │ ├── useApi.ts # useApi / useCursorList data hooks
+│ │ │ ├── account.tsx # Shared wallet + unread-notification context
+│ │ │ ├── types.ts # /customer/* response types
+│ │ │ ├── format.ts, statusLabels.ts, phone.ts, csv.ts, recipients.ts
 │ │ │ └── theme.tsx # Dark/light mode provider
-│ │ ├── mock/
-│ │ │ ├── dashboard.ts
-│ │ │ ├── messaging.ts
-│ │ │ ├── sendSms.ts
-│ │ │ ├── contacts.ts
-│ │ │ ├── contactGroups.ts
-│ │ │ ├── senderIds.ts
-│ │ │ ├── requestSenderId.ts
-│ │ │ ├── wallet.ts
-│ │ │ ├── addFunds.ts
-│ │ │ ├── transactions.ts
-│ │ │ ├── api.ts
-│ │ │ ├── notifications.ts
-│ │ │ ├── services.ts
-│ │ │ ├── settings.ts
-│ │ │ └── organisation.ts
+│ │ │ (mock/ removed — every screen reads /customer/*)
 │ │ ├── App.tsx
 │ │ ├── main.tsx
 │ │ └── index.css
@@ -324,14 +314,17 @@ Route	Page	Status
 /messaging/sender-ids	Sender IDs list	✅
 /messaging/sender-ids/request	Request Sender ID form	✅
 /messaging/campaigns	Campaigns — placeholder	✅ (stub)
-/messaging/history	Message History — placeholder	✅ (stub)
+/messaging/history	Message History — filters, load more	✅
+/messaging/history/:batchId	Message detail — per-recipient status, CSV export	✅
 /contacts	Contacts list	✅
 /contacts/groups	Contact Groups grid	✅
 /services	Services hub (featured hero + catalog)	✅
-/services/data	Data — placeholder	✅ (stub)
-/services/airtime	Airtime — placeholder	✅ (stub)
+/services/data	Data — coming soon	✅ (honest stub)
+/services/airtime	Airtime — coming soon	✅ (honest stub)
 /wallet	Wallet — balance, spending chart, activity table	✅
-/wallet/add-funds	Add Funds — amount + method selector	✅
+/wallet/add-funds	Add Funds — live packages + custom amount, MoMo/card	✅
+/wallet/add-funds/complete	Payment return page — verifies + polls	✅
+/forgot-password	Password reset email	✅
 /transactions	Transactions — metrics, filter bar, table	✅
 /api	API & Integrations — status, key, usage, integrations	✅
 /notifications	Notifications — filters, list, summary	✅
@@ -463,9 +456,9 @@ Admin API (/admin/*) — Firebase Auth + role check
 
 Webhook API (/webhooks/*) — signature verification
 
-Customer platform will add a fourth surface: /customer/* — Firebase
-ID token auth (customer accounts, not admins). Decision documented in
-docs/customer-platform.md §14 (CP2 fork). This is not yet built.
+Customer platform API (/customer/*) — Firebase ID token auth with the
+`customer: true` claim + an active customers/{uid} doc (customerAuth
+middleware). Built — see §14.
 
 API keys
 Cryptographically random
@@ -533,25 +526,21 @@ settings	Fixed ID docs: platform, sms, payments, notifications, security
 Customer platform additions (planned):
 
 Collection	Purpose
-customers	Customer accounts (keyed by Firebase Auth UID)
+customers	Customer accounts (keyed by Firebase Auth UID). Owns one project.
+notifications	Customer in-app notifications, keyed by projectId (§14)
+contacts	Customer address book: {projectId}__{phone} doc IDs
+contactGroups	Customer contact groups; membership is contacts.groupIds
 tenants	Future multi-tenant org (not v1)
 Field specs available in the chat history. Reconstruct before coding —
 do not improvise.
 
 9. What's mocked
-Everything under apps/customer/src/mock/*.ts is mock data for UI
-development. Every file starts with a clear comment:
+Customer app: nothing. apps/customer/src/mock/ has been deleted; every
+screen reads /customer/* (or the public /v1/pricing) with loading, empty
+and error states. Static marketing copy for the Services page lives in
+apps/customer/src/lib/servicesContent.ts and is clearly not account data.
 
-text
-// ⚠️ MOCK DATA — replace with /customer/* API calls once that surface exists.
-Files: dashboard, messaging, sendSms, contacts, contactGroups,
-senderIds, requestSenderId, wallet, addFunds, transactions, api,
-notifications, services, settings, organisation.
-
-Admin mocks were the same, now mostly replaced with real API calls.
-
-Do not present mocked values as real. When the customer backend lands,
-each mock file gets replaced with an API call + loading/error states.
+Admin app: see the admin notes (mostly real API calls).
 
 10. What's next
 Frontend — done
@@ -563,32 +552,20 @@ Frontend — done
 
 ✅ State document (this file)
 
-Backend — customer platform (start a fresh chat)
-Extend API with /customer/* surface — Firebase ID token auth (not
-API keys). New routers, middleware, services.
+Customer platform — done (CP1–CP7, see §14)
+✅ /customer/* API, auth, payments, SMS, history, Sender IDs, contacts,
+   API keys, notifications (in-app + email)
 
-Customer auth — self-signup, email/password, customers collection.
-Swap the stubbed useAuth() in apps/customer/src/lib/auth.tsx for real
-Firebase Auth. Keep the same interface so page code doesn't change.
-
-Customer wallet — top-up (mobile money / card via Paystack), balance,
-ledger. Reuse the existing wallet service with a customer-scoped view.
-
-Customer send SMS — scoped to the customer's own project, using the
-existing reserve/confirm/release flow.
-
-Sender ID request flow — customer submits → admin reviews → provider
-registration. Notification on approval.
-
-Notifications — in-app collection + email (Resend recommended). Needed
-for Sender ID approval, payment receipts, low balance.
-
-Reports/analytics — replace mock aggregates with real queries.
-
-Hardening — rate limits, reconciliation, security review.
-
-Deploy customer app — likely connect.profjero.com or
-profjeroconnect.pages.dev for now.
+Customer platform — still to do
+- Deploy: API (wrangler deploy) + customer app (Pages). Checklist in §14.
+- Admin UI: show a Sender ID request's purpose/description (now stored on
+  the assignment) in the admin approval queue.
+- Campaigns / scheduled sends (deferred, customer-platform.md §9).
+- Data and Airtime (coming-soon pages are live).
+- Large sends: services/sms.ts writes records one by one; sends of many
+  hundreds of recipients can hit Worker subrequest limits. Batch the
+  record writes (firestoreBatchWrite) before marketing bulk sends.
+- Team seats (one owner login per organisation today).
 
 Admin backend — maintenance
 Arkesel delivery receipts — see §10.5
@@ -690,7 +667,13 @@ cmd
 npm run build --workspace=apps/web
 npm run build --workspace=apps/customer
 Environment variables: see apps/api/.dev.vars.example for the backend.
-Frontend apps don't need env vars yet — customer Firebase config will be
+Customer app env vars: apps/customer/.env.example (VITE_API_URL, Firebase
+web config, optional VITE_SUPPORT_EMAIL).
+
+Customer-platform e2e test (no credentials needed):
+  npm run test:customer --workspace=@profjero/api
+
+Previously: frontend apps didn't need env vars — customer Firebase config would be
 added during CP1.
 
 13. Notes for the next assistant / developer
@@ -718,3 +701,106 @@ viewports, triggering mobile breakpoints unexpectedly.
 Two design languages. Admin uses #1976d2 / #0c1e38 / 13px. Customer
 uses #1a6cf0 / #0c192c / 16px + dark mode. Do not mix them.
 
+
+
+---
+
+## 14. Customer platform — implementation notes (CP1–CP7)
+
+Built 2026-10-02. Product decisions taken with the operator for this
+milestone: contacts & groups are in v1; Add Funds offers packages **and**
+a custom amount (billed at pricingSettings/sms.unitPriceGhs within
+min/max); customers create their own **secret** API keys (max 5 active);
+notifications are in-app **plus** email via Resend.
+
+### /customer/* endpoints (Firebase ID token + customer claim)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | /customer/register | CP1. Creates project + wallet + 3 starter units + customer doc |
+| GET/PUT | /customer/me | Profile (now includes phone, createdAt, emailNotifications) |
+| PUT | /customer/me/preferences | `{ emailNotifications }` |
+| GET | /customer/wallet | Balance |
+| PUT | /customer/wallet/threshold | `{ threshold: number \| null }` — low-balance alert level |
+| GET | /customer/wallet/transactions | `view=summary` hides per-recipient confirms; `types=a,b` filter |
+| POST | /customer/payments | **Idempotency-Key**. `{ packageId }` or `{ units }`, optional `method: mobile_money\|card`. Returns `checkoutUrl` |
+| GET | /customer/payments | List + `summary` totals |
+| GET | /customer/payments/:ref | One payment |
+| POST | /customer/payments/:ref/verify | Return-page check. Never marks an unfinished checkout failed |
+| POST | /customer/sms/send | **Idempotency-Key**. `{ senderId, message, recipients?, contactIds?, groupIds? }` (≤1000 unique) |
+| GET | /customer/sms/batches | History; `status`, `senderId`, `source=api\|dashboard`, `q`, cursor |
+| GET | /customer/sms/batches/:id | Batch + per-recipient records |
+| GET | /customer/sms/stats?days=N | Totals, previous period, per-source, per-day series |
+| GET/POST | /customer/sender-ids | List / request `{ value, purpose, description }` |
+| GET/POST | /customer/contacts | List (q, groupId, offset) / create |
+| POST | /customer/contacts/import | Bulk upsert ≤2000, optional groupId; reports skipped rows |
+| POST | /customer/contacts/delete | Bulk delete `{ ids }` |
+| PUT/DELETE | /customer/contacts/:id | Edit (phone change moves the doc) / delete |
+| GET/POST/PUT/DELETE | /customer/contact-groups[/:id] | Groups; delete keeps contacts |
+| POST | /customer/contact-groups/:id/members[/remove] | `{ contactIds }` |
+| GET/POST | /customer/api-keys | List / create (plaintext returned once) |
+| POST | /customer/api-keys/:id/revoke | Immediate |
+| GET | /customer/notifications | `type`, `unread=true`, cursor; returns unreadCount + counts |
+| POST | /customer/notifications/:id/read, /read-all | |
+
+customerAuth runs **once** for the whole surface (routers/customer/index.ts);
+sub-routers must not add their own `use('*')` (Hono merges it into the
+parent, which re-verified the token per sub-router).
+
+### Decisions worth knowing
+
+- **Idempotency is project-scoped.** Payment references and SMS batch IDs
+  are `sha256(projectId:key)` prefixes (`pjc_…`, `cs_…`), so two customers
+  can never collide on a client key.
+- **Provider names are scrubbed** from every customer response
+  (lib/scrub.ts): ledger descriptions, payment failure reasons, SMS errors.
+- **Never-sent batches are hidden.** A send refused for balance leaves a
+  `queued` batch (by design, for retry); customer history/stats skip them.
+- **Ledger display.** A send shows as its `reserve` (−N available) and any
+  `release` (+N); `confirm` rows are hidden (view=summary). Amounts are
+  availableDelta, so the running balance matches what the customer sees.
+- **Notifications are best-effort and deduplicated** by deterministic IDs
+  (`payment__{ref}`, `sender_id__{project}__{value}__{status}__{decidedAt}`,
+  `low_balance__{batchId}`, `sms__{batchId}`). Webhook replays never
+  duplicate a receipt or an email. Low-balance fires only on the crossing.
+- **Sender ID decisions notify** from services/senderIds.ts, so approving
+  in the admin dashboard is all the operator needs to do.
+- **Project docs from customer signup now match ProjectSchema** (contact +
+  audit fields). parseProject also defaults those fields for older CP1
+  docs — previously such projects were skipped by listProjects, hiding
+  them from the admin dashboard and dropping their Sender ID requests from
+  the approval queue.
+- **"Remember me"** now chooses local vs session Firebase persistence.
+
+### Environment (apps/api) — new, all optional
+
+| Var | Purpose |
+|---|---|
+| RESEND_API_KEY | Enables notification email. Unset → in-app only |
+| EMAIL_FROM | e.g. `ProfJero Connect <hello@yourdomain>` (domain verified in Resend) |
+| CUSTOMER_APP_URL | e.g. `https://profjeroconnect-customer.pages.dev` — email links + payment return when Origin is unknown |
+
+See apps/api/.dev.vars.example.
+
+### Deploy checklist
+
+1. `npm run typecheck` and `npm run test:customer --workspace=@profjero/api`.
+2. Set secrets: `npx wrangler secret put RESEND_API_KEY --env production`
+   (and EMAIL_FROM, CUSTOMER_APP_URL as vars or secrets).
+3. Confirm the customer app's production origin in `apps/api/src/lib/origins.ts`
+   (both lists), then `npm run deploy:prod --workspace=@profjero/api`.
+4. Make sure pricingSettings/sms has `unitPriceGhs` + `minPurchaseUnits`
+   if you want the custom-amount option (otherwise it's hidden).
+5. Build + deploy the customer app with `VITE_API_URL` pointing at
+   production; optionally `VITE_SUPPORT_EMAIL`.
+6. Smoke test: sign up → buy the Starter package (test key) → request a
+   Sender ID → approve it in admin → send to your own number.
+
+### Testing
+
+`apps/api/test/customer.e2e.ts` runs the real Worker against an in-memory
+fake of Firestore/Google/payment gateway/Resend (test/fakeCloud.ts) and
+walks the whole journey: signup, top-up + webhook replay, Sender ID
+request/approval, contacts/import, send with failures, replay, history,
+stats, low-balance alert, API keys on /v1, notifications, and cross-tenant
+isolation. Needs `openssl` on PATH (Git for Windows ships one).

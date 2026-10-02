@@ -514,3 +514,52 @@ export async function runTransaction<T>(
 
   throw new Error('runTransaction exhausted retries');
 }
+// ---------- Batched writes (non-transactional) ----------
+
+export type BatchWrite = FirestoreWrite | { deletePath: string };
+
+/**
+ * Apply many writes with as few round-trips as possible. Each chunk of up
+ * to 500 writes commits atomically (Firestore's per-commit limit); chunks
+ * are independent. Use for bulk, idempotent operations like contact
+ * imports — never for wallet/ledger changes, which go through
+ * runTransaction.
+ */
+export async function firestoreBatchWrite(
+  env: Env,
+  writes: BatchWrite[],
+): Promise<void> {
+  if (writes.length === 0) return;
+  const token = await getFirestoreAccessToken(env);
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:commit`;
+  const docPrefix = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/`;
+
+  for (let i = 0; i < writes.length; i += 500) {
+    const chunk = writes.slice(i, i + 500).map((w) => {
+      if ('deletePath' in w) return { delete: docPrefix + w.deletePath };
+      const entry: Record<string, unknown> = {
+        update: { name: docPrefix + w.path, fields: encodeFields(w.fields) },
+      };
+      if (w.updateFieldPaths && w.updateFieldPaths.length > 0) {
+        entry.updateMask = { fieldPaths: w.updateFieldPaths };
+      }
+      if (w.precondition && 'exists' in w.precondition) {
+        entry.currentDocument = { exists: w.precondition.exists };
+      }
+      return entry;
+    });
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ writes: chunk }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`firestoreBatchWrite failed (${res.status}): ${body}`);
+    }
+  }
+}

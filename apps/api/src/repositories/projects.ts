@@ -19,7 +19,21 @@ import { ensureWalletForProject } from './wallets';
 const COLLECTION = 'projects';
 
 function parseProject(doc: FirestoreDoc): Project {
-  const parsed = ProjectSchema.safeParse({ id: doc.id, ...doc.data });
+  // Customer-platform signups before 2026-10 wrote projects without the
+  // admin contact/audit fields. Default them rather than rejecting the doc:
+  // a rejected doc is skipped by listProjects, which hides the customer
+  // from the admin dashboard and drops their Sender ID requests from the
+  // approval queue.
+  const d = doc.data;
+  const parsed = ProjectSchema.safeParse({
+    id: doc.id,
+    ...d,
+    description: d.description ?? null,
+    contactEmail: d.contactEmail ?? null,
+    contactPhone: d.contactPhone ?? null,
+    createdBy: d.createdBy ?? 'unknown',
+    updatedBy: d.updatedBy ?? d.createdBy ?? 'unknown',
+  });
   if (!parsed.success) {
     throw new Error(
       `Malformed project doc "${doc.id}": ${parsed.error.message}`,

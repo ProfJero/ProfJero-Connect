@@ -8,20 +8,12 @@ import { v1Router, v1PublicRouter } from './routers/v1';
 import { webhooksRouter } from './routers/webhooks';
 import { handleScheduled } from './services/cron';
 import { customerRouter } from './routers/customer';
+import { allowedOrigins } from './lib/origins';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // ---- CORS ----
-const allowedOrigins = [
-  // Admin dashboard
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'https://profjeroconnect.pages.dev',
-  // Customer platform
-  'http://localhost:5174',
-  'http://127.0.0.1:5174',
-  'https://profjeroconnect-customer.pages.dev', // ← confirm/adjust
-];
+// Origins live in lib/origins.ts (shared with the customer payment flow).
 
 app.use(
   '*',

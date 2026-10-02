@@ -8,6 +8,7 @@ import {
   markPaymentSuccessful,
 } from '../services/payments';
 import { verifyPaystackSignature } from '../providers/paystackClient';
+import { notifyProject } from '../services/notifications';
 import type { Env } from '../types/env';
 
 export const webhooksRouter = new Hono<{ Bindings: Env }>();
@@ -152,6 +153,17 @@ webhooksRouter.post('/paystack', async (c) => {
         reason,
         payload,
       );
+      if (failed.status === 'failed') {
+        await notifyProject(c.env, {
+          projectId: failed.projectId,
+          id: `payment_failed__${reference}`,
+          type: 'payment',
+          severity: 'error',
+          title: 'Payment failed',
+          body: `Your payment of GH₵${(failed.amountPesewas / 100).toFixed(2)} (reference ${reference}) did not go through. No units were added. You can try again from Add Funds.`,
+          link: '/wallet/add-funds',
+        });
+      }
       return c.json({
         ok: true,
         reference,

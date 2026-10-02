@@ -8,11 +8,18 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   sendEmailVerification,
+  sendPasswordResetEmail,
+  setPersistence,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  updatePassword,
   type User as FirebaseUser,
 } from 'firebase/auth';
 import { firebaseAuth } from './firebase';
@@ -44,8 +51,13 @@ interface AuthContextValue {
     /** Required. Backend rejects registration without it. */
     acceptedTerms: boolean;
   }) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  /** `remember` = stay signed in after the browser closes (default true). */
+  login: (email: string, password: string, remember?: boolean) => Promise<void>;
   logout: () => Promise<void>;
+  /** Email a password-reset link. Resolves even for unknown emails. */
+  resetPassword: (email: string) => Promise<void>;
+  /** Re-authenticate with the current password, then set a new one. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   /** Force a refetch of the customer profile from /customer/me. */
   refresh: () => Promise<void>;
   /**
@@ -99,6 +111,34 @@ function toCustomerUser(fbUser: FirebaseUser, me: MeResponse): CustomerUser {
     displayName: me.customer.displayName,
     companyName: me.customer.organisationName ?? me.project.name,
   };
+}
+
+/** Firebase error codes → messages a customer can act on. */
+function friendlyAuthError(err: unknown, fallback: string): string {
+  const code = (err as { code?: string } | null)?.code ?? '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+    case 'auth/invalid-login-credentials':
+      return 'Incorrect email or password.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Wait a few minutes and try again.';
+    case 'auth/network-request-failed':
+      return 'Network error. Check your connection and try again.';
+    case 'auth/weak-password':
+      return 'Choose a stronger password (at least 8 characters).';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Sign in instead.';
+    case 'auth/requires-recent-login':
+      return 'For your security, sign out and sign in again, then retry.';
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Contact support.';
+    default:
+      return fallback;
+  }
 }
 
 // ── Provider ─────────────────────────────────────────────────────────
@@ -195,7 +235,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Please accept the Terms of Service and Privacy Policy.');
 
     // 1. Create the Firebase Auth user (also signs them in).
-    const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+    let cred;
+    try {
+      cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+    } catch (err) {
+      throw new Error(friendlyAuthError(err, 'Could not create your account. Please try again.'), { cause: err });
+    }
     const fbUser = cred.user;
 
     // 2. Fire-and-forget email verification. Do not block signup on this.
@@ -252,11 +297,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadCustomer(fbUser);
   };
 
-    const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, remember = true) => {
     if (!email.includes('@')) throw new Error('Please enter a valid email address.');
     if (password.length < 8) throw new Error('Password must be at least 8 characters.');
 
-    const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
+    await setPersistence(
+      firebaseAuth,
+      remember ? browserLocalPersistence : browserSessionPersistence,
+    );
+    let cred;
+    try {
+      cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
+    } catch (err) {
+      throw new Error(friendlyAuthError(err, 'Sign in failed. Please try again.'), { cause: err });
+    }
     // Wait for the profile fetch so `user` state is set before LoginForm
     // returns control. Without this, LoginPage's effect navigates while
     // isAuthenticated is still false, and ProtectedRoute bounces back
@@ -269,6 +323,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error(
         'Signed in, but could not load your account. Please try again.',
       );
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    if (!email.includes('@')) throw new Error('Please enter a valid email address.');
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email.trim());
+    } catch (err) {
+      // Don't reveal whether an account exists for this email.
+      const code = (err as { code?: string }).code;
+      if (code === 'auth/user-not-found') return;
+      throw new Error(friendlyAuthError(err, 'Could not send the reset email. Please try again.'), { cause: err });
+    }
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    const fbUser = firebaseAuth.currentUser;
+    if (!fbUser?.email) throw new Error('You are not signed in.');
+    if (newPassword.length < 8) throw new Error('New password must be at least 8 characters.');
+    try {
+      await reauthenticateWithCredential(
+        fbUser,
+        EmailAuthProvider.credential(fbUser.email, currentPassword),
+      );
+      await updatePassword(fbUser, newPassword);
+    } catch (err) {
+      throw new Error(friendlyAuthError(err, 'Could not change your password. Please try again.'), { cause: err });
     }
   };
 
@@ -291,6 +372,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         login,
         logout,
+        resetPassword,
+        changePassword,
         refresh,
         completeSetup,
       }}
@@ -300,6 +383,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');

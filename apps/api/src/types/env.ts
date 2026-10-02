@@ -41,6 +41,23 @@ export interface Env {
    * This is an internal ID; the admin UI never sees the driver behind it.
    */
   DEFAULT_SMS_PROVIDER_ID?: string;
+
+  /**
+   * Resend API key for transactional customer email (payment receipts,
+   * Sender ID decisions, low balance). When unset, email is skipped and
+   * only in-app notifications are created — safe to deploy unconfigured.
+   */
+  RESEND_API_KEY?: string;
+
+  /** From header for customer email, e.g. "ProfJero Connect <hello@profjeroconnect.com>". */
+  EMAIL_FROM?: string;
+
+  /**
+   * Public URL of the customer platform, e.g. "https://profjeroconnect-customer.pages.dev".
+   * Used for payment return URLs (when the request has no allowed Origin)
+   * and for links in notification emails.
+   */
+  CUSTOMER_APP_URL?: string;
 }
 
 /**

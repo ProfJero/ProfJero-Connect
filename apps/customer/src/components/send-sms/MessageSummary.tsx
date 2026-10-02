@@ -1,104 +1,122 @@
-import {
-  FileText,
-  Users,
-  AlignJustify,
-  Package,
-  Wallet,
-  Check,
-  Info,
-  Send,
-  Download,
-} from 'lucide-react';
-import { walletInfo, messageDetails, selectedContacts, messageMetrics } from '../../mock/sendSms';
+import { Link } from 'react-router-dom';
+import { FileText, Users, AlignJustify, Package, Wallet, Check, Send, AlertTriangle } from 'lucide-react';
+import { Notice, Spinner } from '../ui/States';
+import { cn } from '../../lib/utils';
 
-export function MessageSummary() {
+export function MessageSummary({
+  senderId,
+  recipientCount,
+  isUpperBound,
+  segments,
+  balance,
+  canSend,
+  blockers,
+  sending,
+  error,
+  onSend,
+}: {
+  senderId: string | null;
+  recipientCount: number;
+  isUpperBound: boolean;
+  segments: number;
+  balance: number | null;
+  canSend: boolean;
+  blockers: string[];
+  sending: boolean;
+  error: string | null;
+  onSend: () => void;
+}) {
+  const units = recipientCount * segments;
+  const sufficient = balance !== null && units <= balance;
+  const prefix = isUpperBound ? 'up to ' : '';
+
   return (
-    <aside className="lg:col-span-4" data-purpose="message-summary-sidebar">
+    <aside className="lg:col-span-4 lg:sticky lg:top-24">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-5">
-        {/* Header */}
-        <div className="flex items-center gap-2.5 pb-1">
+        <div className="flex items-center gap-2.5">
           <FileText className="w-5 h-5 text-blue-500" strokeWidth={2} />
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-            Message Summary
-          </h3>
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Message Summary</h3>
         </div>
 
-        {/* Metrics list */}
-        <div className="space-y-3 pt-1">
-          <Row icon={Users} label="Recipients" value={selectedContacts.count.toString()} />
-          <Row icon={AlignJustify} label="Segments" value={messageMetrics.segments.toString()} />
-          <Row
-            icon={Package}
-            label="Estimated Units"
-            value={messageMetrics.estimatedUnits.toString()}
-          />
+        <div className="space-y-3">
+          <Row icon={Package} label="Sender ID" value={senderId ?? '—'} />
+          <Row icon={Users} label="Recipients" value={`${prefix}${recipientCount.toLocaleString()}`} />
+          <Row icon={AlignJustify} label="Pages per message" value={segments.toString()} />
+          <Row icon={Package} label="Units needed" value={`${prefix}${units.toLocaleString()}`} strong />
         </div>
 
         <hr className="border-slate-100 dark:border-slate-800" />
 
-        {/* Wallet balance */}
-        <div className="flex items-center gap-3">
-          <Wallet className="w-4 h-4 text-blue-500" strokeWidth={2} />
-          <div>
-            <div className="text-[10px] text-slate-400 dark:text-slate-500 leading-none">
-              Wallet Balance
-            </div>
-            <div className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5">
-              {walletInfo.balance.toLocaleString()} units
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Wallet className="w-4 h-4 text-blue-500" strokeWidth={2} />
+            <div>
+              <div className="text-[10px] text-slate-400 dark:text-slate-500 leading-none">Wallet balance</div>
+              <div className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5">
+                {balance === null ? '—' : `${balance.toLocaleString()} units`}
+              </div>
             </div>
           </div>
+          <Link to="/wallet/add-funds" className="text-[11px] font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline">
+            Top up
+          </Link>
         </div>
 
-        {/* Sufficient alert */}
-        {walletInfo.sufficient && (
-          <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-lg p-3 flex items-start gap-2.5">
-            <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0 mt-0.5">
-              <Check className="w-3 h-3" strokeWidth={3} />
+        {recipientCount > 0 && balance !== null && (
+          <div
+            className={cn(
+              'rounded-lg p-3 flex items-start gap-2.5 border',
+              sufficient
+                ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'
+                : 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20',
+            )}
+          >
+            <div
+              className={cn(
+                'w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0',
+                sufficient ? 'bg-emerald-500' : 'bg-rose-500',
+              )}
+            >
+              {sufficient ? <Check className="w-3 h-3" strokeWidth={3} /> : <AlertTriangle className="w-3 h-3" strokeWidth={3} />}
             </div>
-            <div>
-              <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-400">
-                Sufficient balance
+            <div className="text-[11px]">
+              <div className={cn('font-semibold', sufficient ? 'text-emerald-800 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400')}>
+                {sufficient ? 'Sufficient balance' : 'Not enough units'}
               </div>
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-500 mt-0.5">
-                You have enough units to send this message.
+              <div className={sufficient ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400'}>
+                {sufficient
+                  ? `${(balance - units).toLocaleString()} units will remain${isUpperBound ? ' (at least)' : ''}.`
+                  : `You need ${(units - balance).toLocaleString()} more units${isUpperBound ? ' (at most)' : ''}.`}
               </div>
             </div>
           </div>
         )}
 
-        {/* Message details */}
-        <div className="bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-lg p-3 space-y-2">
-          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 font-semibold text-xs mb-1">
-            <div className="w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center">
-              <Info className="w-2.5 h-2.5" strokeWidth={3} />
-            </div>
-            <span>Message Details</span>
-          </div>
-          <div className="text-[11px] space-y-1.5 pt-1">
-            <DetailRow label="Sender ID" value={messageDetails.senderId} />
-            <DetailRow label="Message Length" value={messageDetails.messageLength} />
-            <DetailRow label="Segments" value={messageDetails.segments} />
-            <DetailRow label="Estimated Units" value={messageDetails.estimatedUnits} />
-          </div>
-        </div>
+        {blockers.length > 0 && (
+          <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 list-disc pl-4">
+            {blockers.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        )}
 
-        {/* Actions */}
-        <div className="space-y-2.5 pt-2">
-          <button
-            className="w-full bg-[#1a6cf0] hover:bg-[#155cd0] text-white py-2.5 px-4 rounded-lg font-semibold text-xs shadow-xs flex items-center justify-center gap-2 transition-colors"
-            type="button"
-          >
-            <Send className="w-4 h-4 -rotate-45" strokeWidth={2} />
-            <span>Send Message</span>
-          </button>
-          <button
-            className="w-full bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 py-2.5 px-4 rounded-lg font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
-            type="button"
-          >
-            <Download className="w-4 h-4 text-slate-600 dark:text-slate-400" strokeWidth={2} />
-            <span>Save as Draft</span>
-          </button>
-        </div>
+        {error && <Notice tone="error">{error}</Notice>}
+
+        <button
+          type="button"
+          onClick={onSend}
+          disabled={!canSend || sending}
+          className="w-full bg-[#1a6cf0] hover:bg-[#155cd0] text-white py-2.5 px-4 rounded-lg font-semibold text-xs shadow-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {sending ? <Spinner /> : <Send className="w-4 h-4 -rotate-45" strokeWidth={2} />}
+          <span>
+            {sending
+              ? 'Sending…'
+              : recipientCount > 0
+                ? `Send to ${prefix}${recipientCount.toLocaleString()} recipient${recipientCount === 1 ? '' : 's'}`
+                : 'Send Message'}
+          </span>
+        </button>
       </div>
     </aside>
   );
@@ -108,27 +126,20 @@ function Row({
   icon: Icon,
   label,
   value,
+  strong,
 }: {
   icon: typeof Users;
   label: string;
   value: string;
+  strong?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between text-xs">
+    <div className="flex items-center justify-between text-xs gap-3">
       <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
         <Icon className="w-4 h-4 text-blue-500" strokeWidth={2} />
         <span>{label}</span>
       </div>
-      <span className="font-bold text-slate-800 dark:text-slate-100">{value}</span>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-2">
-      <span className="text-slate-500 dark:text-slate-400">{label}:</span>
-      <span className="text-slate-800 dark:text-slate-200 font-medium text-right">{value}</span>
+      <span className={cn('text-slate-800 dark:text-slate-100 text-right', strong ? 'font-extrabold' : 'font-bold')}>{value}</span>
     </div>
   );
 }
