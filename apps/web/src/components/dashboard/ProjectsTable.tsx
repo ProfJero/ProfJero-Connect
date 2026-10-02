@@ -7,7 +7,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
 ];
 
@@ -45,7 +45,7 @@ export function ProjectsTable({ topProjects, onProjectClick }: Props) {
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {topProjects.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-10 text-center text-slate-400 text-sm">
+                <td colSpan={4} className="py-10 text-center text-slate-500 text-sm">
                   No SMS activity yet.
                 </td>
               </tr>
@@ -74,7 +74,7 @@ export function ProjectsTable({ topProjects, onProjectClick }: Props) {
                     </span>
                   </div>
                 </td>
-                <td className="py-3 px-3 text-right font-medium text-emerald-600">
+                <td className="py-3 px-3 text-right font-medium text-emerald-700">
                   {p.submitted.toLocaleString()}
                 </td>
                 <td className="py-3 px-3 text-right font-medium text-rose-600">

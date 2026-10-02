@@ -45,7 +45,7 @@ export function MetricCard({ metric }: { metric: Metric }) {
         <div className="flex items-baseline gap-2 mt-0.5">
           <span className="text-lg font-bold text-slate-900">{metric.value}</span>
         </div>
-        <span className="text-[10px] text-slate-400 block mt-0.5">
+        <span className="text-[10px] text-slate-500 block mt-0.5">
           {metric.footnote}
         </span>
       </div>

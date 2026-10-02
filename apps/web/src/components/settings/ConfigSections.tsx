@@ -31,8 +31,8 @@ function useSection<T>(props: SectionProps<T>) {
 }
 
 function Updated({ at }: { at: string | null }) {
-  if (!at) return <p className="text-[11px] text-slate-400 mb-4">Using defaults — never changed.</p>;
-  return <p className="text-[11px] text-slate-400 mb-4">Last changed {new Date(at).toLocaleString()}.</p>;
+  if (!at) return <p className="text-[11px] text-slate-500 mb-4">Using defaults — never changed.</p>;
+  return <p className="text-[11px] text-slate-500 mb-4">Last changed {new Date(at).toLocaleString()}.</p>;
 }
 
 /** Number input bound to an int or null ("" = null when nullable). */

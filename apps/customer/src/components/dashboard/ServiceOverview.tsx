@@ -14,7 +14,7 @@ export function ServiceOverview({ activeKeys }: { activeKeys: number | null }) {
       available: true,
       icon: Mail,
       iconBg: 'bg-blue-100 dark:bg-blue-500/20',
-      iconColor: 'text-[#1a6cf0] dark:text-blue-400',
+      iconColor: 'text-[#1764e0] dark:text-blue-400',
     },
     {
       name: 'API',
@@ -32,7 +32,7 @@ export function ServiceOverview({ activeKeys }: { activeKeys: number | null }) {
       available: false,
       icon: Smartphone,
       iconBg: 'bg-emerald-100 dark:bg-emerald-500/20',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      iconColor: 'text-emerald-700 dark:text-emerald-400',
     },
     {
       name: 'Airtime',
@@ -41,7 +41,7 @@ export function ServiceOverview({ activeKeys }: { activeKeys: number | null }) {
       available: false,
       icon: Phone,
       iconBg: 'bg-amber-100 dark:bg-amber-500/20',
-      iconColor: 'text-amber-600 dark:text-amber-400',
+      iconColor: 'text-amber-700 dark:text-amber-400',
     },
   ];
 
@@ -49,7 +49,7 @@ export function ServiceOverview({ activeKeys }: { activeKeys: number | null }) {
     <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Services</h3>
-        <Link to="/services" className="text-[#1a6cf0] dark:text-blue-400 hover:underline text-xs font-medium">
+        <Link to="/services" className="text-[#1764e0] dark:text-blue-400 hover:underline text-xs font-medium">
           View all →
         </Link>
       </div>
@@ -73,7 +73,7 @@ export function ServiceOverview({ activeKeys }: { activeKeys: number | null }) {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Badge tone={item.available ? 'success' : 'neutral'} label={item.available ? 'Available' : 'Coming soon'} />
-                <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500" strokeWidth={2} />
+                <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-500" strokeWidth={2} />
               </div>
             </Link>
           );

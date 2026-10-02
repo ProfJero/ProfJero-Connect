@@ -52,7 +52,7 @@ export function Field({
         {label}
       </label>
       {children}
-      {hint && <p className="text-[11px] text-slate-400 mt-1 leading-snug">{hint}</p>}
+      {hint && <p className="text-[11px] text-slate-500 mt-1 leading-snug">{hint}</p>}
     </div>
   );
 }
@@ -118,7 +118,7 @@ export function SaveBar({
 }) {
   return (
     <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-      <div aria-live="polite" className={cn('text-xs', message?.tone === 'error' ? 'text-rose-600' : 'text-emerald-600')}>
+      <div aria-live="polite" className={cn('text-xs', message?.tone === 'error' ? 'text-rose-600' : 'text-emerald-700')}>
         {message?.text}
       </div>
       {!disabled && (

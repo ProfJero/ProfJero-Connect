@@ -11,10 +11,10 @@ export function UnitConsumptionDonut({ segments, totalUnits }: Props) {
   return (
     <Card className="p-5" data-purpose="unit-consumption">
       <h3 className="text-sm font-bold text-slate-900">Unit Consumption by Project</h3>
-      <p className="text-xs text-slate-400 mb-4">Share of total units consumed.</p>
+      <p className="text-xs text-slate-500 mb-4">Share of total units consumed.</p>
 
       {segments.length === 0 ? (
-        <div className="h-36 flex items-center justify-center text-xs text-slate-400">
+        <div className="h-36 flex items-center justify-center text-xs text-slate-500">
           No units consumed in this period.
         </div>
       ) : (
@@ -52,7 +52,7 @@ export function UnitConsumptionDonut({ segments, totalUnits }: Props) {
               <span className="text-xs font-bold text-slate-800 leading-tight">
                 {totalUnits.toLocaleString()}
               </span>
-              <span className="text-[9px] text-slate-400 font-medium">Units Used</span>
+              <span className="text-[9px] text-slate-500 font-medium">Units Used</span>
             </div>
           </div>
 

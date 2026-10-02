@@ -29,12 +29,12 @@ export function ProjectPerformanceTable({ stats }: Props) {
   return (
     <Card className="p-5 lg:col-span-4 flex flex-col" data-purpose="project-performance">
       <h3 className="text-sm font-bold text-slate-900">Project Performance</h3>
-      <p className="text-xs text-slate-400 mb-3">Top projects by SMS volume.</p>
+      <p className="text-xs text-slate-500 mb-3">Top projects by SMS volume.</p>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Project performance">
         <table className="w-full text-left text-xs">
           <thead>
-            <tr className="text-[11px] text-slate-400 border-b border-slate-100">
+            <tr className="text-[11px] text-slate-500 border-b border-slate-100">
               <th className="pb-2 font-medium">Project</th>
               <th className="pb-2 font-medium text-right">SMS</th>
               <th className="pb-2 font-medium text-right">Units</th>
@@ -45,7 +45,7 @@ export function ProjectPerformanceTable({ stats }: Props) {
           <tbody className="divide-y divide-slate-100">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-slate-400">
+                <td colSpan={5} className="py-8 text-center text-slate-500">
                   No project activity in this period.
                 </td>
               </tr>

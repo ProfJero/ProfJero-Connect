@@ -16,7 +16,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
   'bg-indigo-600',
 ];
@@ -113,8 +113,8 @@ export function SendSmsSidebar({
               className={cn(
                 'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
                 sufficient
-                  ? 'bg-emerald-100 text-emerald-600'
-                  : 'bg-amber-100 text-amber-600',
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-amber-100 text-amber-700',
               )}
             >
               <Wallet className="w-5 h-5" strokeWidth={2} />
@@ -138,8 +138,8 @@ export function SendSmsSidebar({
               className={cn(
                 'px-2.5 py-1 rounded-md bg-white border text-[11px] font-semibold shadow-xs shrink-0',
                 sufficient
-                  ? 'border-emerald-200 text-emerald-600'
-                  : 'border-amber-200 text-amber-600',
+                  ? 'border-emerald-200 text-emerald-700'
+                  : 'border-amber-200 text-amber-700',
               )}
             >
               {sufficient ? 'Sufficient' : `Short by ${units - balance}`}
@@ -183,7 +183,7 @@ function SummaryPill({
         <div className="text-xs font-bold text-slate-900 leading-tight truncate">
           {value}
         </div>
-        <div className="text-[10px] text-slate-400 leading-tight truncate">
+        <div className="text-[10px] text-slate-500 leading-tight truncate">
           {sub}
         </div>
       </div>

@@ -97,7 +97,7 @@ export function AddFundsPage() {
           <div className="flex items-center gap-2">
             <Link
               to="/wallet"
-              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition text-[#1a6cf0] dark:text-blue-400 shrink-0"
+              className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition text-[#1764e0] dark:text-blue-400 shrink-0"
               aria-label="Go back"
             >
               <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
@@ -155,8 +155,8 @@ export function AddFundsPage() {
                         <div className="text-base font-extrabold text-slate-900 dark:text-slate-100 mt-1">
                           {pkg.units.toLocaleString()} <span className="text-xs font-semibold text-slate-500">units</span>
                         </div>
-                        <div className="text-xs font-bold text-[#1a6cf0] dark:text-blue-400 mt-0.5">{formatGhs(pkg.priceGhs)}</div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                        <div className="text-xs font-bold text-[#1764e0] dark:text-blue-400 mt-0.5">{formatGhs(pkg.priceGhs)}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
                           GH₵{pkg.effectiveRate.toFixed(4)} / unit
                         </div>
                       </button>
@@ -176,7 +176,7 @@ export function AddFundsPage() {
                     >
                       <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Custom</div>
                       <div className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1">Enter an amount</div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-500 mt-1">
                         GH₵{sms!.unitPriceGhs!.toFixed(4)} / unit
                       </div>
                     </button>
@@ -213,7 +213,7 @@ export function AddFundsPage() {
             <PaymentMethodSelector selected={method} onSelect={setMethod} />
 
             <div className="bg-sky-50/70 dark:bg-blue-500/10 border border-sky-100 dark:border-blue-500/20 rounded-xl p-3.5 flex items-start gap-3">
-              <Info className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400 shrink-0 mt-0.5" strokeWidth={2} />
+              <Info className="w-4 h-4 text-[#1764e0] dark:text-blue-400 shrink-0 mt-0.5" strokeWidth={2} />
               <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
                 <span className="font-bold text-slate-900 dark:text-slate-100">How it works: </span>
                 you'll complete payment on our secure checkout page, then return here. Units are added
@@ -246,7 +246,7 @@ export function AddFundsPage() {
           <div className="lg:col-span-5 space-y-5">
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs p-5">
               <div className="flex items-center gap-2 mb-4">
-                <Receipt className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400" strokeWidth={2} />
+                <Receipt className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Order Summary</h3>
               </div>
               {summary ? (
@@ -293,7 +293,7 @@ function StepHeader({ step, title, subtitle }: { step: number; title: string; su
       </span>
       <div>
         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">{title}</h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500">{subtitle}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-500">{subtitle}</p>
       </div>
     </div>
   );

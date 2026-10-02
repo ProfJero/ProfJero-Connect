@@ -40,7 +40,7 @@ export function DashboardPage() {
         footer: p && p.messages > 0 ? 'vs. previous 30 days' : 'messages',
         icon: Mail,
         iconBg: 'bg-blue-50 dark:bg-blue-500/10',
-        iconColor: 'text-[#1a6cf0] dark:text-blue-400',
+        iconColor: 'text-[#1764e0] dark:text-blue-400',
       },
     },
     {
@@ -63,7 +63,7 @@ export function DashboardPage() {
         footer: 'paid into your wallet',
         icon: Banknote,
         iconBg: 'bg-emerald-50 dark:bg-emerald-500/10',
-        iconColor: 'text-emerald-600 dark:text-emerald-400',
+        iconColor: 'text-emerald-700 dark:text-emerald-400',
       },
     },
     {

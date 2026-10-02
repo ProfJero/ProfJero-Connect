@@ -50,7 +50,7 @@ export function SmsDetailsInspector({ detail, loading, error, onClose }: Props) 
         <h3 className="text-sm font-bold text-slate-900">Batch Details</h3>
         <button
           aria-label="Close inspector"
-          className="text-slate-400 hover:text-slate-600"
+          className="text-slate-500 hover:text-slate-600"
           type="button"
           onClick={onClose}
         >
@@ -226,7 +226,7 @@ function RecordRow({
         className="w-full flex items-center justify-between gap-2 p-2.5 hover:bg-slate-50 transition-colors text-left"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <Chevron className="w-3 h-3 text-slate-400 shrink-0" />
+          <Chevron className="w-3 h-3 text-slate-500 shrink-0" />
           <span className="font-mono text-[11px] text-slate-700 truncate">
             {record.recipient}
           </span>
@@ -273,13 +273,13 @@ function RecordRow({
           {record.providerError && (
             <div>
               <span className="text-slate-500 block mb-0.5">Error</span>
-              <div className="text-rose-600 bg-rose-50 border border-rose-200 rounded px-2 py-1">
+              <div className="text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
                 {record.providerError}
               </div>
             </div>
           )}
 
-          <div className="font-mono text-[10px] text-slate-400">
+          <div className="font-mono text-[10px] text-slate-500">
             Record ID: {record.id}
           </div>
         </div>
@@ -301,11 +301,11 @@ function StatCell({
 }) {
   const toneClass =
     tone === 'emerald'
-      ? 'text-emerald-600'
+      ? 'text-emerald-700'
       : tone === 'rose'
         ? 'text-rose-600'
         : tone === 'amber'
-          ? 'text-amber-600'
+          ? 'text-amber-700'
           : highlight
             ? 'text-slate-900'
             : 'text-slate-700';
@@ -320,7 +320,7 @@ function StatCell({
 function DetailCell({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-slate-400 text-[10px]">{label}</div>
+      <div className="text-slate-500 text-[10px]">{label}</div>
       <div className="font-semibold text-slate-800">{value}</div>
     </div>
   );
@@ -335,7 +335,7 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 pt-2">
-      <span className="text-slate-400 font-normal shrink-0">{label}</span>
+      <span className="text-slate-500 font-normal shrink-0">{label}</span>
       <div className="min-w-0 text-right">{children}</div>
     </div>
   );
@@ -355,12 +355,12 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   return (
     <button
       aria-label={label}
-      className="text-slate-400 hover:text-slate-600 shrink-0"
+      className="text-slate-500 hover:text-slate-600 shrink-0"
       type="button"
       onClick={handle}
     >
       {copied ? (
-        <span className="text-[10px] text-emerald-600 font-medium">Copied</span>
+        <span className="text-[10px] text-emerald-700 font-medium">Copied</span>
       ) : (
         <Copy className="w-3.5 h-3.5" />
       )}

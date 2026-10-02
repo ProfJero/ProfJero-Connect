@@ -49,9 +49,9 @@ export function PricingPage() {
           <Tag className="w-5 h-5" strokeWidth={2} />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
             Pricing
-          </h2>
+          </h1>
           <p className="text-xs text-slate-500">
             Configure the unit rate and package catalog clients see.
           </p>
@@ -74,7 +74,7 @@ export function PricingPage() {
                   ? 'bg-white text-slate-900 shadow-sm'
                   : tab.available
                     ? 'text-slate-600 hover:text-slate-900'
-                    : 'text-slate-400 cursor-not-allowed',
+                    : 'text-slate-500 cursor-not-allowed',
               )}
             >
               {tab.label}

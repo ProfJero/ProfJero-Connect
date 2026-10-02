@@ -67,7 +67,7 @@ export function AddFundsCompletePage() {
       <div className="max-w-md mx-auto bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-8 text-center">
         {view.kind === 'checking' && (
           <>
-            <Spinner className="w-8 h-8 text-[#1a6cf0]" />
+            <Spinner className="w-8 h-8 text-[#1764e0]" />
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-4">Confirming your payment…</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
               This usually takes a few seconds. If you're paying with Mobile Money, approve the prompt on your phone.
@@ -82,7 +82,7 @@ export function AddFundsCompletePage() {
             <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
               {view.payment.units.toLocaleString()} units have been added to your wallet.
             </p>
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
               {formatGhs(view.payment.amountGhs)} · Ref {view.payment.reference}
             </p>
           </>

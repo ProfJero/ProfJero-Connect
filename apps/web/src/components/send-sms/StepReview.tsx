@@ -19,7 +19,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
   'bg-indigo-600',
 ];

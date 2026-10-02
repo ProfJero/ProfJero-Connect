@@ -13,7 +13,7 @@ export function SuccessPanel({ response, onSendAnother }: Props) {
   return (
     <div className="sm:col-span-7 bg-white rounded-xl border border-slate-200/90 p-4 sm:p-6 shadow-xs space-y-5">
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+        <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
           <CheckCircle2 className="w-6 h-6" strokeWidth={2} />
         </div>
         <div>
@@ -85,10 +85,10 @@ function Stat({
 }) {
   const toneClass =
     tone === 'emerald'
-      ? 'text-emerald-600'
+      ? 'text-emerald-700'
       : tone === 'rose'
         ? 'text-rose-600'
-        : 'text-amber-600';
+        : 'text-amber-700';
   return (
     <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
       <div className="text-[10px] text-slate-500 font-medium">{label}</div>

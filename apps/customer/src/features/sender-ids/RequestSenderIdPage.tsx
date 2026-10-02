@@ -20,14 +20,14 @@ export function RequestSenderIdPage() {
         <div className="flex items-center gap-3">
           <Link
             to="/messaging/sender-ids"
-            className="text-[#1a6cf0] dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 focus:outline-none"
+            className="text-[#1764e0] dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 focus:outline-none"
             title="Go back"
           >
             <ArrowLeft className="w-6 h-6" strokeWidth={2.5} />
           </Link>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
             Request Sender ID
-          </h2>
+          </h1>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 pl-9">
           Submit a request for a Sender ID. Our team reviews and registers it with the networks

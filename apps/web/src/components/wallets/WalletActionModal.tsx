@@ -183,7 +183,7 @@ function WalletActionModalForm({
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
               />
               {currentEntry && mode === 'debit' && (
-                <p className="mt-1 text-[11px] text-slate-400">
+                <p className="mt-1 text-[11px] text-slate-500">
                   Available: {currentEntry.wallet.availableUnits.toLocaleString()} units
                 </p>
               )}
@@ -205,7 +205,7 @@ function WalletActionModalForm({
                 }
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
               />
-              <p className="mt-1 text-[11px] text-slate-400">
+              <p className="mt-1 text-[11px] text-slate-500">
                 Appears in the ledger as the reason for this entry.
               </p>
             </div>
@@ -227,7 +227,7 @@ function WalletActionModalForm({
               placeholder="e.g. 500 — leave empty to clear"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
             />
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-[11px] text-slate-500">
               Currently:{' '}
               {currentEntry?.wallet.lowBalanceThreshold != null
                 ? `${currentEntry.wallet.lowBalanceThreshold.toLocaleString()} units`

@@ -41,13 +41,13 @@ export function ProviderActivityCard({
       </div>
 
       {!providerLabel && (
-        <div className="py-8 text-center text-xs text-slate-400">
+        <div className="py-8 text-center text-xs text-slate-500">
           No provider configured.
         </div>
       )}
 
       {providerLabel && requests.length === 0 && (
-        <div className="py-8 text-center text-xs text-slate-400">
+        <div className="py-8 text-center text-xs text-slate-500">
           No activity yet.
         </div>
       )}
@@ -70,7 +70,7 @@ export function ProviderActivityCard({
                     'w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5',
                     isError
                       ? 'bg-rose-100 text-rose-600'
-                      : 'bg-emerald-100 text-emerald-600',
+                      : 'bg-emerald-100 text-emerald-700',
                   )}
                 >
                   {isError ? (
@@ -84,11 +84,11 @@ export function ProviderActivityCard({
                     <span className="font-medium text-slate-700 truncate">
                       {OPERATION_LABELS[r.operation]}
                     </span>
-                    <span className="text-[10px] text-slate-400 shrink-0">
+                    <span className="text-[10px] text-slate-500 shrink-0">
                       {r.durationMs}ms
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                  <div className="text-[10px] text-slate-500 mt-0.5 truncate">
                     {date} {time}
                     {r.error ? ` · ${r.error}` : ` · ${r.summary}`}
                   </div>

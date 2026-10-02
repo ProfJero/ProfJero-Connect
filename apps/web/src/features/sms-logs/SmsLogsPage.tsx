@@ -147,7 +147,7 @@ export function SmsLogsPage() {
             <MessageSquare className="w-5 h-5" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-slate-900">SMS Logs</h2>
+            <h1 className="text-xl font-bold text-slate-900">SMS Logs</h1>
             <p className="text-xs text-slate-500">
               View, track and manage all SMS sent through ProfJero SMS.
             </p>

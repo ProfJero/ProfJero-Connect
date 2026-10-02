@@ -56,7 +56,7 @@ export function RecentPayments() {
                   <div className="font-semibold text-slate-800 dark:text-slate-100">
                     {formatGhs(p.amountGhs)} · {p.units.toLocaleString()} units
                   </div>
-                  <div className="text-[11px] text-slate-400 dark:text-slate-500">{formatDateTime(p.createdAt)}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-500">{formatDateTime(p.createdAt)}</div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {p.status === 'pending' && (
@@ -64,7 +64,7 @@ export function RecentPayments() {
                       type="button"
                       onClick={() => recheck(p.reference)}
                       disabled={checking === p.reference}
-                      className="text-[11px] font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline disabled:opacity-50"
+                      className="text-[11px] font-semibold text-[#1764e0] dark:text-blue-400 hover:underline disabled:opacity-50"
                     >
                       {checking === p.reference ? 'Checking…' : 'Check status'}
                     </button>
@@ -77,7 +77,7 @@ export function RecentPayments() {
         </ul>
       )}
       <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800">
-        <Link to="/transactions" className="text-[11px] font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline">
+        <Link to="/transactions" className="text-[11px] font-semibold text-[#1764e0] dark:text-blue-400 hover:underline">
           View all transactions →
         </Link>
       </div>

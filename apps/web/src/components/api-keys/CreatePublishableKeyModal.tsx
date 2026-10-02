@@ -253,7 +253,7 @@ function CreatePublishableKeyModalForm({
                       <button
                         type="button"
                         onClick={() => removeRecipient(r)}
-                        className="text-slate-400 hover:text-rose-600"
+                        className="text-slate-500 hover:text-rose-600"
                         aria-label={`Remove ${r}`}
                       >
                         <X className="w-3 h-3" strokeWidth={2.5} />
@@ -263,7 +263,7 @@ function CreatePublishableKeyModalForm({
                 </div>
               )}
 
-              <p className="mt-1.5 text-[11px] text-slate-400">
+              <p className="mt-1.5 text-[11px] text-slate-500">
                 {recipientMode === 'allowlist'
                   ? 'Exact phone numbers this key may send to.'
                   : 'Phone number prefixes (e.g. +23353 allows any number starting with that).'}
@@ -297,7 +297,7 @@ function CreatePublishableKeyModalForm({
               suffix="req"
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-slate-400">
+          <p className="mt-1.5 text-[11px] text-slate-500">
             Each recipient in a batch counts as one request. A 10-recipient
             send consumes 10 slots.
           </p>
@@ -319,7 +319,7 @@ function CreatePublishableKeyModalForm({
               }
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
             />
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-[11px] text-slate-500">
               Max units this key can ever spend.
             </p>
           </div>
@@ -333,7 +333,7 @@ function CreatePublishableKeyModalForm({
               onChange={(e) => setExpiresAt(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
             />
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-[11px] text-slate-500">
               Key stops working after this date.
             </p>
           </div>
@@ -384,7 +384,7 @@ function NumberField({
           onChange={(e) => onChange(Math.max(1, Number(e.target.value) || 1))}
           className="w-full rounded-lg border border-slate-200 pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
         />
-        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
+        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 pointer-events-none">
           {suffix}
         </span>
       </div>

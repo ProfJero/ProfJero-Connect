@@ -56,9 +56,9 @@ export function SenderIdsPage() {
             <BadgeCheck className="w-5 h-5" strokeWidth={2} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               Sender IDs
-            </h2>
+            </h1>
             <p className="text-xs text-slate-500">
               Review requests and manage which projects can send as which
               identities.

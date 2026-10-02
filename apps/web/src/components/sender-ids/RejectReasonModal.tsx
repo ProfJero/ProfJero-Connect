@@ -76,7 +76,7 @@ function RejectReasonModalForm({
             placeholder="Why is this being rejected?"
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20 resize-none"
           />
-          <p className="mt-1 text-[11px] text-slate-400">
+          <p className="mt-1 text-[11px] text-slate-500">
             {reason.length}/300 characters
           </p>
         </div>

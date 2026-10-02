@@ -39,9 +39,9 @@ export function CustomerSidebar({
               <span className="font-extrabold text-2xl tracking-tighter italic">P</span>
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-white font-bold text-base tracking-tight leading-tight">
+              <div className="text-white font-bold text-base tracking-tight leading-tight">
                 ProfJero Connect
-              </h1>
+              </div>
               <p className="text-[11px] text-slate-400 font-medium">
                 Connect. Communicate. Grow.
               </p>

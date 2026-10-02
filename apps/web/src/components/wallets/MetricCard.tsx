@@ -44,7 +44,7 @@ export function MetricCard({ metric }: { metric: Metric }) {
               {metric.value}
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">{metric.footnote}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">{metric.footnote}</p>
         </div>
       </div>
     </div>

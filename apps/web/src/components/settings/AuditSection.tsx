@@ -92,11 +92,11 @@ export function AuditSection() {
                   <tr key={l.id} className="align-top">
                     <td className="px-6 py-3 whitespace-nowrap">
                       <div className="text-slate-700">{when.date}</div>
-                      <div className="text-[11px] text-slate-400">{when.time}</div>
+                      <div className="text-[11px] text-slate-500">{when.time}</div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-slate-700">{l.actorEmail ?? l.actorUid}</div>
-                      <div className="text-[11px] text-slate-400">{l.actorRole}</div>
+                      <div className="text-[11px] text-slate-500">{l.actorRole}</div>
                     </td>
                     <td className="px-4 py-3 min-w-[240px]">
                       <div className="font-semibold text-slate-800">{l.action}</div>

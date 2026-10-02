@@ -53,7 +53,7 @@ export function BatchesTable({ batches }: { batches: SmsBatch[] }) {
                 </td>
                 <td className="py-3.5 px-4 text-right">
                   <Link to={href} aria-label="View details" className="inline-flex p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <ChevronRight className="w-4 h-4 text-slate-400" strokeWidth={2} />
+                    <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={2} />
                   </Link>
                 </td>
               </tr>

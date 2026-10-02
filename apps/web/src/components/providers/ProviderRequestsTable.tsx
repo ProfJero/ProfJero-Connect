@@ -29,7 +29,7 @@ export function ProviderRequestsTable({
         <div>
           <h3 className="text-sm font-bold text-slate-800">
             Request Log
-            <span className="ml-2 text-slate-400 font-normal text-xs">
+            <span className="ml-2 text-slate-500 font-normal text-xs">
               {requests.length}
             </span>
           </h3>
@@ -67,7 +67,7 @@ export function ProviderRequestsTable({
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {requests.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-slate-400 text-sm">
+                  <td colSpan={6} className="py-10 text-center text-slate-500 text-sm">
                     No requests logged yet.
                   </td>
                 </tr>
@@ -79,7 +79,7 @@ export function ProviderRequestsTable({
                   <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3 px-4 whitespace-nowrap text-slate-500">
                       <div className="text-[11px]">{date}</div>
-                      <div className="text-[10px] text-slate-400">{time}</div>
+                      <div className="text-[10px] text-slate-500">{time}</div>
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-800">
                       {OPERATION_LABELS[r.operation]}

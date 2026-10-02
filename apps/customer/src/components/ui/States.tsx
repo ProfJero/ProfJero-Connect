@@ -41,7 +41,7 @@ export function EmptyState({
 }) {
   return (
     <div className={cn('px-6 py-12 text-center', className)}>
-      <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 flex items-center justify-center mx-auto mb-3">
+      <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 flex items-center justify-center mx-auto mb-3">
         <Icon className="w-5 h-5" strokeWidth={2} />
       </div>
       <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">{title}</h3>

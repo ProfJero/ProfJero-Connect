@@ -7,8 +7,8 @@ import { cn } from '../../lib/utils';
 
 const ICON = { error: AlertCircle, warning: AlertTriangle, info: Info } as const;
 const TONE = {
-  error: 'bg-rose-50 text-rose-600',
-  warning: 'bg-amber-50 text-amber-600',
+  error: 'bg-rose-50 text-rose-700',
+  warning: 'bg-amber-50 text-amber-700',
   info: 'bg-blue-50 text-blue-600',
 } as const;
 
@@ -103,7 +103,7 @@ export function AlertsBell() {
                           {a.title}
                         </span>
                         <span className="block text-[11px] text-slate-500 leading-snug mt-0.5">{a.body}</span>
-                        <span className="block text-[10px] text-slate-400 mt-0.5">{timeAgo(a.latestAt)}</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">{timeAgo(a.latestAt)}</span>
                       </span>
                       {a.unread && <span className="w-2 h-2 rounded-full bg-blue-600 mt-1.5 shrink-0" aria-label="New" />}
                     </button>

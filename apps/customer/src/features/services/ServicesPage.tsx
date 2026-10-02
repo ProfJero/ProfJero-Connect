@@ -9,7 +9,7 @@ export function ServicesPage() {
     <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 max-w-7xl w-full mx-auto">
       {/* Breadcrumb + heading */}
       <div>
-        <div className="text-xs font-medium text-[#1a6cf0] dark:text-blue-400 mb-1">
+        <div className="text-xs font-medium text-[#1764e0] dark:text-blue-400 mb-1">
           Services
         </div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

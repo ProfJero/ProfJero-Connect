@@ -51,13 +51,13 @@ export function MessageSummary({
           <div className="flex items-center gap-3">
             <Wallet className="w-4 h-4 text-blue-500" strokeWidth={2} />
             <div>
-              <div className="text-[10px] text-slate-400 dark:text-slate-500 leading-none">Wallet balance</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-500 leading-none">Wallet balance</div>
               <div className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-0.5">
                 {balance === null ? '—' : `${balance.toLocaleString()} units`}
               </div>
             </div>
           </div>
-          <Link to="/wallet/add-funds" className="text-[11px] font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline">
+          <Link to="/wallet/add-funds" className="text-[11px] font-semibold text-[#1764e0] dark:text-blue-400 hover:underline">
             Top up
           </Link>
         </div>
@@ -83,7 +83,7 @@ export function MessageSummary({
               <div className={cn('font-semibold', sufficient ? 'text-emerald-800 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400')}>
                 {sufficient ? 'Sufficient balance' : 'Not enough units'}
               </div>
-              <div className={sufficient ? 'text-emerald-600 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400'}>
+              <div className={sufficient ? 'text-emerald-700 dark:text-emerald-500' : 'text-rose-600 dark:text-rose-400'}>
                 {sufficient
                   ? `${(balance - units).toLocaleString()} units will remain${isUpperBound ? ' (at least)' : ''}.`
                   : `You need ${(units - balance).toLocaleString()} more units${isUpperBound ? ' (at most)' : ''}.`}

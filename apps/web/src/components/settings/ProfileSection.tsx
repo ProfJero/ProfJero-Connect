@@ -81,7 +81,7 @@ export function ProfileSection() {
             <input id="me-role" value={user?.role.replace('_', ' ') ?? ''} disabled className={inputCls + ' capitalize'} />
           </Field>
           <div className="flex items-center justify-between gap-3">
-            <span aria-live="polite" className={nameMsg?.ok ? 'text-xs text-emerald-600' : 'text-xs text-rose-600'}>{nameMsg?.text}</span>
+            <span aria-live="polite" className={nameMsg?.ok ? 'text-xs text-emerald-700' : 'text-xs text-rose-600'}>{nameMsg?.text}</span>
             <button type="submit" disabled={savingName || nameValue.trim() === (user?.displayName ?? '')} className="px-4 py-2 rounded-lg bg-[#1976d2] text-white text-xs font-semibold disabled:opacity-50">
               {savingName ? 'Saving…' : 'Save name'}
             </button>
@@ -101,7 +101,7 @@ export function ProfileSection() {
             <input id="pw-conf" type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputCls} />
           </Field>
           <div className="flex items-center justify-between gap-3">
-            <span aria-live="polite" className={pwMsg?.ok ? 'text-xs text-emerald-600' : 'text-xs text-rose-600'}>{pwMsg?.text}</span>
+            <span aria-live="polite" className={pwMsg?.ok ? 'text-xs text-emerald-700' : 'text-xs text-rose-600'}>{pwMsg?.text}</span>
             <button type="submit" disabled={savingPw} className="px-4 py-2 rounded-lg bg-[#1976d2] text-white text-xs font-semibold disabled:opacity-50">
               {savingPw ? 'Changing…' : 'Change password'}
             </button>

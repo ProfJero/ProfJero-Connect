@@ -21,7 +21,7 @@ const TYPE_STYLE: Record<
   'Wallet Funding': {
     icon: Wallet,
     bg: 'bg-blue-100 dark:bg-blue-500/20',
-    color: 'text-[#1a6cf0] dark:text-blue-400',
+    color: 'text-[#1764e0] dark:text-blue-400',
   },
   SMS: {
     icon: Mail,
@@ -31,12 +31,12 @@ const TYPE_STYLE: Record<
   Refund: {
     icon: RotateCcw,
     bg: 'bg-emerald-100 dark:bg-emerald-500/20',
-    color: 'text-emerald-600 dark:text-emerald-400',
+    color: 'text-emerald-700 dark:text-emerald-400',
   },
   Adjustment: {
     icon: SlidersHorizontal,
     bg: 'bg-amber-100 dark:bg-amber-500/20',
-    color: 'text-amber-600 dark:text-amber-400',
+    color: 'text-amber-700 dark:text-amber-400',
   },
 };
 
@@ -52,7 +52,7 @@ export function RecentTransactions() {
         </h3>
         <Link
           to="/transactions"
-          className="text-[#1a6cf0] dark:text-blue-400 hover:underline text-xs font-medium flex items-center gap-1"
+          className="text-[#1764e0] dark:text-blue-400 hover:underline text-xs font-medium flex items-center gap-1"
         >
           <span>View all</span>
           <ArrowRight className="w-3 h-3" strokeWidth={2} />
@@ -78,7 +78,7 @@ export function RecentTransactions() {
         <TableScroll>
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+              <tr className="text-[11px] font-semibold text-slate-500 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                 <th className="py-2.5 px-5 whitespace-nowrap">Date &amp; Time</th>
                 <th className="py-2.5 px-4 whitespace-nowrap">Type</th>
                 <th className="py-2.5 px-4 whitespace-nowrap">Description</th>
@@ -124,7 +124,7 @@ export function RecentTransactions() {
                       className={cn(
                         'py-3 px-4 font-semibold whitespace-nowrap',
                         amount.positive
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-emerald-700 dark:text-emerald-400'
                           : 'text-rose-500 dark:text-rose-400',
                       )}
                     >

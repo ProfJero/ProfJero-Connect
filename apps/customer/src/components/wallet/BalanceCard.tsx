@@ -15,7 +15,7 @@ export function BalanceCard() {
               <Wallet className="w-6 h-6" strokeWidth={2} />
             </div>
             <div className="min-w-0">
-              <span className="text-xs text-blue-100 font-medium">
+              <span className="text-xs text-white font-medium">
                 Available Balance
               </span>
               <div className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-0.5">
@@ -26,7 +26,7 @@ export function BalanceCard() {
                 ) : (
                   <>
                     {(wallet?.availableUnits ?? 0).toLocaleString()}
-                    <span className="text-sm font-medium text-blue-100 ml-1.5">units</span>
+                    <span className="text-sm font-medium text-white ml-1.5">units</span>
                   </>
                 )}
               </div>
@@ -65,7 +65,7 @@ export function BalanceCard() {
           to="/transactions"
           className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition"
         >
-          <Clock className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400" strokeWidth={2} />
+          <Clock className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
           <span>Transaction History</span>
         </Link>
       </div>
@@ -86,17 +86,17 @@ function SubMetric({
 }) {
   return (
     <div className="border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 rounded-xl p-3.5 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-[#1a6cf0] dark:text-blue-400 shrink-0">
+      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-[#1764e0] dark:text-blue-400 shrink-0">
         <Icon className="w-5 h-5" strokeWidth={2} />
       </div>
       <div className="min-w-0">
-        <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+        <div className="text-[11px] text-slate-500 dark:text-slate-500 font-medium">
           {label}
         </div>
         <div className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">
           {value}
         </div>
-        <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+        <div className="text-[10px] text-slate-500 dark:text-slate-500 truncate">
           {sub}
         </div>
       </div>

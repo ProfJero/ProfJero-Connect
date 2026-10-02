@@ -39,7 +39,7 @@ interface SystemResponse {
 
 type Health = 'ok' | 'warn' | 'bad';
 const HEALTH_ICON = { ok: CheckCircle2, warn: AlertTriangle, bad: XCircle };
-const HEALTH_TONE = { ok: 'text-emerald-600', warn: 'text-amber-600', bad: 'text-rose-600' };
+const HEALTH_TONE = { ok: 'text-emerald-700', warn: 'text-amber-700', bad: 'text-rose-600' };
 
 function Row({ label, value, health, hint }: { label: string; value: string; health: Health; hint?: string }) {
   const Icon = HEALTH_ICON[health];
@@ -169,7 +169,7 @@ export function SystemSection() {
         ) : (
           <p className="text-[11px] text-slate-500">Recovery actions are available to super admins.</p>
         )}
-        <p className="text-[11px] text-slate-400 mt-4">
+        <p className="text-[11px] text-slate-500 mt-4">
           External uptime monitors can poll <code className="font-mono">GET /health/ready</code> (checks the database; returns 503 when unhealthy).
         </p>
       </Card>

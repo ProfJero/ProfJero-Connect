@@ -182,9 +182,9 @@ export function ProjectsPage() {
             <Building className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               Projects / Clients
-            </h2>
+            </h1>
             <p className="text-xs text-slate-500">
               Manage all your projects, clients and their SMS integration details.
             </p>

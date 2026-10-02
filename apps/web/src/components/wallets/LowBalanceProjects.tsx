@@ -30,7 +30,7 @@ export function LowBalanceProjects({ entries, onProjectClick }: Props) {
       </div>
 
       {flagged.length === 0 ? (
-        <div className="py-8 text-center text-[11px] text-slate-400">
+        <div className="py-8 text-center text-[11px] text-slate-500">
           All wallets are healthy.
         </div>
       ) : (
@@ -53,8 +53,8 @@ export function LowBalanceProjects({ entries, onProjectClick }: Props) {
                     className={cn(
                       'w-6 h-6 rounded-md flex items-center justify-center',
                       isCritical
-                        ? 'bg-rose-50 text-rose-600'
-                        : 'bg-amber-50 text-amber-600',
+                        ? 'bg-rose-50 text-rose-700'
+                        : 'bg-amber-50 text-amber-700',
                     )}
                   >
                     <span className="text-[10px] font-bold">
@@ -65,7 +65,7 @@ export function LowBalanceProjects({ entries, onProjectClick }: Props) {
                     <p className="text-xs font-semibold text-slate-800">
                       {e.project.name}
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-slate-500">
                       {e.wallet.availableUnits.toLocaleString()} units available
                     </p>
                   </div>
@@ -74,8 +74,8 @@ export function LowBalanceProjects({ entries, onProjectClick }: Props) {
                   className={cn(
                     'px-2 py-0.5 text-[10px] font-semibold rounded border',
                     isCritical
-                      ? 'text-rose-600 bg-rose-50 border-rose-200/50'
-                      : 'text-amber-600 bg-amber-50 border-amber-200/50',
+                      ? 'text-rose-700 bg-rose-50 border-rose-200/50'
+                      : 'text-amber-700 bg-amber-50 border-amber-200/50',
                   )}
                 >
                   {isCritical ? 'Critical' : 'Low'}

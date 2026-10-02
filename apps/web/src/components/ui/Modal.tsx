@@ -68,7 +68,7 @@ export function Modal({ open, title, onClose, children, locked = false }: Props)
             type="button"
             onClick={onClose}
             disabled={locked}
-            className="text-slate-400 hover:text-slate-700 disabled:opacity-40 p-1 -m-1"
+            className="text-slate-500 hover:text-slate-700 disabled:opacity-40 p-1 -m-1"
             aria-label="Close"
           >
             <X className="w-4 h-4" />

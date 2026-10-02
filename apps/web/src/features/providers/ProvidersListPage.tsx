@@ -44,9 +44,9 @@ export function ProvidersListPage() {
           <Server className="w-5 h-5" strokeWidth={2} />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
             Providers
-          </h2>
+          </h1>
           <p className="text-xs text-slate-500">
             Manage service provider connections, balances and costs.
           </p>
@@ -85,7 +85,7 @@ export function ProvidersListPage() {
           <div className="text-sm text-slate-500">
             No providers configured yet.
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Providers are added when you enable a new service (SMS, Data,
             Airtime, etc.).
           </p>
@@ -98,7 +98,7 @@ export function ProvidersListPage() {
             <h3 className="text-sm font-bold text-slate-800">
               {SERVICE_LABELS[service as ProviderService] ?? service}
             </h3>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-slate-500">
               {list.length} provider{list.length === 1 ? '' : 's'}
             </span>
           </div>
@@ -157,7 +157,7 @@ function ProviderCard({
           <div className="text-sm font-bold text-slate-900 truncate">
             {provider.label}
           </div>
-          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+          <div className="text-[11px] text-slate-500 font-mono mt-0.5">
             {provider.id}
           </div>
         </div>
@@ -189,7 +189,7 @@ function ProviderCard({
       </div>
 
       {balanceUpdated && (
-        <div className="text-[10px] text-slate-400 mt-3">
+        <div className="text-[10px] text-slate-500 mt-3">
           Balance updated {balanceUpdated.date} {balanceUpdated.time}
         </div>
       )}

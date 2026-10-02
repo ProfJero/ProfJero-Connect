@@ -35,7 +35,7 @@ export function ProjectStatusOverview({ projects }: Props) {
       </div>
 
       {total === 0 ? (
-        <div className="py-8 text-center text-[11px] text-slate-400">
+        <div className="py-8 text-center text-[11px] text-slate-500">
           No projects yet.
         </div>
       ) : (
@@ -71,7 +71,7 @@ export function ProjectStatusOverview({ projects }: Props) {
             ))}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+          <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-500">
             {total} project{total === 1 ? '' : 's'} total
           </div>
         </>

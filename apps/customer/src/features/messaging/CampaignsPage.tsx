@@ -21,7 +21,7 @@ export function CampaignsPage() {
       <MessagingTabs />
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs p-10 text-center">
-        <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 flex items-center justify-center mx-auto mb-4">
+        <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 flex items-center justify-center mx-auto mb-4">
           <Megaphone className="w-6 h-6" strokeWidth={2} />
         </div>
         <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">

@@ -25,7 +25,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
   'bg-indigo-600',
 ];
@@ -79,7 +79,7 @@ export function StepProjectSelect({
               </option>
             ))}
           </select>
-          <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
+          <ChevronDown className="w-4 h-4 text-slate-500 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
         </div>
 
         {selected && (
@@ -117,7 +117,7 @@ export function StepProjectSelect({
             <div className="p-3.5 rounded-lg border border-amber-200 bg-amber-50">
               <div className="flex items-start gap-2.5">
                 <AlertCircle
-                  className="w-4 h-4 shrink-0 mt-0.5 text-amber-600"
+                  className="w-4 h-4 shrink-0 mt-0.5 text-amber-700"
                   strokeWidth={2}
                 />
                 <div className="flex-1 min-w-0">
@@ -187,7 +187,7 @@ export function StepProjectSelect({
                 </div>
                 <ChevronDown
                   className={cn(
-                    'w-4 h-4 text-slate-400 shrink-0 transition-transform',
+                    'w-4 h-4 text-slate-500 shrink-0 transition-transform',
                     senderDropdownOpen && 'rotate-180',
                   )}
                 />

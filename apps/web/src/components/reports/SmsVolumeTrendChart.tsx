@@ -20,10 +20,10 @@ export function SmsVolumeTrendChart({ weeks }: Props) {
   return (
     <Card className="p-5 flex flex-col" data-purpose="sms-volume-trend">
       <h3 className="text-sm font-bold text-slate-900">SMS Volume Trend</h3>
-      <p className="text-xs text-slate-400 mb-4">Weekly SMS and units consumed.</p>
+      <p className="text-xs text-slate-500 mb-4">Weekly SMS and units consumed.</p>
 
       {!hasData ? (
-        <div className="h-44 flex items-center justify-center text-xs text-slate-400">
+        <div className="h-44 flex items-center justify-center text-xs text-slate-500">
           No data for this period.
         </div>
       ) : (

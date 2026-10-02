@@ -33,7 +33,7 @@ export function ProjectsFilterBar({
   return (
     <div className="p-4 border-b border-slate-200/80 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 justify-between bg-white">
       <div className="relative w-full sm:flex-1 sm:min-w-[240px]">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-0 placeholder:text-slate-400"
           placeholder="Search by name, description or contact email..."
@@ -45,6 +45,7 @@ export function ProjectsFilterBar({
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
         <SelectControl
+          label="Filter by status"
           value={status}
           onChange={(v) => onStatusChange(v as ProjectStatus | 'all')}
           display={
@@ -61,6 +62,7 @@ export function ProjectsFilterBar({
         />
 
         <SelectControl
+          label="Sort projects"
           value={sort}
           onChange={(v) => onSortChange(v as SortOption)}
           display={SORT_LABELS[sort]}
@@ -85,11 +87,13 @@ export function ProjectsFilterBar({
 // --- Native select styled to look like the old button. Accessible, keyboard-
 // navigable, mobile-friendly. No custom dropdown code needed. ---
 function SelectControl({
+  label,
   value,
   onChange,
   display,
   options,
 }: {
+  label: string;
   value: string;
   onChange: (v: string) => void;
   display: string;
@@ -98,6 +102,7 @@ function SelectControl({
   return (
     <div className="relative">
       <select
+        aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="appearance-none w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2 text-xs text-slate-600 border border-slate-200 rounded-lg pl-3 pr-8 py-2 hover:bg-slate-50 bg-white cursor-pointer focus:outline-none focus:border-blue-500"
@@ -108,7 +113,7 @@ function SelectControl({
           </option>
         ))}
       </select>
-      <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+      <ChevronDown className="w-3.5 h-3.5 text-slate-500 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
       {/* The visible label comes from the <select>'s own rendering when closed.
           We pass `display` only as a fallback concept; native <select> already
           shows the matching option's label. */}

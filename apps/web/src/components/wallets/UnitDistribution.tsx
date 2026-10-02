@@ -52,7 +52,7 @@ export function UnitDistribution({ entries }: Props) {
       </h4>
 
       {segments.length === 0 ? (
-        <div className="py-8 text-center text-[11px] text-slate-400">
+        <div className="py-8 text-center text-[11px] text-slate-500">
           No units to distribute yet.
         </div>
       ) : (
@@ -90,7 +90,7 @@ export function UnitDistribution({ entries }: Props) {
               <span className="text-xs font-extrabold text-slate-900 leading-tight">
                 {totalUnits.toLocaleString()}
               </span>
-              <span className="text-[9px] text-slate-400 font-medium">Total</span>
+              <span className="text-[9px] text-slate-500 font-medium">Total</span>
             </div>
           </div>
 

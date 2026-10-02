@@ -58,14 +58,14 @@ export function StatCard({ stat }: { stat: Stat }) {
           <div className="text-xs text-slate-500 font-medium">
             {stat.title}
             {stat.subtitle && (
-              <span className="text-slate-400 ml-1">{stat.subtitle}</span>
+              <span className="text-slate-500 ml-1">{stat.subtitle}</span>
             )}
           </div>
           <div className="text-xl font-bold text-slate-900 mt-1 tracking-tight">
             {stat.value}
           </div>
           {stat.footnote && (
-            <div className="text-[11px] text-slate-400 mt-0.5">
+            <div className="text-[11px] text-slate-500 mt-0.5">
               {stat.footnote}
             </div>
           )}

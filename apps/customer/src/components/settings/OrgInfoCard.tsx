@@ -95,7 +95,7 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
   return (
     <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs">
       <div className="flex items-center gap-2.5 pb-5 border-b border-slate-100 dark:border-slate-800">
-        <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-[#1a6cf0] dark:text-blue-400 shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-[#1764e0] dark:text-blue-400 shrink-0">
           <Building2 className="w-4 h-4" strokeWidth={2} />
         </div>
         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -205,7 +205,7 @@ function Row({
   return (
     <div className="grid grid-cols-12 py-1 items-center gap-2">
       <span className="col-span-5 text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-        <Icon className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" strokeWidth={2} />
+        <Icon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-500 shrink-0" strokeWidth={2} />
         {label}
       </span>
       <span className="col-span-7">
@@ -246,7 +246,7 @@ function ReadOnlyRow({
   return (
     <div className="grid grid-cols-12 py-1 items-start gap-2">
       <span className="col-span-5 text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5 pt-0.5">
-        <Icon className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" strokeWidth={2} />
+        <Icon className="w-3.5 h-3.5 text-slate-500 dark:text-slate-500 shrink-0" strokeWidth={2} />
         {label}
       </span>
       <span className="col-span-7">
@@ -254,7 +254,7 @@ function ReadOnlyRow({
           {value}
         </span>
         {note && (
-          <span className="block text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+          <span className="block text-[10px] text-slate-500 dark:text-slate-500 mt-0.5">
             {note}
           </span>
         )}

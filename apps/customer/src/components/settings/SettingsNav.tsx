@@ -30,14 +30,14 @@ export function SettingsNav() {
             className={cn(
               'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition',
               isActive
-                ? 'bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 font-semibold'
+                ? 'bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 font-semibold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium',
             )}
           >
             <Icon
               className={cn(
                 'w-4 h-4 shrink-0',
-                isActive ? 'text-[#1a6cf0] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500',
+                isActive ? 'text-[#1764e0] dark:text-blue-400' : 'text-slate-500 dark:text-slate-500',
               )}
               strokeWidth={2}
             />

@@ -56,7 +56,7 @@ export function BatchDetailPage() {
         <div className="flex items-center gap-2">
           <Link
             to="/messaging/history"
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-[#1a6cf0] dark:text-blue-400"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-[#1764e0] dark:text-blue-400"
             aria-label="Back to message history"
           >
             <ArrowLeft className="w-5 h-5" strokeWidth={2.5} />
@@ -97,7 +97,7 @@ export function BatchDetailPage() {
               <p className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg p-3.5">
                 {data.batch.message}
               </p>
-              <p className="text-[11px] text-slate-400 mt-2">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
                 {data.batch.messageSegments ?? 1} page{(data.batch.messageSegments ?? 1) === 1 ? '' : 's'} ·{' '}
                 {data.batch.messageEncoding === 'UCS-2' ? 'Unicode' : 'Standard'} characters · Ref {data.batch.id}
               </p>
@@ -106,7 +106,7 @@ export function BatchDetailPage() {
             <section className={cn(cardClass, 'lg:col-span-5 p-5 grid grid-cols-2 gap-4 content-start')}>
               <Stat label="Recipients" value={data.batch.totalRecipients} />
               <Stat label="Accepted" value={data.batch.submittedCount} tone="text-blue-600 dark:text-blue-400" />
-              <Stat label="Delivery confirmed" value={data.batch.deliveredCount} tone="text-emerald-600 dark:text-emerald-400" />
+              <Stat label="Delivery confirmed" value={data.batch.deliveredCount} tone="text-emerald-700 dark:text-emerald-400" />
               <Stat label="Failed" value={data.batch.failedCount} tone="text-rose-600 dark:text-rose-400" />
               <Stat label="Units charged" value={data.batch.totalUnitsCharged} />
               <Stat label="Units returned" value={data.batch.totalUnitsReleased} />

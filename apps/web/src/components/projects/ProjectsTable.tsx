@@ -28,7 +28,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
   'bg-indigo-600',
 ];
@@ -133,7 +133,7 @@ export function ProjectsTable({
             <tbody className="divide-y divide-slate-100 text-slate-700 font-normal">
               {projects.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={10} className="py-12 text-center text-slate-500 text-sm">
                     {hasFilters ? (
                       <div>
                         <div>No projects match your filters.</div>
@@ -204,11 +204,11 @@ export function ProjectsTable({
                         {STATUS_LABELS[p.status]}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-400 text-[11px] whitespace-nowrap">
+                    <td className="py-3 px-4 text-slate-500 text-[11px] whitespace-nowrap">
                       <div>{date}</div>
                       <div className="text-[10px]">{time}</div>
                     </td>
-                    <td className="py-3 px-4 text-right text-slate-400">
+                    <td className="py-3 px-4 text-right text-slate-500">
                       <button
                         onClick={(e) => handleMenuClick(e, p)}
                         className="hover:text-slate-700 p-1"

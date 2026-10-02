@@ -75,7 +75,7 @@ export function MetricCard({ metric }: { metric: Metric }) {
           <span className="text-xl font-bold text-slate-900">{metric.value}</span>
           {deltaEl}
         </div>
-        <div className="text-[10px] text-slate-400 mt-1">{metric.footnote}</div>
+        <div className="text-[10px] text-slate-500 mt-1">{metric.footnote}</div>
       </div>
     </div>
   );

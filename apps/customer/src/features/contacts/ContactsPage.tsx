@@ -103,11 +103,11 @@ export function ContactsPage() {
               Add Contact
             </button>
             <button type="button" onClick={() => setImportOpen(true)} className={btnSecondary}>
-              <Upload className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400" strokeWidth={2} />
+              <Upload className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
               Import CSV
             </button>
             <Link to="/contacts/groups" className={btnSecondary}>
-              <UsersRound className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400" strokeWidth={2} />
+              <UsersRound className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
               Groups
             </Link>
           </>
@@ -123,7 +123,7 @@ export function ContactsPage() {
 
       <section className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
+          <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
           <input
             className={cn(inputClass, 'pl-9 py-2.5')}
             placeholder="Search by name, number or email…"
@@ -174,7 +174,7 @@ export function ContactsPage() {
           <button type="button" onClick={() => setSelected(new Set())} className="text-slate-500 hover:underline ml-auto">
             Clear selection
           </button>
-          {busy && <Spinner className="text-slate-400" />}
+          {busy && <Spinner className="text-slate-500 dark:text-slate-400" />}
         </section>
       )}
 
@@ -326,7 +326,7 @@ export function ContactsPage() {
 function Stat({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number | undefined }) {
   return (
     <div className={cn(cardClass, 'p-4 flex items-center gap-3')}>
-      <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 flex items-center justify-center shrink-0">
+      <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 flex items-center justify-center shrink-0">
         <Icon className="w-5 h-5" strokeWidth={2} />
       </div>
       <div className="min-w-0">

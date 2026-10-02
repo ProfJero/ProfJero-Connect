@@ -36,11 +36,11 @@ export function SmsUsageChart({ daily }: Props) {
     <Card className="p-5" data-purpose="sms-usage-chart">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-slate-900">SMS Activity</h3>
-        <span className="text-[11px] text-slate-400">Last 7 days</span>
+        <span className="text-[11px] text-slate-500">Last 7 days</span>
       </div>
 
       {!hasData ? (
-        <div className="h-[220px] flex items-center justify-center text-xs text-slate-400">
+        <div className="h-[220px] flex items-center justify-center text-xs text-slate-500">
           No SMS activity in the last 7 days.
         </div>
       ) : (

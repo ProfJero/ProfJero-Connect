@@ -54,7 +54,7 @@ export function PlaintextRevealModal({
             className={cn(
               'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
               kind === 'secret'
-                ? 'bg-rose-50 text-rose-600'
+                ? 'bg-rose-50 text-rose-700'
                 : 'bg-blue-50 text-blue-600',
             )}
           >
@@ -72,7 +72,7 @@ export function PlaintextRevealModal({
 
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex items-start gap-2.5">
           <AlertTriangle
-            className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"
+            className="w-4 h-4 text-amber-700 shrink-0 mt-0.5"
             strokeWidth={2}
           />
           <div className="text-[11px] text-amber-800 leading-relaxed">

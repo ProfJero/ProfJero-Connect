@@ -54,7 +54,7 @@ export function PreviewCard({ senderId }: { senderId: string }) {
         </div>
         <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Preview</h3>
       </div>
-      <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+      <p className="text-xs text-slate-500 dark:text-slate-500 mb-4">
         Your SMS will appear as:
       </p>
 

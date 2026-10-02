@@ -82,9 +82,9 @@ export function Sidebar({
               <MessageSquare className="w-5 h-5 fill-current" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-white font-bold text-[17px] leading-tight tracking-tight">
+              <div className="text-white font-bold text-[17px] leading-tight tracking-tight">
                 ProfJero Connect
-              </h1>
+              </div>
               <p className="text-[11px] text-slate-400 font-medium">
                 One Platform. Multiple Projects.
               </p>

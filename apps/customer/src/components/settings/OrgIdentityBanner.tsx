@@ -71,7 +71,7 @@ export function OrgIdentityBanner() {
             )}
           </h2>
           <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 border border-blue-100 dark:border-blue-500/20">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 border border-blue-100 dark:border-blue-500/20">
               <Briefcase className="w-3.5 h-3.5" strokeWidth={2} />
               Business Account
             </span>
@@ -86,7 +86,7 @@ export function OrgIdentityBanner() {
             <button
               onClick={handleCopy}
               disabled={!projectId}
-              className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors disabled:opacity-40"
+              className="text-slate-500 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors disabled:opacity-40"
               title="Copy full account ID"
             >
               {copied ? (

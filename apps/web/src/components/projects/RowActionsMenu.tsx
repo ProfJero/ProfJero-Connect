@@ -107,7 +107,7 @@ function MenuItem({
       className={
         'w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ' +
         (destructive
-          ? 'text-rose-600 hover:bg-rose-50'
+          ? 'text-rose-700 hover:bg-rose-50'
           : 'text-slate-700 hover:bg-slate-50')
       }
     >

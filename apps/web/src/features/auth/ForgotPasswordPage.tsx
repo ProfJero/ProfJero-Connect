@@ -54,7 +54,7 @@ export function ForgotPasswordPage() {
             </div>
             <label htmlFor="fp-email" className="block text-xs font-semibold text-slate-700">Email</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input id="fp-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
             </div>
             {error && <p role="alert" className="text-xs text-rose-600">{error}</p>}

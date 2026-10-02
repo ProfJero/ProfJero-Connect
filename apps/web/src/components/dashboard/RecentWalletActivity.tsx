@@ -47,7 +47,7 @@ export function RecentWalletActivity({ transactions }: Props) {
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-10 text-center text-slate-400 text-sm">
+                <td colSpan={4} className="py-10 text-center text-slate-500 text-sm">
                   No wallet activity yet.
                 </td>
               </tr>
@@ -79,7 +79,7 @@ export function RecentWalletActivity({ transactions }: Props) {
                   <td
                     className={cn(
                       'py-2.5 px-3 text-right font-bold',
-                      t.availableDelta >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                      t.availableDelta >= 0 ? 'text-emerald-700' : 'text-rose-600',
                     )}
                   >
                     {formatDelta(t.availableDelta)}

@@ -199,7 +199,7 @@ function PackageFormModalForm({
               onChange={(e) => setDisplayOrder(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
             />
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-[11px] text-slate-500">
               Lower numbers appear first.
             </p>
           </div>

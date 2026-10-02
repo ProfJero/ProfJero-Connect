@@ -31,7 +31,7 @@ function CardShell({
   return (
     <div id={id} className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xs scroll-mt-24">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 flex items-center justify-center shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 flex items-center justify-center shrink-0">
           <Icon className="w-4 h-4" strokeWidth={2} />
         </div>
         <div className="min-w-0">
@@ -73,7 +73,7 @@ function LinkRow({ to, icon: Icon, label, description }: { to: string; icon: typ
           <span className="block text-[11px] text-slate-500 dark:text-slate-400 truncate">{description}</span>
         </span>
       </span>
-      <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={2} />
+      <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={2} />
     </Link>
   );
 }
@@ -125,7 +125,7 @@ export function ProfileCard() {
         <div>
           <label htmlFor="p-email" className={labelClass}>Email</label>
           <input id="p-email" type="email" value={c?.email ?? ''} disabled className={inputClass} />
-          <p className="text-[10px] text-slate-400 mt-1">Your sign-in email. Contact support to change it.</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Your sign-in email. Contact support to change it.</p>
         </div>
         <div>
           <label htmlFor="p-phone" className={labelClass}>Phone (optional)</label>

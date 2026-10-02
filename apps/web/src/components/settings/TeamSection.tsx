@@ -106,7 +106,7 @@ export function TeamSection() {
                 return (
                   <tr key={a.uid} className={cn(a.status === 'disabled' && 'opacity-60')}>
                     <td className="px-6 py-3">
-                      <div className="font-semibold text-slate-800">{a.displayName ?? '—'} {self && <span className="text-[10px] text-slate-400 font-normal">(you)</span>}</div>
+                      <div className="font-semibold text-slate-800">{a.displayName ?? '—'} {self && <span className="text-[10px] text-slate-500 font-normal">(you)</span>}</div>
                       <div className="text-[11px] text-slate-500">{a.email}</div>
                     </td>
                     <td className="px-4 py-3">
@@ -143,7 +143,7 @@ export function TeamSection() {
                             type="button"
                             disabled={busy === a.uid}
                             onClick={() => update(a.uid, { status: a.status === 'active' ? 'disabled' : 'active' })}
-                            className={cn('text-[11px] font-semibold hover:underline', a.status === 'active' ? 'text-rose-600' : 'text-emerald-600')}
+                            className={cn('text-[11px] font-semibold hover:underline', a.status === 'active' ? 'text-rose-600' : 'text-emerald-700')}
                           >
                             {a.status === 'active' ? 'Disable' : 'Re-enable'}
                           </button>
@@ -262,10 +262,10 @@ function LinkModal({ link, onClose }: { link: { email: string; url: string; emai
               }}
               className="px-3 rounded-lg border border-slate-200 hover:bg-slate-50"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-emerald-700" /> : <Copy className="w-4 h-4" />}
             </button>
           </div>
-          <p className="text-[11px] text-slate-400">The link expires after about an hour. Use “Reset link” to issue a new one.</p>
+          <p className="text-[11px] text-slate-500">The link expires after about an hour. Use “Reset link” to issue a new one.</p>
         </div>
       )}
     </Modal>

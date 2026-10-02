@@ -79,7 +79,7 @@ export function ComposeForm({
                   </option>
                 ))}
               </select>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
+              <p className="text-[11px] text-slate-500 dark:text-slate-500 mt-1.5">
                 Recipients will see this name as the sender.{' '}
                 {pending.length > 0 && `${pending.length} more awaiting approval.`}
               </p>
@@ -118,7 +118,7 @@ export function ComposeForm({
               value={message}
               onChange={(e) => onMessageChange(e.target.value)}
             />
-            <div className="flex justify-between items-center pt-2 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+            <div className="flex justify-between items-center pt-2 text-[11px] text-slate-500 dark:text-slate-500 font-medium">
               <span>{segments.encoding === 'UCS-2' ? 'Unicode' : 'Standard'} characters</span>
               <span>
                 {segments.unitCount}/{perSegment * segments.segmentCount} · {segments.segmentCount} page

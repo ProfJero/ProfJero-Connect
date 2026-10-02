@@ -22,11 +22,11 @@ export function PlatformDonutChart({ topProjects, totalSubmitted }: Props) {
     <Card className="p-5" data-purpose="sms-by-project-chart">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-slate-900">SMS by Project</h3>
-        <span className="text-[11px] text-slate-400">Top {segments.length}</span>
+        <span className="text-[11px] text-slate-500">Top {segments.length}</span>
       </div>
 
       {!hasData ? (
-        <div className="h-[220px] flex items-center justify-center text-xs text-slate-400">
+        <div className="h-[220px] flex items-center justify-center text-xs text-slate-500">
           No submitted SMS yet.
         </div>
       ) : (

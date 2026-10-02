@@ -36,10 +36,10 @@ export function UsageTrendsChart({ daily }: Props) {
           </div>
         </div>
       </div>
-      <p className="text-xs text-slate-400 mb-3">SMS and units over time.</p>
+      <p className="text-xs text-slate-500 mb-3">SMS and units over time.</p>
 
       {!hasData ? (
-        <div className="h-44 flex items-center justify-center text-xs text-slate-400">
+        <div className="h-44 flex items-center justify-center text-xs text-slate-500">
           No data for this period.
         </div>
       ) : (

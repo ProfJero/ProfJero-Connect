@@ -34,7 +34,7 @@ export function StepCompose({
           Recipients <span className="text-red-500">*</span>
         </label>
         <div className="relative">
-          <span className="absolute top-3 left-3 text-slate-400 pointer-events-none">
+          <span className="absolute top-3 left-3 text-slate-500 pointer-events-none">
             <Users className="w-4 h-4" strokeWidth={2} />
           </span>
           <textarea
@@ -59,7 +59,7 @@ export function StepCompose({
           Message <span className="text-red-500">*</span>
         </label>
         <div className="relative">
-          <span className="absolute top-3 left-3 text-slate-400 pointer-events-none">
+          <span className="absolute top-3 left-3 text-slate-500 pointer-events-none">
             <MessageSquare className="w-4 h-4" strokeWidth={2} />
           </span>
           <textarea
@@ -81,7 +81,7 @@ export function StepCompose({
           </span>
         </div>
         {seg.nonGsmChars.length > 0 && (
-          <p className="mt-1.5 text-[11px] text-amber-600">
+          <p className="mt-1.5 text-[11px] text-amber-700">
             Message contains characters outside GSM-7 ({seg.nonGsmChars.slice(0, 5).join(' ')})
             — billed at UCS-2 rates (67 chars per segment).
           </p>
