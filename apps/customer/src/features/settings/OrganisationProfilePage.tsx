@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Building2, ArrowLeft, Pencil } from 'lucide-react';
 import { OrgIdentityBanner } from '../../components/settings/OrgIdentityBanner';
 import { OrgInfoCard } from '../../components/settings/OrgInfoCard';
-import { ChangeLogoCard, AccountTypeCard } from '../../components/settings/OrgSideCards';
+import { AccountTypeCard, OrgStatCards } from '../../components/settings/OrgSideCards';
 
 export function OrganisationProfilePage() {
   const [editing, setEditing] = useState(false);
@@ -50,26 +50,11 @@ export function OrganisationProfilePage() {
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <OrgInfoCard editing={editing} onDone={() => setEditing(false)} />
         <div className="lg:col-span-5 space-y-5 flex flex-col justify-start">
-          <ChangeLogoCard />
           <AccountTypeCard />
         </div>
       </section>
 
-      {/*
-        OrgStatCards removed for CP1.
-
-        Team Members, Projects, API Keys, Sender IDs and the wallet
-        summary were all mocked. None of those have /customer/*
-        endpoints yet, and per docs/customer-platform.md §12 we don't
-        ship fake numbers on real pages.
-
-        Restore when the endpoints exist:
-          - Team Members: post-v1 (multi-user orgs)
-          - Projects:     always 1 for v1 (customer = one project)
-          - API Keys:     future /customer/api-keys endpoint
-          - Sender IDs:   CP3 (/customer/sender-ids)
-          - Wallet:       already on /wallet — no need to duplicate
-      */}
+      <OrgStatCards />
     </main>
   );
 }

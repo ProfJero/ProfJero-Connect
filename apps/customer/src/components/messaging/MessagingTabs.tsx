@@ -6,8 +6,8 @@ const TABS = [
   { label: 'Overview', path: '/messaging', icon: LayoutDashboard, end: true },
   { label: 'Send SMS', path: '/messaging/sms', icon: Send, end: false },
   { label: 'Sender IDs', path: '/messaging/sender-ids', icon: AtSign, end: false },
-  { label: 'Campaigns', path: '/messaging/campaigns', icon: Megaphone, end: false },
   { label: 'Message History', path: '/messaging/history', icon: Clock, end: false },
+  { label: 'Campaigns', path: '/messaging/campaigns', icon: Megaphone, end: false },
 ];
 
 export function MessagingTabs() {

@@ -1,6 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
-import { settingsNavItems } from '../../mock/settings';
+import { User, Building2, Lock, Bell, Wallet, Code2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+const settingsNavItems = [
+  { id: 'profile', label: 'Profile', icon: User, path: '/settings' },
+  { id: 'organisation', label: 'Organisation', icon: Building2, path: '/settings/organisation' },
+  { id: 'security', label: 'Security', icon: Lock, path: '/settings#security' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, path: '/settings#notifications' },
+  { id: 'billing', label: 'Billing', icon: Wallet, path: '/settings#billing' },
+  { id: 'api', label: 'API', icon: Code2, path: '/settings#api' },
+];
 
 export function SettingsNav() {
   const { pathname, hash } = useLocation();
@@ -10,10 +19,9 @@ export function SettingsNav() {
       {settingsNavItems.map((item) => {
         const Icon = item.icon;
         // Active if path matches exactly and no hash
+        const [itemPath, itemHash] = item.path.split('#');
         const isActive =
-          item.path === pathname && item.path !== '/settings'
-            ? true
-            : item.path === '/settings' && pathname === '/settings' && !hash;
+          pathname === itemPath && (itemHash ? hash === `#${itemHash}` : !hash);
 
         return (
           <Link

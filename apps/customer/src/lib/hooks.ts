@@ -1,51 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, ApiError } from './api';
+import { useCallback, useState } from 'react';
+import { api } from './api';
+import { useApi, useCursorList } from './useApi';
 
-// ─────────────────────────────────────────────────────────────────────
-// Wallet
-// ─────────────────────────────────────────────────────────────────────
-
-export interface WalletData {
-  availableUnits: number;
-  reservedUnits: number;
-  totalUnits: number;
-  lowBalanceThreshold: number | null;
-  updatedAt: string | null;
-}
-
-export function useWallet() {
-  const [data, setData] = useState<WalletData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | Error | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get<WalletData>('/customer/wallet');
-      if (mountedRef.current) setData(res);
-    } catch (err) {
-      if (mountedRef.current)
-        setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { data, loading, error, refresh };
-}
+export { useWallet } from './account';
+export type { WalletData } from './account';
 
 // ─────────────────────────────────────────────────────────────────────
 // Transactions
@@ -80,80 +38,30 @@ export interface WalletTransaction {
   metadata: Record<string, unknown> | null;
 }
 
-interface TransactionsResponse {
-  transactions: WalletTransaction[];
-  count: number;
-  nextCursor: string | null;
-}
-
 export interface UseTransactionsOptions {
   limit?: number;
+  /** Comma-separated ledger types to include (server-side filter). */
+  types?: string;
 }
 
+/**
+ * Wallet ledger, newest first, in the customer "summary" view (one row
+ * per send rather than one per recipient — see wallet router).
+ */
 export function useTransactions(opts: UseTransactionsOptions = {}) {
   const limit = opts.limit ?? 20;
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<ApiError | Error | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get<TransactionsResponse>(
-        `/customer/wallet/transactions?limit=${limit}`,
-      );
-      if (!mountedRef.current) return;
-      setTransactions(res.transactions);
-      setNextCursor(res.nextCursor);
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [limit]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const loadMore = useCallback(async () => {
-    if (!nextCursor || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const res = await api.get<TransactionsResponse>(
-        `/customer/wallet/transactions?limit=${limit}&before=${encodeURIComponent(nextCursor)}`,
-      );
-      if (!mountedRef.current) return;
-      setTransactions((prev) => [...prev, ...res.transactions]);
-      setNextCursor(res.nextCursor);
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      if (mountedRef.current) setLoadingMore(false);
-    }
-  }, [nextCursor, loadingMore, limit]);
-
+  const list = useCursorList<WalletTransaction>(
+    `/customer/wallet/transactions?view=summary&limit=${limit}${opts.types ? `&types=${encodeURIComponent(opts.types)}` : ''}`,
+    'transactions',
+  );
   return {
-    transactions,
-    loading,
-    loadingMore,
-    error,
-    hasMore: nextCursor !== null,
-    refresh,
-    loadMore,
+    transactions: list.items,
+    loading: list.loading,
+    loadingMore: list.loadingMore,
+    error: list.error,
+    hasMore: list.hasMore,
+    refresh: list.refresh,
+    loadMore: list.loadMore,
   };
 }
 
@@ -167,8 +75,11 @@ export interface CustomerProfileData {
     email: string;
     displayName: string;
     organisationName: string | null;
+    phone: string | null;
     projectId: string;
     status: 'active' | 'suspended';
+    createdAt: string;
+    emailNotifications: boolean;
   };
   project: {
     id: string;
@@ -178,36 +89,8 @@ export interface CustomerProfileData {
 }
 
 export function useProfile() {
-  const [data, setData] = useState<CustomerProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | Error | null>(null);
+  const { data, loading, error, refresh, setData } = useApi<CustomerProfileData>('/customer/me');
   const [saving, setSaving] = useState(false);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get<CustomerProfileData>('/customer/me');
-      if (mountedRef.current) setData(res);
-    } catch (err) {
-      if (mountedRef.current)
-        setError(err instanceof Error ? err : new Error(String(err)));
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
 
   const update = useCallback(
     async (patch: {
@@ -218,14 +101,14 @@ export function useProfile() {
       setSaving(true);
       try {
         const res = await api.put<CustomerProfileData>('/customer/me', patch);
-        if (mountedRef.current) setData(res);
+        setData(() => res);
         return res;
       } finally {
-        if (mountedRef.current) setSaving(false);
+        setSaving(false);
       }
     },
-    [],
+    [setData],
   );
 
-  return { data, loading, error, saving, refresh, update };
+  return { data, loading: loading && !data, error, saving, refresh, update };
 }

@@ -12,7 +12,7 @@ import { MessageHistoryPage } from './features/messaging/MessageHistoryPage';
 import { SendSmsPage } from './features/send-sms/SendSmsPage';
 import { ContactsPage } from './features/contacts/ContactsPage';
 import { ContactGroupsPage } from './features/contacts/ContactGroupsPage';
-import { PlaceholderPage } from './features/PlaceholderPage';
+import { ComingSoonPage } from './features/ComingSoonPage';
 import { WalletPage } from './features/wallet/WalletPage';
 import { ServicesPage } from './features/services/ServicesPage';
 import { RequestSenderIdPage } from './features/sender-ids/RequestSenderIdPage';
@@ -24,6 +24,9 @@ import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { OrganisationProfilePage } from './features/settings/OrganisationProfilePage';
 import { CompleteSetupPage } from './features/auth/CompleteSetupPage';
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
+import { AddFundsCompletePage } from './features/wallet/AddFundsCompletePage';
+import { BatchDetailPage } from './features/messaging/BatchDetailPage';
 
 export default function App() {
   return (
@@ -35,6 +38,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/complete-setup" element={<CompleteSetupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* Protected */}
             <Route element={<ProtectedRoute />}>
@@ -50,6 +54,7 @@ export default function App() {
                 <Route path="/messaging/sender-ids/request" element={<RequestSenderIdPage />} />
                 <Route path="/messaging/campaigns" element={<CampaignsPage />} />
                 <Route path="/messaging/history" element={<MessageHistoryPage />} />
+                <Route path="/messaging/history/:batchId" element={<BatchDetailPage />} />
 
                 {/* Contacts */}
                 <Route path="/contacts" element={<ContactsPage />} />
@@ -57,12 +62,19 @@ export default function App() {
 
                 {/* Services */}
                 <Route path="/services" element={<ServicesPage />} />
-                <Route path="/services/data" element={<PlaceholderPage title="Data" />} />
-                <Route path="/services/airtime" element={<PlaceholderPage title="Airtime" />} />
+                <Route
+                  path="/services/data"
+                  element={<ComingSoonPage title="Data" description="Buy data bundles for MTN, Telecel and AirtelTigo numbers straight from your wallet." />}
+                />
+                <Route
+                  path="/services/airtime"
+                  element={<ComingSoonPage title="Airtime" description="Top up any Ghanaian mobile number with airtime straight from your wallet." />}
+                />
 
                 {/* Other */}
                 <Route path="/wallet" element={<WalletPage />} />
                 <Route path="/wallet/add-funds" element={<AddFundsPage />} />
+                <Route path="/wallet/add-funds/complete" element={<AddFundsCompletePage />} />
                 <Route path="/transactions" element={<TransactionsPage />} />
                 <Route path="/api" element={<ApiPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />

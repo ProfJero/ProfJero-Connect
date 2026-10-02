@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MessageCircle, Send, Check, Signal, Wifi, Battery, ChevronLeft, MoreHorizontal } from 'lucide-react';
-import { featuredService } from '../../mock/services';
+import { featuredService } from '../../lib/servicesContent';
 
 export function FeaturedServiceBanner() {
   return (

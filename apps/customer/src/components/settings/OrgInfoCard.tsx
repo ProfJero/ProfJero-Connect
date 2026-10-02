@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Building2, Mail, User, Phone, AlertCircle } from 'lucide-react';
 import { useProfile } from '../../lib/hooks';
+import { useAuth } from '../../lib/auth';
 import { cn } from '../../lib/utils';
 
 interface OrgInfoCardProps {
@@ -12,6 +13,7 @@ interface OrgInfoCardProps {
 
 export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
   const { data, loading, error, saving, update } = useProfile();
+  const { refresh: refreshAuth } = useAuth();
 
   // Local form state mirrors the customer doc when editing begins.
   const [displayName, setDisplayName] = useState('');
@@ -22,7 +24,6 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
   // Reset local state every time we enter edit mode, so abandoned
   // edits don't leak into a fresh edit session.
   // (Keyed on `editing`; runs on every entry.)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useState(() => {
     if (data && editing) {
       setDisplayName(data.customer.displayName);
@@ -76,6 +77,8 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
         organisationName: organisationName.trim(),
         phone: phone.trim() || null,
       });
+      // Topbar and greeting read the name from the auth context.
+      await refreshAuth();
       onDone?.();
     } catch (err) {
       setFormError(

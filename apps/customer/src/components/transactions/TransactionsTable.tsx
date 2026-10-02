@@ -1,4 +1,5 @@
-import { Inbox, Wallet, Mail, Plus, ArrowUp, Settings as SettingsIcon, type LucideIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Inbox, Mail, Plus, RotateCcw, Settings as SettingsIcon, type LucideIcon } from 'lucide-react';
 import { TableScroll } from '../ui/TableScroll';
 import { useTransactions } from '../../lib/hooks';
 import {
@@ -7,6 +8,7 @@ import {
   getDisplayDescription,
   getAmount,
   getStatus,
+  getTxLink,
   formatDateTime,
   shortRef,
   type DisplayTxType,
@@ -30,7 +32,7 @@ const TYPE_STYLES: Record<
   Refund: {
     bg: 'bg-amber-50 dark:bg-amber-500/10',
     text: 'text-amber-700 dark:text-amber-400',
-    icon: ArrowUp,
+    icon: RotateCcw,
   },
   Adjustment: {
     bg: 'bg-slate-100 dark:bg-slate-800',
@@ -47,9 +49,9 @@ const STATUS_STYLES = {
   },
 } as const;
 
-export function TransactionsTable() {
+export function TransactionsTable({ types }: { types?: string }) {
   const { transactions, loading, loadingMore, error, hasMore, loadMore } =
-    useTransactions({ limit: 20 });
+    useTransactions({ limit: 20, types });
   const rows = transactions.filter(isDisplayable);
 
   return (
@@ -69,7 +71,7 @@ export function TransactionsTable() {
             strokeWidth={1.5}
           />
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-            No transactions yet
+            {types ? 'No transactions of this type' : 'No transactions yet'}
           </p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
             Your transaction history will appear here.
@@ -120,7 +122,13 @@ export function TransactionsTable() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-slate-600 dark:text-slate-400">
-                      {getDisplayDescription(tx)}
+                      {getTxLink(tx) ? (
+                        <Link to={getTxLink(tx)!} className="hover:text-[#1a6cf0] hover:underline">
+                          {getDisplayDescription(tx)}
+                        </Link>
+                      ) : (
+                        getDisplayDescription(tx)
+                      )}
                     </td>
                     <td
                       className={cn(

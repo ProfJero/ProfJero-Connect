@@ -1,5 +1,11 @@
 import { ShieldCheck, Check, Eye, Info } from 'lucide-react';
-import { senderIdRequirements } from '../../mock/requestSenderId';
+
+const senderIdRequirements = [
+  { title: 'Maximum 11 characters', description: 'Letters, numbers and spaces only — spaces count toward the limit.' },
+  { title: 'Must represent your business or organisation', description: 'Use a name that clearly identifies who the message is from.' },
+  { title: 'Cannot impersonate another organisation', description: 'Names of banks, telcos, government agencies or other brands you don\'t own are rejected.' },
+  { title: 'Approval is required before use', description: 'Each request is registered with the networks, usually within 1 business day.' },
+];
 
 export function RequirementsCard() {
   return (

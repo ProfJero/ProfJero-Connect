@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ChevronDown, LifeBuoy, ExternalLink, X } from 'lucide-react';
 import { navItems, type NavItem } from '../../lib/nav';
+import { useAccount } from '../../lib/account';
+import { SUPPORT_EMAIL } from '../../lib/config';
 import { cn } from '../../lib/utils';
 
 export function CustomerSidebar({
@@ -68,14 +70,29 @@ export function CustomerSidebar({
               <div>
                 <h4 className="text-white font-semibold text-xs leading-snug">Need help?</h4>
                 <p className="text-slate-400 text-[11px] mt-0.5 leading-relaxed">
-                  Visit our documentation or contact support.
+                  {SUPPORT_EMAIL
+                    ? `Email us at ${SUPPORT_EMAIL} and we'll get back to you.`
+                    : 'See the API guide or reply to any email from us.'}
                 </p>
               </div>
             </div>
-            <button className="mt-3 w-full py-1.5 px-3 bg-slate-800/80 hover:bg-slate-700/80 text-white rounded-lg border border-slate-700 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors">
-              <span>View Docs</span>
-              <ExternalLink className="w-3 h-3 text-slate-400" strokeWidth={2} />
-            </button>
+            {SUPPORT_EMAIL ? (
+              <a
+                href={`mailto:${SUPPORT_EMAIL}`}
+                className="mt-3 w-full py-1.5 px-3 bg-slate-800/80 hover:bg-slate-700/80 text-white rounded-lg border border-slate-700 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <span>Contact Support</span>
+                <ExternalLink className="w-3 h-3 text-slate-400" strokeWidth={2} />
+              </a>
+            ) : (
+              <Link
+                to="/api"
+                onClick={onClose}
+                className="mt-3 w-full py-1.5 px-3 bg-slate-800/80 hover:bg-slate-700/80 text-white rounded-lg border border-slate-700 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <span>API Documentation</span>
+              </Link>
+            )}
           </div>
         </div>
       </aside>
@@ -89,11 +106,13 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
   const isParentActive = item.path ? location.pathname === item.path : false;
   const isHighlighted = hasActiveChild || isParentActive;
 
-  const [expanded, setExpanded] = useState(isHighlighted);
+  // null = follow the route (open when active); a click pins it.
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const expanded = toggled ?? isHighlighted;
+  const setExpanded = (fn: (v: boolean) => boolean) => setToggled(fn(expanded));
 
-  useEffect(() => {
-    if (isHighlighted) setExpanded(true);
-  }, [isHighlighted]);
+  const { unreadCount } = useAccount();
+  const badge = item.badge === 'unreadNotifications' ? unreadCount : 0;
 
   const Icon = item.icon;
 
@@ -116,9 +135,9 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
           <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
           <span className="truncate">{item.label}</span>
         </span>
-        {item.badge !== undefined && item.badge > 0 && (
+        {badge > 0 && (
           <span className="bg-red-500 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
-            {item.badge}
+            {badge > 99 ? '99+' : badge}
           </span>
         )}
       </NavLink>

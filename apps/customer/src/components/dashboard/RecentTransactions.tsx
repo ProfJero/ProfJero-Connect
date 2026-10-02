@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Wallet, Mail, Smartphone, Phone, Inbox } from 'lucide-react';
+import { ArrowRight, Wallet, Mail, RotateCcw, SlidersHorizontal, Inbox } from 'lucide-react';
 import { TableScroll } from '../ui/TableScroll';
-import { StatusBadge } from '../ui/StatusBadge';
+import { Badge } from '../ui/Badge';
 import { useTransactions } from '../../lib/hooks';
 import {
   isDisplayable,
@@ -29,12 +29,12 @@ const TYPE_STYLE: Record<
     color: 'text-sky-600 dark:text-sky-400',
   },
   Refund: {
-    icon: Smartphone,
+    icon: RotateCcw,
     bg: 'bg-emerald-100 dark:bg-emerald-500/20',
     color: 'text-emerald-600 dark:text-emerald-400',
   },
   Adjustment: {
-    icon: Phone,
+    icon: SlidersHorizontal,
     bg: 'bg-amber-100 dark:bg-amber-500/20',
     color: 'text-amber-600 dark:text-amber-400',
   },
@@ -131,7 +131,7 @@ export function RecentTransactions() {
                       {amount.text}
                     </td>
                     <td className="py-3 px-5">
-                      <StatusBadge status={status} />
+                      <Badge tone="success" label={status} />
                     </td>
                   </tr>
                 );

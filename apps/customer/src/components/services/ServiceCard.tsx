@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, Bell, Check } from 'lucide-react';
-import type { ServiceCardData } from '../../mock/services';
+import type { ServiceCardData } from '../../lib/servicesContent';
 import { cn } from '../../lib/utils';
 
 const TELCOS = [

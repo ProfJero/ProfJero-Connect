@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@profjero/shared": "*",
     "firebase": "^10.13.0",
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
