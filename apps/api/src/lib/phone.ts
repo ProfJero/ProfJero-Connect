@@ -20,3 +20,10 @@ export function normalizePhone(input: string): string {
   }
   return s;
 }
+/**
+ * True when a normalized number (see normalizePhone) looks dialable:
+ * digits only, 9-15 long (E.164 max is 15). Does not check carriers.
+ */
+export function isValidNormalizedPhone(normalized: string): boolean {
+  return /^[1-9][0-9]{8,14}$/.test(normalized);
+}

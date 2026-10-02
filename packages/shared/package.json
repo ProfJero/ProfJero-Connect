@@ -9,6 +9,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./sms-segments": {
+      "types": "./src/lib/smsSegments.ts",
+      "default": "./src/lib/smsSegments.ts"
     }
   },
   "scripts": {

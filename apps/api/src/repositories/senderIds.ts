@@ -45,6 +45,8 @@ function parseAssignment(
     decidedAt: (data.decidedAt as string | null) ?? null,
     decidedByAdminUid: (data.decidedByAdminUid as string | null) ?? null,
     notes: (data.notes as string | null) ?? null,
+    purpose: (data.purpose as string | null) ?? null,
+    description: (data.description as string | null) ?? null,
   };
 }
 

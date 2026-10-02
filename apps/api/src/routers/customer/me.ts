@@ -1,14 +1,17 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { UpdateCustomerProfileRequestSchema } from '@profjero/shared';
-import { customerAuth } from '../../middleware/customerAuth';
+import {
+  UpdateCustomerProfileRequestSchema,
+  UpdateNotificationPrefsSchema,
+} from '@profjero/shared';
+import { firestoreUpdateDoc } from '../../lib/firestore';
+import { parseBody } from './helpers';
 import { firestoreGetDoc, runTransaction } from '../../lib/firestore';
 import type { AuthVariables, Env } from '../../types/env';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-// Every route in this file requires a verified customer.
-router.use('*', customerAuth);
+// customerAuth is applied once for the whole surface in ./index.ts.
 
 /**
  * GET /customer/me
@@ -31,14 +34,18 @@ router.get('/me', async (c) => {
     });
   }
 
+  const raw = await firestoreGetDoc(c.env, 'customers', customer.uid);
   return c.json({
     customer: {
       uid: customer.uid,
       email: customer.email,
       displayName: customer.displayName,
       organisationName: customer.organisationName,
+      phone: customer.phone,
       projectId: customer.projectId,
       status: customer.status,
+      createdAt: customer.createdAt,
+      emailNotifications: raw?.data.emailNotifications !== false,
     },
     project: {
       id: customer.projectId,
@@ -132,8 +139,11 @@ router.put('/me', async (c) => {
       email: customerDoc.data.email,
       displayName: customerDoc.data.displayName,
       organisationName: customerDoc.data.organisationName ?? null,
+      phone: customerDoc.data.phone ?? null,
       projectId: customerDoc.data.projectId,
       status: customerDoc.data.status,
+      createdAt: customerDoc.data.createdAt,
+      emailNotifications: customerDoc.data.emailNotifications !== false,
     },
     project: {
       id: projectId,
@@ -143,6 +153,20 @@ router.put('/me', async (c) => {
         | 'customer',
     },
   });
+});
+
+/**
+ * PUT /customer/me/preferences — { emailNotifications }.
+ * In-app notifications are always on; this only controls email.
+ */
+router.put('/me/preferences', async (c) => {
+  const customer = c.get('customer')!;
+  const { emailNotifications } = await parseBody(c, UpdateNotificationPrefsSchema);
+  await firestoreUpdateDoc(c.env, 'customers', customer.uid, {
+    emailNotifications,
+    updatedAt: new Date().toISOString(),
+  });
+  return c.json({ emailNotifications });
 });
 
 export { router as customerMeRouter };

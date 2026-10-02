@@ -58,6 +58,9 @@ export const SenderIdAssignmentSchema = z.object({
   decidedAt: z.string().datetime().nullable(),
   decidedByAdminUid: z.string().nullable(),
   notes: z.string().nullable(),
+  /** Set when a customer requested it from the customer platform. */
+  purpose: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
 });
 export type SenderIdAssignment = z.infer<typeof SenderIdAssignmentSchema>;
 

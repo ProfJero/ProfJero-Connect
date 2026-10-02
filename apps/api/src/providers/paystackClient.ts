@@ -48,6 +48,8 @@ export interface InitializeArgs {
   currency?: string;
   callbackUrl?: string;
   metadata?: Record<string, unknown>;
+  /** Restrict checkout to these channels, e.g. ['mobile_money']. */
+  channels?: string[];
 }
 
 export interface InitializeResult {
@@ -86,6 +88,7 @@ export async function initializeTransaction(
       reference: args.reference,
       currency: args.currency ?? 'GHS',
       ...(args.callbackUrl ? { callback_url: args.callbackUrl } : {}),
+      ...(args.channels?.length ? { channels: args.channels } : {}),
       ...(args.metadata ? { metadata: args.metadata } : {}),
     }),
   });

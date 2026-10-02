@@ -11,6 +11,7 @@ import {
   verifyTransaction,
 } from '../providers/paystackClient';
 import { DomainError } from '../lib/domainError';
+import { notifyProject } from './notifications';
 import type { Env } from '../types/env';
 import type { Payment } from '@profjero/shared';
 
@@ -26,6 +27,15 @@ export interface InitiateArgs {
   amountPesewas?: number;
   callbackUrl?: string;
   createdBy: string;
+  /**
+   * Caller-supplied deterministic reference (customer flow derives it from
+   * the Idempotency-Key). When a payment with this reference already
+   * exists for the same project, it is returned instead of starting a
+   * second checkout. Omit to generate a fresh one.
+   */
+  reference?: string;
+  /** Gateway checkout channels to offer (e.g. ['mobile_money']). */
+  channels?: string[];
 }
 
 export interface InitiateResult {
@@ -39,6 +49,16 @@ export async function initiatePayment(
 ): Promise<InitiateResult> {
   if (!env.PAYSTACK_SECRET_KEY) {
     throw new DomainError('Payments are not configured.', 500);
+  }
+
+  if (args.reference) {
+    const existing = await getPaymentByReference(env, args.reference);
+    if (existing) {
+      if (existing.projectId !== args.projectId || !existing.authorizationUrl) {
+        throw new DomainError('Payment reference conflict.', 409);
+      }
+      return { payment: existing, authorizationUrl: existing.authorizationUrl };
+    }
   }
 
   const project = await getProject(env, args.projectId);
@@ -78,7 +98,7 @@ export async function initiatePayment(
     );
   }
 
-  const reference = newReference();
+  const reference = args.reference ?? newReference();
 
   const init = await initializeTransaction(env, {
     email: args.customerEmail,
@@ -86,6 +106,7 @@ export async function initiatePayment(
     reference,
     currency: 'GHS',
     callbackUrl: args.callbackUrl,
+    channels: args.channels,
     metadata: {
       projectId: args.projectId,
       packageId,
@@ -170,6 +191,19 @@ export async function markPaymentSuccessful(
     ...(webhookData !== undefined ? { webhookData } : {}),
   });
 
+  // Deterministic ID: a webhook replay or a later manual verify can't
+  // produce a second receipt.
+  await notifyProject(env, {
+    projectId: updated.projectId,
+    id: `payment__${updated.reference}`,
+    type: 'payment',
+    severity: 'success',
+    title: 'Payment received',
+    body: `GH₵${(updated.amountPesewas / 100).toFixed(2)} received — ${updated.units.toLocaleString('en-US')} units have been added to your wallet. Reference: ${updated.reference}.`,
+    link: '/wallet',
+    email: true,
+  });
+
   return { payment: updated, walletCredited: true };
 }
 
@@ -198,7 +232,25 @@ export async function markPaymentFailed(
 export async function verifyAndSettlePayment(
   env: Env,
   reference: string,
+  options: {
+    /**
+     * When false, a checkout the payer hasn't finished yet (gateway status
+     * "abandoned", "ongoing", "pending", …) leaves the payment pending
+     * instead of marking it failed. The customer return page uses this so
+     * an early "check status" can't poison a checkout still in progress.
+     * Only "failed" and "reversed" are treated as definitive.
+     */
+    failOnIncomplete?: boolean;
+    /**
+     * With failOnIncomplete=false: a checkout the gateway still reports as
+     * "abandoned" after this long is marked `abandoned` (not failed). A
+     * later success webhook still credits it — markPaymentSuccessful only
+     * refuses refunded payments.
+     */
+    abandonAfterMs?: number;
+  } = {},
 ): Promise<{ payment: Payment; walletCredited: boolean }> {
+  const failOnIncomplete = options.failOnIncomplete ?? true;
   const payment = await getPaymentByReference(env, reference);
   if (!payment) throw new DomainError('Payment not found.', 404);
 
@@ -212,6 +264,22 @@ export async function verifyAndSettlePayment(
   }
 
   if (!result.success) {
+    const definitive = result.status === 'failed' || result.status === 'reversed';
+    if (!failOnIncomplete && !definitive) {
+      const age = Date.now() - new Date(payment.createdAt).getTime();
+      if (
+        result.status === 'abandoned' &&
+        options.abandonAfterMs !== undefined &&
+        age > options.abandonAfterMs
+      ) {
+        const abandoned = await updatePayment(env, reference, {
+          status: 'abandoned',
+          failureReason: 'Checkout was not completed.',
+        });
+        return { payment: abandoned, walletCredited: false };
+      }
+      return { payment, walletCredited: false };
+    }
     const failed = await markPaymentFailed(
       env,
       reference,

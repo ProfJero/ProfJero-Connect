@@ -7,7 +7,8 @@
     "dev": "wrangler dev",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:prod": "wrangler deploy --env production",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test:customer": "esbuild test/customer.e2e.ts --bundle --platform=node --format=esm --target=node20 --outfile=.test-build/customer.e2e.mjs --log-level=warning && node .test-build/customer.e2e.mjs"
   },
   "dependencies": {
     "@profjero/shared": "*",

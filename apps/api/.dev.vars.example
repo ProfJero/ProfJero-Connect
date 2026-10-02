@@ -1,0 +1,24 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit real values.
+# Production values are set with: npx wrangler secret put NAME --env production
+
+# Firebase service account (Firestore + Auth admin)
+FIREBASE_PROJECT_ID=profjero-sms-gateway
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxx@profjero-sms-gateway.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# SMS provider: "mock" (default, sends nothing) or "arkesel"
+SMS_PROVIDER=mock
+ARKESEL_API_KEY=
+ARKESEL_SANDBOX=true
+ARKESEL_WEBHOOK_URL=
+DEFAULT_SMS_PROVIDER_ID=sms_gw_01
+
+# Payments (use sk_test_* locally)
+PAYSTACK_SECRET_KEY=
+
+# Customer notification email (optional — unset = in-app only)
+RESEND_API_KEY=
+EMAIL_FROM="ProfJero Connect <hello@example.com>"
+
+# Customer app base URL for email links / payment return fallback
+CUSTOMER_APP_URL=http://localhost:5174

@@ -9,6 +9,7 @@ import {
   updateAssignmentStatus,
   updateSenderIdStatus,
 } from '../repositories/senderIds';
+import { notifyProject } from './notifications';
 import type { Env } from '../types/env';
 import type {
   SenderId,
@@ -92,6 +93,51 @@ export async function requestSenderId(
   };
 }
 
+
+// ---------- Customer notifications on decisions ----------
+
+/**
+ * Tell the project's owner about a decision on their Sender ID request.
+ * The ID includes decidedAt so approve → revoke → re-approve each notify
+ * once, while a retried admin click doesn't.
+ */
+async function notifyAssignmentDecision(
+  env: Env,
+  assignment: SenderIdAssignment,
+  reason: string | null = null,
+): Promise<void> {
+  const v = assignment.senderId;
+  const base = {
+    projectId: assignment.projectId,
+    id: `sender_id__${assignment.projectId}__${v}__${assignment.status}__${assignment.decidedAt ?? ''}`,
+    type: 'sender_id' as const,
+    link: '/messaging/sender-ids',
+    email: true,
+  };
+  if (assignment.status === 'approved') {
+    await notifyProject(env, {
+      ...base,
+      severity: 'success',
+      title: `Sender ID "${v}" approved`,
+      body: `Your Sender ID "${v}" is approved and ready to use. You can now select it when sending SMS.`,
+    });
+  } else if (assignment.status === 'rejected') {
+    await notifyProject(env, {
+      ...base,
+      severity: 'error',
+      title: `Sender ID "${v}" was not approved`,
+      body: `Your request for Sender ID "${v}" was not approved.${reason ? ` Reason: ${reason}.` : ''} You can submit a different Sender ID from your dashboard.`,
+    });
+  } else if (assignment.status === 'revoked') {
+    await notifyProject(env, {
+      ...base,
+      severity: 'warning',
+      title: `Sender ID "${v}" is no longer active`,
+      body: `Access to Sender ID "${v}" has been withdrawn.${reason ? ` Reason: ${reason}.` : ''} Contact support if you think this is a mistake.`,
+    });
+  }
+}
+
 // ---------- Admin: approve / reject a value ----------
 
 export async function approveSenderIdValue(
@@ -122,7 +168,7 @@ export async function approveSenderIdValue(
       value,
     );
     if (firstAssignment && firstAssignment.status === 'pending') {
-      await updateAssignmentStatus(
+      const approved = await updateAssignmentStatus(
         env,
         existing.requestedByProjectId,
         value,
@@ -130,6 +176,7 @@ export async function approveSenderIdValue(
         adminUid,
         'Auto-approved with value',
       );
+      await notifyAssignmentDecision(env, approved);
     }
   }
 
@@ -152,7 +199,7 @@ export async function rejectSenderIdValue(
   const assignments = await listAssignmentsForValue(env, value);
   for (const a of assignments) {
     if (a.status === 'pending') {
-      await updateAssignmentStatus(
+      const rejected = await updateAssignmentStatus(
         env,
         a.projectId,
         value,
@@ -160,6 +207,7 @@ export async function rejectSenderIdValue(
         adminUid,
         `Value rejected: ${reason}`,
       );
+      await notifyAssignmentDecision(env, rejected, reason);
     }
   }
 
@@ -190,7 +238,15 @@ export async function approveAssignment(
   }
   if (assignment.status === 'approved') return assignment;
 
-  return updateAssignmentStatus(env, projectId, value, 'approved', adminUid);
+  const approved = await updateAssignmentStatus(
+    env,
+    projectId,
+    value,
+    'approved',
+    adminUid,
+  );
+  await notifyAssignmentDecision(env, approved);
+  return approved;
 }
 
 export async function rejectAssignment(
@@ -206,7 +262,7 @@ export async function rejectAssignment(
       `No assignment for project "${projectId}" and Sender ID "${value}".`,
     );
   }
-  return updateAssignmentStatus(
+  const updated = await updateAssignmentStatus(
     env,
     projectId,
     value,
@@ -214,6 +270,8 @@ export async function rejectAssignment(
     adminUid,
     notes,
   );
+  await notifyAssignmentDecision(env, updated, notes);
+  return updated;
 }
 
 export async function revokeAssignment(
@@ -229,7 +287,7 @@ export async function revokeAssignment(
       `No assignment for project "${projectId}" and Sender ID "${value}".`,
     );
   }
-  return updateAssignmentStatus(
+  const updated = await updateAssignmentStatus(
     env,
     projectId,
     value,
@@ -237,6 +295,8 @@ export async function revokeAssignment(
     adminUid,
     notes,
   );
+  await notifyAssignmentDecision(env, updated, notes);
+  return updated;
 }
 
 // ---------- Admin: fast-path direct creation ----------
