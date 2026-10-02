@@ -34,7 +34,7 @@ Serves the operator (you). Manages:
 - API keys issued to clients
 - Arkesel provider account
 - Payments received via Paystack
-- Reports, settings, audit logs
+- Reports, platform settings, team/admin users, audit log, alerts, system health
 
 **Tech-independence rule:** clients authenticate with ProfJero-issued API
 keys. No client Firebase/Supabase/DB config is ever stored on our side.
@@ -84,6 +84,11 @@ text
 | **Customer-facing Paystack flow** | ✅ Done — packages + custom amount, MoMo/card |
 | **Notifications system** (in-app + email) | ✅ Done — in-app + Resend email (optional) |
 | **Arkesel delivery receipts** | ⚠️ Not firing in production (see §10.5) |
+| **Admin Settings / Team / Audit / System** | ✅ Done, real (§15) — no mocks left in the admin app |
+| **Alert bell + live provider balance** | ✅ Done (§15) |
+| **Rate limiting + security hardening** | ✅ Done (§15) |
+| **Firestore security rules** | ✅ Deny-all + emulator tests (§15) — deploy them |
+| **Test suites** (API, security, load, rules, browser, a11y, mobile) | ✅ All passing — see `docs/testing.md` |
 
 ---
 
@@ -804,3 +809,89 @@ walks the whole journey: signup, top-up + webhook replay, Sender ID
 request/approval, contacts/import, send with failures, replay, history,
 stats, low-balance alert, API keys on /v1, notifications, and cross-tenant
 isolation. Needs `openssl` on PATH (Git for Windows ships one).
+
+---
+
+## 15. Admin platform — settings, team, audit, alerts, security (phase 2)
+
+Everything on the admin dashboard is now real: the old Settings mock-up,
+the topbar's fake date range and badge, and all `src/mock/*` data are gone.
+
+### What the operator can do
+
+| Where | What |
+|---|---|
+| Settings → General | Platform name, support email/phone (shown to customers), address, time zone |
+| Settings → SMS | Welcome credit for new signups (default 3 units, 0 = off), default low-balance alert, max recipients per send, Sender ID review time shown to customers |
+| Settings → Payments | Pause customer top-ups with a message (webhooks for payments already in flight still credit) |
+| Settings → Notifications | Admin alert emails (≤10) for: new Sender ID request, new customer, payment received, provider balance low (+ level) |
+| Settings → Security | Close/open customer sign-ups; customer sends/min and API calls/min |
+| Settings → Team | Invite admins (creates the Firebase login, returns a password-setup link and emails it if Resend is set), change roles, disable/re-enable (also disables the Firebase login), reset links |
+| Settings → Audit Log | Every successful admin change, who/when/what, secrets redacted (super admin + admin) |
+| Settings → System | Config health (SMS mode, webhook + token, payments, email), cron heartbeats, stuck/held queues, DB latency; run reconciliation / clean up orphans (super admin) |
+| Settings → My Profile | Display name, password change |
+| Topbar bell | Live alerts: Sender ID requests, low-balance wallets, provider errors/low credits, failed payments, stuck messages, new customers, stale cron (prod). Unread per admin; opening marks read |
+| Sidebar SMS balance | Live provider credits + status (refreshed every 15 min by cron), links to the provider page |
+| Sidebar quick actions | Send SMS, Add Project, Create Payment Link — open the real dialogs |
+
+Who may edit which settings section: general/SMS/notifications = super
+admin + admin; payments = + finance; security = super admin only. Team
+changes are super admin only; nobody can change their own role/status and
+at least one active super admin must remain.
+
+Settings live in Firestore `settings/{general|sms|payments|notifications|security}`,
+merged over defaults (`packages/shared/src/schemas/settings.ts`) and cached
+30 s per Worker isolate.
+
+### New API endpoints (all under `/admin`, audit-logged when they change something)
+
+`GET /settings`, `PUT /settings/:section`, `PATCH /me`, `GET|POST /admins`,
+`PATCH /admins/:uid`, `POST /admins/:uid/reset-link`, `GET /audit-logs`,
+`GET /alerts`, `POST /alerts/seen`, `GET /system`. Public: `GET /health/ready`
+(DB check, 503 when down), `GET /v1/platform`. Customer: `GET /customer/config`.
+
+### Security changes (found by the test matrix — details in docs/testing.md)
+
+- Paystack webhook checks amount + currency before crediting.
+- Delivery webhook token: set `ARKESEL_WEBHOOK_SECRET`; the callback URL
+  gets `?token=…` and callbacks without it are rejected (401).
+- Suspended/archived projects can't send from any surface.
+- Idempotency-Key misuse is 409 everywhere; a key reused by another
+  project no longer exposes that project's batch.
+- Provider 5xx → units held as "unknown" (reconciliation decides).
+- API-key cap enforced atomically; document IDs validated before Firestore.
+- Rate limits (Firestore-backed `rateLimits/*` + per-isolate): customer
+  API calls/min and sends/min (configurable), 10 sign-ups/hour per IP,
+  10 checkouts/min, 10 API keys/hour, 10 Sender ID requests/day; 429 +
+  `Retry-After`.
+- Localhost CORS origins refused when `ENVIRONMENT=production`.
+- Admins can't sign up as customers; customers can't be invited as admins.
+- `firebase/firestore.rules` is deny-all (both apps go through the API).
+
+### Environment (apps/api) — new
+
+| Var | Purpose |
+|---|---|
+| ARKESEL_WEBHOOK_SECRET | Recommended in production: shared token for delivery callbacks |
+
+### Deploy checklist (phase 2)
+
+1. Deploy the API (`npm run deploy:prod --workspace=@profjero/api`). The
+   `*/15` cron now also refreshes the provider balance and writes
+   heartbeats to `systemStatus/cron`.
+2. Set `ARKESEL_WEBHOOK_SECRET` (`npx wrangler secret put ARKESEL_WEBHOOK_SECRET --env production`).
+   The callback URL sent to Arkesel picks it up automatically.
+3. Deploy the Firestore rules: `cd firebase` then
+   `npx firebase deploy --only firestore:rules --project profjero-sms-gateway`.
+   Check first that nothing else reads Firestore directly from a browser.
+4. Deploy both front ends. Open Settings once and fill in General
+   (support email) and Notifications (alert emails).
+5. Point an uptime monitor at `GET /health/ready`.
+6. Existing admins keep working. New admins are invited from Settings → Team.
+
+### Testing
+
+See **docs/testing.md** for how to run everything and the full results:
+API customer journey (27), security & reliability (61), load test, Firestore
+rules (6), and Playwright browser tests (17: UI, accessibility, mobile).
+
