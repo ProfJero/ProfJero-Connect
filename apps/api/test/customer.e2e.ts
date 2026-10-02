@@ -214,7 +214,7 @@ await step('a checkout abandoned for 30+ minutes is marked abandoned on re-check
 });
 
 await step('payment webhook credits wallet once, notifies and emails once', async () => {
-  const payload = JSON.stringify({ event: 'charge.success', data: { reference, status: 'success' } });
+  const payload = JSON.stringify({ event: 'charge.success', data: { reference, status: 'success', amount: 2000, currency: 'GHS' } });
   const sig = createHmac('sha512', PAYSTACK_SECRET).update(payload).digest('hex');
   for (let i = 0; i < 2; i++) {
     const r = await call('POST', '/webhooks/paystack', { raw: payload, headers: { 'x-paystack-signature': sig } });

@@ -1,6 +1,6 @@
-import { MoreVertical, Search } from 'lucide-react';
+import { ChevronRight, Search } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { TableScroll } from '../ui/TableScroll';
 import { cn } from '../../lib/utils';
@@ -14,7 +14,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
   'bg-indigo-600',
 ];
@@ -60,7 +60,7 @@ export function ProjectsWalletsTable({ entries }: Props) {
 
         <div className="relative min-w-[200px]">
           <Search
-            className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"
+            className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2"
             strokeWidth={2}
           />
           <input
@@ -76,7 +76,7 @@ export function ProjectsWalletsTable({ entries }: Props) {
       <TableScroll>
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="text-[11px] font-semibold text-slate-400 border-b border-slate-100 uppercase tracking-wider bg-slate-50/40">
+            <tr className="text-[11px] font-semibold text-slate-500 border-b border-slate-100 uppercase tracking-wider bg-slate-50/40">
               <th className="py-2.5 px-4 font-semibold">#</th>
               <th className="py-2.5 px-3 font-semibold">Project</th>
               <th className="py-2.5 px-3 font-semibold text-right">Available</th>
@@ -93,7 +93,7 @@ export function ProjectsWalletsTable({ entries }: Props) {
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={11} className="py-12 text-center text-slate-400 text-sm">
+                <td colSpan={11} className="py-12 text-center text-slate-500 text-sm">
                   {entries.length === 0
                     ? 'No wallets yet.'
                     : 'No projects match your search.'}
@@ -114,7 +114,7 @@ export function ProjectsWalletsTable({ entries }: Props) {
                   onClick={() => navigate(`/projects/${entry.project.id}`)}
                   className="hover:bg-slate-50/80 transition-colors cursor-pointer"
                 >
-                  <td className="py-3 px-4 text-slate-400 font-medium">{idx + 1}.</td>
+                  <td className="py-3 px-4 text-slate-500 font-medium">{idx + 1}.</td>
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2">
                       <div
@@ -150,15 +150,15 @@ export function ProjectsWalletsTable({ entries }: Props) {
                   </td>
                   <td className="py-3 px-3 text-[11px] text-slate-500 leading-tight">
                     <div>{date}</div>
-                    <div className="text-slate-400 text-[10px]">{time}</div>
+                    <div className="text-slate-500 text-[10px]">{time}</div>
                   </td>
                   <td className="py-3 px-3 text-center">
                     {critical ? (
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-200/60">
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
                         Critical
                       </span>
                     ) : low ? (
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-600 border border-amber-200/60">
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">
                         Low
                       </span>
                     ) : (
@@ -168,12 +168,14 @@ export function ProjectsWalletsTable({ entries }: Props) {
                     )}
                   </td>
                   <td className="py-3 px-3 text-center">
-                    <button
-                      className="text-slate-400 hover:text-slate-600 p-1"
+                    <Link
+                      to={`/projects/${entry.project.id}`}
                       onClick={(e) => e.stopPropagation()}
+                      aria-label={`Open ${entry.project.name}`}
+                      className="inline-flex text-slate-500 hover:text-blue-600 p-1"
                     >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
                   </td>
                 </tr>
               );

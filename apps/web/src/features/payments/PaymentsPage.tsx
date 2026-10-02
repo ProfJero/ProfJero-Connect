@@ -13,6 +13,7 @@ import { PaymentsFilterBar } from '../../components/payments/PaymentsFilterBar';
 import { PaymentsTable } from '../../components/payments/PaymentsTable';
 import { PaymentDetailsInspector } from '../../components/payments/PaymentDetailsInspector';
 import { InitiatePaymentModal } from '../../components/payments/InitiatePaymentModal';
+import { useNewParam } from '../../lib/useNewParam';
 import { PaymentUrlModal } from '../../components/payments/PaymentUrlModal';
 import { useApi } from '../../lib/useApi';
 import type {
@@ -34,11 +35,12 @@ export function PaymentsPage() {
   const [page, setPage] = useState(1);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
   const [initiateOpen, setInitiateOpen] = useState(false);
+  const [newRequested, dismissNew] = useNewParam();
   const [urlResponse, setUrlResponse] =
     useState<InitiatePaymentResponse | null>(null);
 
-  const projects = projectsApi.data?.projects ?? [];
-  const allPayments = paymentsApi.data?.payments ?? [];
+  const projects = useMemo(() => projectsApi.data?.projects ?? [], [projectsApi.data?.projects]);
+  const allPayments = useMemo(() => paymentsApi.data?.payments ?? [], [paymentsApi.data?.payments]);
   const projectNames = useMemo(
     () => new Map(projects.map((p) => [p.id, p.name])),
     [projects],
@@ -133,6 +135,7 @@ export function PaymentsPage() {
 
   return (
     <main className="p-4 sm:p-6 lg:p-7 space-y-6 flex-1">
+      <h1 className="sr-only">Payments</h1>
       {paymentsApi.error && (
         <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />
@@ -214,11 +217,15 @@ export function PaymentsPage() {
       </section>
 
       <InitiatePaymentModal
-        open={initiateOpen}
+        open={initiateOpen || newRequested}
         projects={projects}
-        onClose={() => setInitiateOpen(false)}
+        onClose={() => {
+          setInitiateOpen(false);
+          dismissNew();
+        }}
         onInitiated={(resp) => {
           setInitiateOpen(false);
+          dismissNew();
           setUrlResponse(resp);
           paymentsApi.reload();
         }}

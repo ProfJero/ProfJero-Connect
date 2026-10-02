@@ -19,7 +19,7 @@ const quickActions: QuickAction[] = [
     to: '/messaging/sms',
     icon: Send,
     iconBg: 'bg-blue-500/10',
-    iconColor: 'text-[#1a6cf0] dark:text-blue-400',
+    iconColor: 'text-[#1764e0] dark:text-blue-400',
     hover: 'hover:border-blue-200 hover:bg-blue-50/30 dark:hover:bg-blue-500/5',
   },
   {
@@ -28,7 +28,7 @@ const quickActions: QuickAction[] = [
     to: '/wallet/add-funds',
     icon: Plus,
     iconBg: 'bg-emerald-500/10',
-    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    iconColor: 'text-emerald-700 dark:text-emerald-400',
     hover: 'hover:border-emerald-200 hover:bg-emerald-50/30 dark:hover:bg-emerald-500/5',
   },
   {
@@ -46,7 +46,7 @@ const quickActions: QuickAction[] = [
     to: '/contacts',
     icon: Users,
     iconBg: 'bg-amber-500/10',
-    iconColor: 'text-amber-600 dark:text-amber-400',
+    iconColor: 'text-amber-700 dark:text-amber-400',
     hover: 'hover:border-amber-200 hover:bg-amber-50/30 dark:hover:bg-amber-500/5',
   },
 ];
@@ -72,7 +72,7 @@ export function QuickActionsCard() {
               </div>
               <div>
                 <h4 className="font-bold text-slate-800 dark:text-slate-100 text-xs">{action.label}</h4>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{action.description}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-500 mt-0.5">{action.description}</p>
               </div>
               <ArrowRight className={cn('w-3.5 h-3.5 mt-2.5 self-end', action.iconColor)} strokeWidth={2} />
             </Link>

@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { customerAuth } from '../../middleware/customerAuth';
+import { memoryLimit } from '../../lib/rateLimit';
+import { getSettings } from '../../services/settings';
 import type { AuthVariables, Env } from '../../types/env';
 import { customerRegisterRouter } from './register';
 import { customerMeRouter } from './me';
@@ -10,6 +12,7 @@ import { customerSenderIdsRouter } from './senderIds';
 import { customerContactsRouter } from './contacts';
 import { customerApiKeysRouter } from './apiKeys';
 import { customerNotificationsRouter } from './notifications';
+import { customerConfigRouter } from './config';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -25,7 +28,13 @@ router.use('*', async (c, next) => {
   if (c.req.method === 'POST' && c.req.path.endsWith('/customer/register')) {
     return next();
   }
-  return customerAuth(c, next);
+  return customerAuth(c, async () => {
+    // Broad per-account request cap (cheap, per isolate). Costly actions
+    // have their own durable limits in their routers.
+    const { security } = await getSettings(c.env);
+    memoryLimit(`cust:${c.get('customer')!.uid}`, security.customerRequestsPerMinute, 60);
+    await next();
+  });
 });
 
 router.route('/', customerMeRouter);
@@ -36,5 +45,6 @@ router.route('/', customerSenderIdsRouter);
 router.route('/', customerContactsRouter);
 router.route('/', customerApiKeysRouter);
 router.route('/', customerNotificationsRouter);
+router.route('/', customerConfigRouter);
 
 export { router as customerRouter };

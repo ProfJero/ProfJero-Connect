@@ -74,7 +74,7 @@ Authorization: Bearer pk_live_xxxxxxxxxxxxxxxxxx_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 
 text
 
-Every request to `/v1/*` (except `/v1/pricing`) must include this header.
+Every request to `/v1/*` (except `/v1/pricing` and `/v1/platform`) must include this header.
 Requests without it return `401`.
 
 ### Creating a key
@@ -491,6 +491,20 @@ Only active services and active packages are returned.
 effectiveRate is computed as priceGhs / units — the per-unit cost of
 that package.
 
+Platform info (public)
+GET /v1/platform
+Operator-controlled public details. No authentication required.
+
+Response (200):
+
+json
+{
+  "platformName": "ProfJero Connect",
+  "supportEmail": "support@example.com",
+  "supportPhone": null,
+  "customerSignupsEnabled": true
+}
+
 Health (public)
 GET /health
 Uptime check. No auth.
@@ -505,6 +519,11 @@ json
   "version": "0.0.1",
   "time": "2026-09-26T14:30:00.000Z"
 }
+
+GET /health/ready
+Readiness check for uptime monitors: does a database round-trip. Returns
+200 { "ok": true, "database": "ok", "latencyMs": 42, "time": "…" }, or
+503 with "database": "unreachable" when the database can't be reached.
 6. Webhooks (internal)
 Webhook endpoints accept events from backend providers. They are not
 intended for client consumption.
@@ -601,6 +620,7 @@ have 160 (single segment) or 153 per segment (split).
 
 9. Changelog
 Date	Change
+2026-10-02	GET /v1/platform added. POST /v1/sms/send: reusing an Idempotency-Key with a different message, sender or recipients now returns 409 (previously the first batch was replayed); sends from suspended projects return 403.
 2026-10-02	Customers can create/revoke their own secret keys in the customer platform (API & Integrations). /v1 behaviour unchanged.
 2026-09-26	Initial public API reference.
 2026-09-23	GET /v1/pricing added.

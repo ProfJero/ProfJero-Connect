@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pencil, AlertCircle, Check } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -16,12 +16,13 @@ export function ProviderSettingsCard({ provider, onChanged }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setCostPerUnit(
-      provider.costPerUnitGhs !== null ? String(provider.costPerUnitGhs) : '',
-    );
+  // Load the current values into the form when editing starts.
+  const startEditing = () => {
+    setCostPerUnit(provider.costPerUnitGhs !== null ? String(provider.costPerUnitGhs) : '');
     setLabel(provider.label);
-  }, [provider]);
+    setError(null);
+    setEditing(true);
+  };
 
   const handleSave = async () => {
     setError(null);
@@ -84,7 +85,7 @@ export function ProviderSettingsCard({ provider, onChanged }: Props) {
         {!editing && (
           <button
             type="button"
-            onClick={() => setEditing(true)}
+            onClick={startEditing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition shrink-0"
           >
             <Pencil className="w-3 h-3" strokeWidth={2.5} />
@@ -127,7 +128,7 @@ export function ProviderSettingsCard({ provider, onChanged }: Props) {
               placeholder="e.g. 0.013"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
             />
-            <p className="mt-1 text-[10px] text-slate-400">
+            <p className="mt-1 text-[10px] text-slate-500">
               What the provider charges you per unit. Used to compute margin.
             </p>
           </div>

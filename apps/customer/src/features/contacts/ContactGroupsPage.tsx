@@ -54,7 +54,7 @@ export function ContactGroupsPage() {
 
       {(data?.groups.length ?? 0) > 0 && (
         <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
+          <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
           <input className={cn(inputClass, 'pl-9 py-2.5')} placeholder="Search groups…" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       )}
@@ -106,7 +106,7 @@ export function ContactGroupsPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 mt-4">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-500 mt-4">
                     <Calendar className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
                     Updated {formatDate(g.updatedAt)}
                   </div>
@@ -117,7 +117,7 @@ export function ContactGroupsPage() {
                 <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
                   <Link
                     to={`/contacts?group=${encodeURIComponent(g.id)}`}
-                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-[#1a6cf0] dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-[#1764e0] dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10"
                   >
                     View contacts
                   </Link>

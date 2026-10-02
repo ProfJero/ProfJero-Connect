@@ -13,11 +13,15 @@ import {
   Check,
 } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
+import { useApi } from '../../lib/useApi';
 import { cn } from '../../lib/utils';
 
 export function SignupForm() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  // Operators can pause new sign-ups from the admin dashboard.
+  const platform = useApi<{ customerSignupsEnabled: boolean }>('/v1/platform');
+  const signupsClosed = platform.data?.customerSignupsEnabled === false;
 
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -69,7 +73,7 @@ export function SignupForm() {
         Already have an account?{' '}
         <Link
           to="/login"
-          className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline ml-1"
+          className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline ml-1"
         >
           Sign in
         </Link>
@@ -90,6 +94,13 @@ export function SignupForm() {
         <div className="mb-5 flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />
           <span className="font-medium leading-relaxed">{error}</span>
+        </div>
+      )}
+
+      {signupsClosed && (
+        <div role="status" className="mb-5 flex items-start gap-2.5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />
+          <span className="font-medium leading-relaxed">New sign-ups are paused right now. Please check back later — existing customers can still sign in.</span>
         </div>
       )}
 
@@ -139,7 +150,7 @@ export function SignupForm() {
             Password
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 dark:text-slate-400">
               <Lock className="w-5 h-5" strokeWidth={1.8} />
             </span>
             <input
@@ -155,7 +166,7 @@ export function SignupForm() {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-5 h-5" strokeWidth={1.8} /> : <Eye className="w-5 h-5" strokeWidth={1.8} />}
@@ -168,7 +179,7 @@ export function SignupForm() {
                 <div className={cn('h-1 flex-1 rounded-full', password.length >= 12 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700')} />
                 <div className={cn('h-1 flex-1 rounded-full', password.length >= 16 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700')} />
               </div>
-              <span className={cn('font-medium', password.length >= 8 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500')}>
+              <span className={cn('font-medium', password.length >= 8 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-500')}>
                 {password.length >= 8 ? 'Good' : 'Too short'}
               </span>
             </div>
@@ -184,7 +195,7 @@ export function SignupForm() {
             Confirm Password
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 dark:text-slate-400">
               <Lock className="w-5 h-5" strokeWidth={1.8} />
             </span>
             <input
@@ -205,7 +216,7 @@ export function SignupForm() {
             <button
               type="button"
               onClick={() => setShowConfirm((v) => !v)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               aria-label={showConfirm ? 'Hide password' : 'Show password'}
             >
               {showConfirm ? <EyeOff className="w-5 h-5" strokeWidth={1.8} /> : <Eye className="w-5 h-5" strokeWidth={1.8} />}
@@ -224,15 +235,15 @@ export function SignupForm() {
             type="checkbox"
             checked={agreedToTerms}
             onChange={(e) => setAgreedToTerms(e.target.checked)}
-            className="w-4 h-4 mt-0.5 text-[#1a6cf0] border-slate-300 dark:border-slate-600 rounded focus:ring-[#1a6cf0]"
+            className="w-4 h-4 mt-0.5 text-[#1764e0] border-slate-300 dark:border-slate-600 rounded focus:ring-[#1a6cf0]"
           />
           <span className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
             I agree to the{' '}
-            <a href="#" className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline">
+            <a href="#" className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline">
               Terms of Service
             </a>{' '}
             and{' '}
-            <a href="#" className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline">
+            <a href="#" className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline">
               Privacy Policy
             </a>
             .
@@ -243,7 +254,7 @@ export function SignupForm() {
         <div className="pt-2">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || signupsClosed}
             className={cn(
               'w-full bg-[#1a6cf0] hover:bg-[#155cd0] active:bg-[#124db0] text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150 flex items-center justify-center gap-2 group',
               'disabled:opacity-70 disabled:cursor-not-allowed',
@@ -266,7 +277,7 @@ export function SignupForm() {
         {/* OR divider */}
         <div className="relative py-2 flex items-center justify-center">
           <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
-          <span className="bg-white dark:bg-slate-900 px-3 text-xs uppercase font-medium text-slate-400 absolute">
+          <span className="bg-white dark:bg-slate-900 px-3 text-xs uppercase font-medium text-slate-500 dark:text-slate-400 absolute">
             OR
           </span>
         </div>
@@ -288,7 +299,7 @@ export function SignupForm() {
 
       {/* Security notice */}
       <div className="pt-5 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-        <ShieldCheck className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400 shrink-0" strokeWidth={2} />
+        <ShieldCheck className="w-4 h-4 text-[#1764e0] dark:text-blue-400 shrink-0" strokeWidth={2} />
         <span className="font-medium">Your information is secure and encrypted.</span>
       </div>
     </div>
@@ -323,7 +334,7 @@ function Field({
         {label}
       </label>
       <div className="relative">
-        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 dark:text-slate-400">
           <Icon className="w-5 h-5" strokeWidth={1.8} />
         </span>
         <input

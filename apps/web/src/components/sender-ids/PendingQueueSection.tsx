@@ -190,7 +190,7 @@ function QueueRow({
         <div className="text-[11px] text-slate-500 mt-0.5 truncate">
           {secondary}
         </div>
-        <div className="text-[10px] text-slate-400 mt-0.5">
+        <div className="text-[10px] text-slate-500 mt-0.5">
           {date} {time}
         </div>
       </div>
@@ -199,7 +199,7 @@ function QueueRow({
           type="button"
           onClick={onApprove}
           disabled={busy}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold disabled:opacity-50 transition"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-semibold disabled:opacity-50 transition"
         >
           <Check className="w-3 h-3" strokeWidth={2.5} />
           Approve
@@ -208,7 +208,7 @@ function QueueRow({
           type="button"
           onClick={onReject}
           disabled={busy}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-[11px] font-semibold disabled:opacity-50 transition"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-[11px] font-semibold disabled:opacity-50 transition"
         >
           <X className="w-3 h-3" strokeWidth={2.5} />
           Reject

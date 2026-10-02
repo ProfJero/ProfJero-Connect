@@ -69,6 +69,8 @@ function dailyLabels(days: number): string {
 
 export function ReportsPage() {
   const [period, setPeriod] = useState<PeriodKey>('30d');
+  // "Now" for the summary windows, fixed when the page opens (render must be pure).
+  const [now] = useState(() => Date.now());
   const periodDays = PERIODS.find((p) => p.key === period)?.days ?? 30;
 
   const batchesApi = useApi<SmsBatchListResponse>(
@@ -99,8 +101,8 @@ export function ReportsPage() {
     return new Map(projects.map((p) => [p.id, p.name]));
   }, [projectsApi.data]);
 
-  const allBatches = batchesApi.data?.batches ?? [];
-  const allPayments = paymentsApi.data?.payments ?? [];
+  const allBatches = useMemo(() => batchesApi.data?.batches ?? [], [batchesApi.data?.batches]);
+  const allPayments = useMemo(() => paymentsApi.data?.payments ?? [], [paymentsApi.data?.payments]);
 
   const filteredBatches = useMemo(
     () => filterByPeriod(allBatches, periodDays),
@@ -175,7 +177,6 @@ export function ReportsPage() {
       : null;
 
   // Summary
-  const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const dailySms = filteredBatches
     .filter((b) => new Date(b.createdAt).getTime() >= now - dayMs)
@@ -221,7 +222,7 @@ export function ReportsPage() {
       value: totalUnitsConsumed.toLocaleString(),
       footnote: 'from SMS sends',
       icon: Package,
-      iconBg: 'bg-emerald-600',
+      iconBg: 'bg-emerald-700',
     },
     {
       label: 'Revenue',
@@ -281,7 +282,7 @@ export function ReportsPage() {
     {
       label: 'Provider Cost',
       shortLabel: 'C',
-      shortBg: 'bg-amber-100 text-amber-600',
+      shortBg: 'bg-amber-100 text-amber-700',
       value: costGhs !== null ? formatGhs(costGhs * 100) : '—',
     },
     {
@@ -293,13 +294,13 @@ export function ReportsPage() {
     {
       label: 'Units Sold',
       shortLabel: 'U',
-      shortBg: 'bg-emerald-100 text-emerald-600',
+      shortBg: 'bg-emerald-100 text-emerald-700',
       value: totalUnitsSold.toLocaleString(),
     },
     {
       label: 'Pending',
       shortLabel: 'W',
-      shortBg: 'bg-amber-100 text-amber-600',
+      shortBg: 'bg-amber-100 text-amber-700',
       value: String(pendingPayments),
     },
     {
@@ -331,6 +332,7 @@ export function ReportsPage() {
 
   return (
     <main className="p-4 sm:p-6 lg:p-7 space-y-6 flex-1">
+      <h1 className="sr-only">Reports</h1>
       {error && (
         <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />
@@ -351,7 +353,7 @@ export function ReportsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 shadow-xs">
-            <Calendar className="w-4 h-4 text-slate-400" strokeWidth={2} />
+            <Calendar className="w-4 h-4 text-slate-500" strokeWidth={2} />
             <span>{formatRangeLabel(periodDays)}</span>
           </div>
 

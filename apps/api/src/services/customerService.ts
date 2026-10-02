@@ -2,7 +2,6 @@ import { firestoreGetDoc, runTransaction } from '../lib/firestore';
 import type { Env } from '../types/env';
 import type { Customer } from '@profjero/shared';
 
-const STARTER_UNITS = 3;
 
 export type CreateCustomerResult = {
   customer: Customer;
@@ -55,9 +54,14 @@ export async function createCustomerAndProject(
     displayName: string;
     organisationName: string;
     phone?: string;
+    /** From settings.sms.starterUnits. 0 = no welcome credit. */
+    starterUnits: number;
+    /** From settings.sms.defaultLowBalanceThreshold. */
+    lowBalanceThreshold: number | null;
   },
 ): Promise<CreateCustomerResult> {
   const { uid, email, displayName, organisationName, phone } = args;
+  const STARTER_UNITS = args.starterUnits;
 
   // Fast path — avoid opening a transaction for the common replay case.
   const existing = await firestoreGetDoc(env, 'customers', uid);
@@ -86,7 +90,7 @@ export async function createCustomerAndProject(
     projectId,
     availableUnits: STARTER_UNITS,
     reservedUnits: 0,
-    lowBalanceThreshold: null,
+    lowBalanceThreshold: args.lowBalanceThreshold,
     updatedAt: now,
   };
 
@@ -140,11 +144,14 @@ export async function createCustomerAndProject(
       fields: walletDoc,
       precondition: { exists: false },
     });
-    txn.write({
-      path: `walletTransactions/${ledgerId}`,
-      fields: ledgerDoc,
-      precondition: { exists: false },
-    });
+    // The ledger must explain the wallet: no credit → no entry.
+    if (STARTER_UNITS > 0) {
+      txn.write({
+        path: `walletTransactions/${ledgerId}`,
+        fields: ledgerDoc,
+        precondition: { exists: false },
+      });
+    }
     txn.write({
       path: `customers/${uid}`,
       fields: customerDoc,
@@ -235,7 +242,7 @@ async function loadExistingResult(
       reservedUnits,
       totalUnits: availableUnits + reservedUnits,
     },
-    starterUnitsGranted: STARTER_UNITS,
+    starterUnitsGranted: 0,
     isNew: false,
   };
 }

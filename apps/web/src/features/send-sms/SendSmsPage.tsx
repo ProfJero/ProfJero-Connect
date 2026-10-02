@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Send, HelpCircle } from 'lucide-react';
 import {
   WizardBar,
@@ -29,7 +29,7 @@ export function SendSmsPage() {
 
   const [step, setStep] = useState<WizardStep>(1);
   const [projectId, setProjectId] = useState<string | null>(null);
-  const [senderId, setSenderId] = useState('');
+  const [chosenSenderId, setSenderId] = useState('');
   const [recipientsText, setRecipientsText] = useState('');
   const [message, setMessage] = useState('');
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
@@ -53,24 +53,10 @@ export function SendSmsPage() {
     setSenderId('');
   };
 
-  // Auto-select the first approved Sender ID whenever the list arrives for a
-  // newly selected project. Ref prevents re-running on every render.
-  const lastAutoSelectProjectRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!projectId) return;
-    if (lastAutoSelectProjectRef.current === projectId) return;
-    if (senderIdsApi.loading) return;
-
-    const first = senderIds.find((s) => s.status === 'approved');
-    if (first) {
-      setSenderId(first.senderId);
-      lastAutoSelectProjectRef.current = projectId;
-    } else {
-      // Mark this project as "attempted" even if nothing was auto-selected,
-      // so we don't re-check on every subsequent render.
-      lastAutoSelectProjectRef.current = projectId;
-    }
-  }, [projectId, senderIds, senderIdsApi.loading]);
+  // Until the operator picks one, default to the project's first approved
+  // Sender ID (derived, so it follows the list as it loads).
+  const senderId =
+    chosenSenderId || senderIds.find((s) => s.status === 'approved')?.senderId || '';
 
   const recipients = useMemo(
     () =>
@@ -130,7 +116,6 @@ export function SendSmsPage() {
     setMessage('');
     setIdempotencyKey(null);
     setSendState({ kind: 'idle' });
-    lastAutoSelectProjectRef.current = null;
   };
 
   return (

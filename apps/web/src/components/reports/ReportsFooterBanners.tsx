@@ -21,12 +21,12 @@ export function ReportsFooterBanners() {
           <MessageSquare className="w-4 h-4 text-blue-600" strokeWidth={2} />
           <span>ProfJero SMS</span>
         </div>
-        <span className="text-slate-400 font-normal">→</span>
+        <span className="text-slate-500 font-normal">→</span>
         <div className="flex items-center gap-1.5">
           <Server className="w-4 h-4 text-slate-500" strokeWidth={2} />
           <span>Provider Infrastructure</span>
         </div>
-        <span className="text-slate-400 font-normal">→</span>
+        <span className="text-slate-500 font-normal">→</span>
         <div className="flex items-center gap-1.5">
           <Radio className="w-4 h-4 text-blue-600" strokeWidth={2} />
           <span>SMS Gateway 01</span>

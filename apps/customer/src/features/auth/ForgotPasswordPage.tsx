@@ -28,7 +28,7 @@ export function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8">
-        <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline">
+        <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1764e0] dark:text-blue-400 hover:underline">
           <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.5} />
           Back to sign in
         </Link>
@@ -51,7 +51,7 @@ export function ForgotPasswordPage() {
               </p>
             </div>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={2} />
+              <Mail className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" strokeWidth={2} />
               <input
                 type="email"
                 required

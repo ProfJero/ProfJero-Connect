@@ -44,7 +44,7 @@ export function WalletActivityTable() {
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
             Wallet Activity
           </h3>
-          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-500 font-medium mt-0.5">
             View your recent wallet transactions and balance changes.
           </p>
         </div>
@@ -67,7 +67,7 @@ export function WalletActivityTable() {
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
             No wallet activity yet
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
             Your wallet transactions will appear here.
           </p>
         </div>
@@ -108,7 +108,7 @@ export function WalletActivityTable() {
                           <div className="font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">
                             {displayType}
                           </div>
-                          <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                          <div className="text-[11px] text-slate-500 dark:text-slate-500 truncate">
                             {getTxLink(tx) ? (
                               <Link to={getTxLink(tx)!} className="hover:text-[#1a6cf0] hover:underline">
                                 {getDisplayDescription(tx)}
@@ -127,7 +127,7 @@ export function WalletActivityTable() {
                       className={cn(
                         'py-4 px-5 font-bold whitespace-nowrap',
                         amount.positive
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-emerald-700 dark:text-emerald-400'
                           : 'text-rose-500 dark:text-rose-400',
                       )}
                     >
@@ -137,7 +137,7 @@ export function WalletActivityTable() {
                       {tx.availableAfter.toLocaleString()} units
                     </td>
                     <td className="py-4 px-5 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
                         • {status}
                       </span>
                     </td>
@@ -154,7 +154,7 @@ export function WalletActivityTable() {
           <button
             onClick={loadMore}
             disabled={loadingMore}
-            className="text-xs font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline disabled:opacity-60"
+            className="text-xs font-semibold text-[#1764e0] dark:text-blue-400 hover:underline disabled:opacity-60"
           >
             {loadingMore ? 'Loading…' : 'Load more'}
           </button>

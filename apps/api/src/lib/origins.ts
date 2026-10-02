@@ -18,6 +18,16 @@ export const allowedOrigins = [
   'https://profjeroconnect.pages.dev',
 ];
 
+/**
+ * CORS check. Local dev origins are refused in production: a deployed API
+ * has no reason to trust whatever happens to run on a visitor's localhost.
+ */
+export function isAllowedOrigin(origin: string, environment: string | undefined): boolean {
+  if (!allowedOrigins.includes(origin)) return false;
+  if (environment === 'production' && /^http:\/\/(localhost|127\.0\.0\.1)(:|$)/.test(origin)) return false;
+  return true;
+}
+
 const customerOrigins = new Set([
   'http://localhost:5174',
   'http://127.0.0.1:5174',

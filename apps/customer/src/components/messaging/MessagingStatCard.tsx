@@ -30,14 +30,14 @@ export function MessagingStatCard({ stat, loading }: { stat: MessagingStat; load
             <span
               className={cn(
                 'text-[11px] font-semibold',
-                stat.delta.good ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+                stat.delta.good ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
               )}
             >
               {stat.delta.text}
             </span>
           )}
         </div>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{stat.footnote}</p>
+        <p className="text-[11px] text-slate-500 dark:text-slate-500 mt-0.5">{stat.footnote}</p>
       </div>
     </div>
   );

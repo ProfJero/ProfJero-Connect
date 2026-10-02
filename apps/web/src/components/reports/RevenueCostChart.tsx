@@ -35,12 +35,12 @@ export function RevenueCostChart({ weeks }: Props) {
           </div>
         </div>
       </div>
-      <p className="text-xs text-slate-400 mb-4">
+      <p className="text-xs text-slate-500 mb-4">
         Weekly revenue from successful payments.
       </p>
 
       {!hasData ? (
-        <div className="h-44 flex items-center justify-center text-xs text-slate-400">
+        <div className="h-44 flex items-center justify-center text-xs text-slate-500">
           No revenue in this period.
         </div>
       ) : (

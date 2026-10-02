@@ -12,3 +12,4 @@ export * from './schemas/pricing';
 export * from './schemas/payment';
 export * from './schemas/provider';
 export * from './schemas/customer';export * from './schemas/customerPlatform';
+export * from './schemas/settings';

@@ -35,7 +35,7 @@ export function ApiBanner() {
           <p className="text-cyan-400 font-semibold">
             POST <span className="text-slate-300 font-normal">/v1/sms/send</span>
           </p>
-          <p className="text-slate-400">{'{'}</p>
+          <p className="text-slate-500 dark:text-slate-400">{'{'}</p>
           <p className="pl-2 text-slate-300">
             "recipients": [<span className="text-emerald-400">"233246789012"</span>],
           </p>
@@ -45,7 +45,7 @@ export function ApiBanner() {
           <p className="pl-2 text-slate-300">
             "senderId": <span className="text-emerald-400">"MYBRAND"</span>
           </p>
-          <p className="text-slate-400">{'}'}</p>
+          <p className="text-slate-500 dark:text-slate-400">{'}'}</p>
         </div>
       </div>
     </div>

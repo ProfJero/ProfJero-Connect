@@ -31,7 +31,7 @@ export function LowBalanceAlerts({ entries, onProjectClick }: Props) {
       </div>
 
       {flagged.length === 0 ? (
-        <div className="py-6 text-center text-[11px] text-slate-400">
+        <div className="py-6 text-center text-[11px] text-slate-500">
           All wallets are healthy.
         </div>
       ) : (
@@ -52,7 +52,7 @@ export function LowBalanceAlerts({ entries, onProjectClick }: Props) {
                   <div className="text-xs font-semibold text-slate-800">
                     {e.project.name}
                   </div>
-                  <div className="text-[10px] text-slate-400">
+                  <div className="text-[10px] text-slate-500">
                     {e.wallet.availableUnits.toLocaleString()} units available
                   </div>
                 </div>
@@ -60,8 +60,8 @@ export function LowBalanceAlerts({ entries, onProjectClick }: Props) {
                   className={cn(
                     'px-2 py-0.5 text-[10px] font-semibold rounded border',
                     critical
-                      ? 'text-rose-600 bg-rose-50 border-rose-200/50'
-                      : 'text-amber-600 bg-amber-50 border-amber-200/50',
+                      ? 'text-rose-700 bg-rose-50 border-rose-200/50'
+                      : 'text-amber-700 bg-amber-50 border-amber-200/50',
                   )}
                 >
                   {critical ? 'Critical' : 'Low'}

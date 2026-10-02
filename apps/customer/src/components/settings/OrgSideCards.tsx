@@ -53,16 +53,16 @@ export function OrgStatCards() {
             className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 flex items-center justify-center shrink-0">
                 <Icon className="w-5 h-5" strokeWidth={2} />
               </div>
               <div className="min-w-0">
                 <div className="text-[11px] text-slate-500 dark:text-slate-400">{c.label}</div>
                 <div className="text-lg font-extrabold text-slate-900 dark:text-slate-100 leading-tight">{c.value}</div>
-                <div className="text-[10px] text-slate-400 truncate">{c.note}</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{c.note}</div>
               </div>
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={2} />
+            <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={2} />
           </Link>
         );
       })}

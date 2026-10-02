@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 
@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function RejectReasonModal({
+function RejectReasonModalForm({
   open,
   title,
   label,
@@ -21,13 +21,6 @@ export function RejectReasonModal({
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setReason('');
-    setError(null);
-    setSubmitting(false);
-  }, [open]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -83,7 +76,7 @@ export function RejectReasonModal({
             placeholder="Why is this being rejected?"
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20 resize-none"
           />
-          <p className="mt-1 text-[11px] text-slate-400">
+          <p className="mt-1 text-[11px] text-slate-500">
             {reason.length}/300 characters
           </p>
         </div>
@@ -108,4 +101,12 @@ export function RejectReasonModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function RejectReasonModal(props: Props) {
+  return props.open ? <RejectReasonModalForm {...props} /> : null;
 }

@@ -8,7 +8,7 @@ import { v1Router, v1PublicRouter } from './routers/v1';
 import { webhooksRouter } from './routers/webhooks';
 import { handleScheduled } from './services/cron';
 import { customerRouter } from './routers/customer';
-import { allowedOrigins } from './lib/origins';
+import { isAllowedOrigin } from './lib/origins';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -18,9 +18,9 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 app.use(
   '*',
   cors({
-    origin: (origin) => {
+    origin: (origin, c) => {
       if (!origin) return null;
-      return allowedOrigins.includes(origin) ? origin : null;
+      return isAllowedOrigin(origin, (c.env as Env | undefined)?.ENVIRONMENT) ? origin : null;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],

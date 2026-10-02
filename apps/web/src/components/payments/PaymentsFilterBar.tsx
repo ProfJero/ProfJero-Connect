@@ -53,7 +53,7 @@ export function PaymentsFilterBar({
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <div className="relative w-64 max-w-full">
           <Search
-            className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"
+            className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"
             strokeWidth={2}
           />
           <input
@@ -66,7 +66,7 @@ export function PaymentsFilterBar({
         </div>
 
         <div className="relative">
-          <select
+          <select aria-label="Filter by project"
             value={projectId}
             onChange={(e) => onProjectChange(e.target.value)}
             className="appearance-none bg-slate-50 border border-slate-200 text-slate-600 pl-3 pr-8 py-1.5 rounded-lg text-xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
@@ -78,11 +78,11 @@ export function PaymentsFilterBar({
               </option>
             ))}
           </select>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
 
         <div className="relative">
-          <select
+          <select aria-label="Filter by status"
             value={status}
             onChange={(e) =>
               onStatusChange(e.target.value as PaymentStatus | 'all')
@@ -95,7 +95,7 @@ export function PaymentsFilterBar({
               </option>
             ))}
           </select>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
 
         <button

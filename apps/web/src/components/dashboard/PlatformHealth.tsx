@@ -62,11 +62,11 @@ export function PlatformHealth({ smsTotals }: Props) {
                   : 'bg-slate-400';
           const valueColor =
             r.tone === 'emerald'
-              ? 'text-emerald-600'
+              ? 'text-emerald-700'
               : r.tone === 'rose'
                 ? 'text-rose-600'
                 : r.tone === 'amber'
-                  ? 'text-amber-600'
+                  ? 'text-amber-700'
                   : 'text-slate-600';
           return (
             <div key={r.label}>
@@ -84,7 +84,7 @@ export function PlatformHealth({ smsTotals }: Props) {
           );
         })}
 
-        <div className="pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+        <div className="pt-3 border-t border-slate-100 text-[10px] text-slate-500">
           Based on {totalOutcomes.toLocaleString()} SMS outcomes all-time.
         </div>
       </div>

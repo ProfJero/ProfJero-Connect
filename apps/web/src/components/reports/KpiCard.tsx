@@ -29,7 +29,7 @@ export function KpiCard({ card }: { card: KpiCardData }) {
           </div>
         </div>
       </div>
-      <div className="text-[11px] text-slate-400 mt-2 pl-[52px]">
+      <div className="text-[11px] text-slate-500 mt-2 pl-[52px]">
         {card.footnote}
       </div>
     </div>

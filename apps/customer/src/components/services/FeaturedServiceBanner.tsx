@@ -8,7 +8,7 @@ export function FeaturedServiceBanner() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
         {/* Left column */}
         <div className="lg:col-span-4 space-y-4">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 text-[#1a6cf0] dark:text-blue-400 shadow-xs border border-blue-100 dark:border-blue-500/20">
+          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 text-[#1764e0] dark:text-blue-400 shadow-xs border border-blue-100 dark:border-blue-500/20">
             {featuredService.badge}
           </div>
           <div>
@@ -72,7 +72,7 @@ function PhoneMockup() {
       <div className="bg-white dark:bg-slate-950 rounded-[28px] overflow-hidden pt-2 pb-5 px-3 border border-slate-100 dark:border-slate-800 min-h-[300px] flex flex-col justify-between">
         <div>
           {/* Status bar */}
-          <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium px-2 py-0.5">
+          <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400 font-medium px-2 py-0.5">
             <span>{phonePreview.time}</span>
             <div className="flex items-center gap-1">
               <Signal className="w-2.5 h-2.5" strokeWidth={2} />
@@ -83,9 +83,9 @@ function PhoneMockup() {
 
           {/* In-app header */}
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 pt-1 text-slate-800 dark:text-slate-200">
-            <ChevronLeft className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400" strokeWidth={2} />
+            <ChevronLeft className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
             <span className="text-xs font-bold">{phonePreview.header}</span>
-            <MoreHorizontal className="w-4 h-4 text-slate-400" strokeWidth={2} />
+            <MoreHorizontal className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={2} />
           </div>
 
           {/* Message bubble */}
@@ -94,7 +94,7 @@ function PhoneMockup() {
           </div>
         </div>
 
-        <div className="text-right text-[10px] text-slate-400 pr-1">
+        <div className="text-right text-[10px] text-slate-500 dark:text-slate-400 pr-1">
           {phonePreview.counter}
         </div>
       </div>

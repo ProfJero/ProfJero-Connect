@@ -1,4 +1,4 @@
-import { Card, ViewAllLink } from '../ui/Card';
+import { Card } from '../ui/Card';
 import { TableScroll } from '../ui/TableScroll';
 import { cn } from '../../lib/utils';
 import { splitDateTime } from '../../lib/datetime';
@@ -40,17 +40,16 @@ export function RecentProjectActivity({ projects, onProjectClick }: Props) {
         <h4 className="font-bold text-xs text-slate-900">
           Recent Project Activity
         </h4>
-        <ViewAllLink />
       </div>
 
       {recent.length === 0 ? (
-        <div className="py-8 text-center text-[11px] text-slate-400">
+        <div className="py-8 text-center text-[11px] text-slate-500">
           No activity yet.
         </div>
       ) : (
         <TableScroll>
           <table className="w-full text-left text-[11px]">
-            <thead className="text-slate-400 border-b border-slate-100 font-medium">
+            <thead className="text-slate-500 border-b border-slate-100 font-medium">
               <tr>
                 <th className="pb-2 whitespace-nowrap">Date &amp; Time</th>
                 <th className="pb-2 whitespace-nowrap">Project</th>
@@ -68,7 +67,7 @@ export function RecentProjectActivity({ projects, onProjectClick }: Props) {
                 const status = STATUS_BADGE[p.status];
                 return (
                   <tr key={p.id}>
-                    <td className="py-2.5 text-slate-400 whitespace-nowrap">
+                    <td className="py-2.5 text-slate-500 whitespace-nowrap">
                       {date} {time}
                     </td>
                     <td className="py-2.5 font-medium text-blue-600 whitespace-nowrap">

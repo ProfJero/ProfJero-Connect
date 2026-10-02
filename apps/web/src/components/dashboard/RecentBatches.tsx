@@ -39,7 +39,7 @@ export function RecentBatches({ batches }: Props) {
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {batches.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-10 text-center text-slate-400 text-sm">
+                <td colSpan={4} className="py-10 text-center text-slate-500 text-sm">
                   No batches yet.
                 </td>
               </tr>

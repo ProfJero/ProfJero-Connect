@@ -47,10 +47,10 @@ export function RecipientPicker({
                   : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200',
               )}
             >
-              <Icon className={cn('w-4 h-4 mt-0.5 shrink-0', !active && 'text-slate-400 dark:text-slate-500')} strokeWidth={2} />
+              <Icon className={cn('w-4 h-4 mt-0.5 shrink-0', !active && 'text-slate-500 dark:text-slate-500')} strokeWidth={2} />
               <div className="min-w-0">
                 <div className="text-xs font-semibold leading-none">{t.title}</div>
-                <div className={cn('text-[10px] mt-1', active ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500')}>
+                <div className={cn('text-[10px] mt-1', active ? 'text-white' : 'text-slate-500 dark:text-slate-500')}>
                   {t.description}
                 </div>
               </div>
@@ -97,7 +97,7 @@ function ContactsTab({
         {groups.length === 0 ? (
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
             No groups yet.{' '}
-            <Link to="/contacts/groups" className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline">
+            <Link to="/contacts/groups" className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline">
               Create a group
             </Link>{' '}
             to send to a list in one click.
@@ -121,7 +121,7 @@ function ContactsTab({
                 >
                   <Users className="w-3 h-3" strokeWidth={2} />
                   {g.name}
-                  <span className={cn('font-normal', on ? 'text-blue-100' : 'text-slate-400')}>{g.contactCount}</span>
+                  <span className={cn('font-normal', on ? 'text-white' : 'text-slate-500 dark:text-slate-400')}>{g.contactCount}</span>
                 </button>
               );
             })}
@@ -132,7 +132,7 @@ function ContactsTab({
       <div>
         <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-2">Individual contacts</div>
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
+          <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
           <input
             className={cn(inputClass, 'pl-9')}
             placeholder="Search contacts by name or number…"
@@ -143,9 +143,9 @@ function ContactsTab({
         {deferredQ && (
           <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-100 dark:divide-slate-800 max-h-56 overflow-y-auto">
             {search.loading && !search.data ? (
-              <p className="px-3 py-2 text-[11px] text-slate-400">Searching…</p>
+              <p className="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">Searching…</p>
             ) : (search.data?.contacts ?? []).length === 0 ? (
-              <p className="px-3 py-2 text-[11px] text-slate-400">No contacts match "{deferredQ}".</p>
+              <p className="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">No contacts match "{deferredQ}".</p>
             ) : (
               search.data!.contacts.map((c) => {
                 const on = selectedIds.has(c.id);
@@ -163,9 +163,9 @@ function ContactsTab({
                   >
                     <span className="min-w-0">
                       <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{c.name}</span>
-                      <span className="block text-[11px] text-slate-400">{formatPhone(c.phone)}</span>
+                      <span className="block text-[11px] text-slate-500 dark:text-slate-400">{formatPhone(c.phone)}</span>
                     </span>
-                    <span className={cn('text-[11px] font-semibold shrink-0', on ? 'text-rose-500' : 'text-[#1a6cf0] dark:text-blue-400')}>
+                    <span className={cn('text-[11px] font-semibold shrink-0', on ? 'text-rose-500' : 'text-[#1764e0] dark:text-blue-400')}>
                       {on ? 'Remove' : 'Add'}
                     </span>
                   </button>
@@ -196,7 +196,7 @@ function ManualTab({ value, onChange }: { value: RecipientDraft; onChange: (next
           One per line, or separated by commas. Local (024…) or international (+233…) format.
         </span>
         {parsed.valid.length > 0 && (
-          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{parsed.valid.length} valid</span>
+          <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{parsed.valid.length} valid</span>
         )}
         {parsed.invalid.length > 0 && (
           <span className="text-rose-600 dark:text-rose-400 font-semibold">
@@ -234,17 +234,17 @@ function UploadTab({ value, onChange }: { value: RecipientDraft; onChange: (next
 
   return (
     <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-6 text-center">
-      <FileText className="w-6 h-6 text-slate-400 mx-auto" strokeWidth={1.75} />
+      <FileText className="w-6 h-6 text-slate-500 dark:text-slate-400 mx-auto" strokeWidth={1.75} />
       <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">
         Upload a <strong>.csv</strong> or <strong>.txt</strong> file with one number per row. A header row such as
         "phone" or "mobile" is detected automatically.
       </p>
-      <p className="text-[11px] text-slate-400 mt-1">Excel files: use File → Save As → CSV first.</p>
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Excel files: use File → Save As → CSV first.</p>
       <input ref={inputRef} type="file" accept=".csv,.txt,text/csv,text/plain" className="hidden" onChange={handleFile} />
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-semibold text-[#1a6cf0] dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+        className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-semibold text-[#1764e0] dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-800"
       >
         <Upload className="w-3.5 h-3.5" strokeWidth={2} />
         Choose file
@@ -296,7 +296,7 @@ function SelectedChips({
       {chips.map((chip) => (
         <span
           key={chip.key}
-          className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-[#1a6cf0] dark:text-blue-400 border border-blue-100 dark:border-blue-500/20"
+          className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-md text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-[#1764e0] dark:text-blue-400 border border-blue-100 dark:border-blue-500/20"
         >
           {chip.label}
           <button type="button" onClick={chip.remove} className="p-0.5 rounded hover:bg-blue-100 dark:hover:bg-blue-500/20" aria-label={`Remove ${chip.label}`}>
@@ -307,7 +307,7 @@ function SelectedChips({
       <button
         type="button"
         onClick={() => onChange(emptyRecipients)}
-        className="text-[11px] font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline"
+        className="text-[11px] font-semibold text-[#1764e0] dark:text-blue-400 hover:underline"
       >
         Clear all
       </button>

@@ -26,7 +26,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
   'bg-indigo-600',
 ];
@@ -73,7 +73,7 @@ export function SmsLogsTable({
       <div className="px-4 sm:px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
         <h3 className="text-xs font-bold text-slate-900 tracking-wide uppercase">
           SMS Batches{' '}
-          <span className="text-slate-400 font-medium lowercase">({total})</span>
+          <span className="text-slate-500 font-medium lowercase">({total})</span>
         </h3>
       </div>
 
@@ -104,7 +104,7 @@ export function SmsLogsTable({
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {batches.length === 0 && (
               <tr>
-                <td colSpan={10} className="py-12 text-center text-slate-400 text-sm">
+                <td colSpan={10} className="py-12 text-center text-slate-500 text-sm">
                   {total === 0
                     ? 'No SMS batches yet.'
                     : 'No batches match your filters.'}
@@ -129,7 +129,7 @@ export function SmsLogsTable({
                   </td>
                   <td className="py-3.5 px-3 whitespace-nowrap">
                     <div className="font-medium text-slate-800">{date}</div>
-                    <div className="text-[11px] text-slate-400">{time}</div>
+                    <div className="text-[11px] text-slate-500">{time}</div>
                   </td>
                   <td className="py-3.5 px-3 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
@@ -156,7 +156,7 @@ export function SmsLogsTable({
                   <td className="py-3.5 px-3 text-center whitespace-nowrap">
                     <div className="inline-flex items-center gap-1.5 text-[11px]">
                       {b.submittedCount > 0 && (
-                        <span className="text-emerald-600 font-semibold">
+                        <span className="text-emerald-700 font-semibold">
                           {b.submittedCount}✓
                         </span>
                       )}
@@ -166,12 +166,12 @@ export function SmsLogsTable({
                         </span>
                       )}
                       {b.unknownCount > 0 && (
-                        <span className="text-amber-600 font-semibold">
+                        <span className="text-amber-700 font-semibold">
                           {b.unknownCount}?
                         </span>
                       )}
                       {b.submittedCount + b.failedCount + b.unknownCount === 0 && (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-slate-500">—</span>
                       )}
                     </div>
                   </td>

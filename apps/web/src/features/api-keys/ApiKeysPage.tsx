@@ -73,9 +73,9 @@ export function ApiKeysPage() {
             <Key className="w-5 h-5" strokeWidth={2} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               API Keys
-            </h2>
+            </h1>
             <p className="text-xs text-slate-500">
               {project ? (
                 <>

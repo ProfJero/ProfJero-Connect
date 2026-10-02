@@ -113,9 +113,9 @@ export function ProjectDetailsPage() {
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
                   {project.name}
-                </h2>
+                </h1>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {project.description ?? 'No description provided.'}
                 </p>
@@ -169,7 +169,7 @@ export function ProjectDetailsPage() {
         {senderIdsApi.loading && !senderIdsApi.data ? (
           <div className="h-16 bg-slate-100 rounded-lg animate-pulse" />
         ) : senderIds.length === 0 ? (
-          <div className="text-center py-6 text-[11px] text-slate-400">
+          <div className="text-center py-6 text-[11px] text-slate-500">
             No Sender IDs registered for this project yet.
           </div>
         ) : (
@@ -222,7 +222,7 @@ export function ProjectDetailsPage() {
         {apiKeysApi.loading && !apiKeysApi.data ? (
           <div className="h-16 bg-slate-100 rounded-lg animate-pulse" />
         ) : apiKeys.length === 0 ? (
-          <div className="text-center py-6 text-[11px] text-slate-400">
+          <div className="text-center py-6 text-[11px] text-slate-500">
             No API keys yet.
           </div>
         ) : (
@@ -234,7 +234,7 @@ export function ProjectDetailsPage() {
               <div className="text-lg font-bold text-slate-900 mt-0.5">
                 {secretKeyCount}
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-500 mt-0.5">
                 Server-side only
               </div>
             </div>
@@ -245,7 +245,7 @@ export function ProjectDetailsPage() {
               <div className="text-lg font-bold text-slate-900 mt-0.5">
                 {publishableKeyCount}
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-500 mt-0.5">
                 Browser-safe, restricted
               </div>
             </div>
@@ -282,7 +282,7 @@ export function ProjectDetailsPage() {
               ))}
             </ul>
 
-            <p className="mt-5 text-[11px] text-slate-400 font-mono">
+            <p className="mt-5 text-[11px] text-slate-500 font-mono">
               Project ID: {project.id}
             </p>
           </div>

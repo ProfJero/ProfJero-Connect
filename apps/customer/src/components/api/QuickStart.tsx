@@ -78,7 +78,7 @@ export function QuickStart({ senderId }: { senderId: string | null }) {
     <section className={cn(cardClass, 'overflow-hidden')}>
       <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2.5">
-          <Terminal className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400" strokeWidth={2} />
+          <Terminal className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Quick start — send an SMS</h2>
         </div>
         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
@@ -98,7 +98,7 @@ export function QuickStart({ senderId }: { senderId: string | null }) {
             }}
             className={cn(
               'px-3 py-2 text-xs font-semibold border-b-2 -mb-px whitespace-nowrap',
-              lang === l ? 'border-[#1a6cf0] text-[#1a6cf0] dark:text-blue-400' : 'border-transparent text-slate-500',
+              lang === l ? 'border-[#1a6cf0] text-[#1764e0] dark:text-blue-400' : 'border-transparent text-slate-500',
             )}
           >
             {LABELS[l]}
@@ -106,7 +106,7 @@ export function QuickStart({ senderId }: { senderId: string | null }) {
         ))}
       </div>
       <div className="relative">
-        <pre className="bg-slate-900 text-slate-100 text-[11px] leading-relaxed p-4 overflow-x-auto font-mono">{code}</pre>
+        <pre tabIndex={0} aria-label="Code example" className="bg-slate-900 text-slate-100 text-[11px] leading-relaxed p-4 overflow-x-auto font-mono">{code}</pre>
         <button
           type="button"
           onClick={async () => {

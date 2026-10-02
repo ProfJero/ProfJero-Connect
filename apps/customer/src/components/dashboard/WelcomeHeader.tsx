@@ -16,10 +16,10 @@ export function WelcomeHeader() {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
           {greeting(now.getHours())}
           {firstName && `, ${firstName}`}
-        </h2>
+        </h1>
         <p className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">
           Here's what's happening with {user?.companyName ?? 'your account'}.
         </p>

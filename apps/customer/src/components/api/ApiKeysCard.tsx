@@ -42,7 +42,7 @@ export function ApiKeysCard() {
     <section className={cn(cardClass, 'overflow-hidden')}>
       <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <KeyRound className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400" strokeWidth={2} />
+          <KeyRound className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
           <div>
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">API keys</h2>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -224,7 +224,7 @@ function CreateKeyModal({
                 placeholder="e.g. Production server"
                 className={inputClass}
               />
-              <p className="text-[11px] text-slate-400 mt-1">A label so you can tell keys apart later.</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">A label so you can tell keys apart later.</p>
             </div>
           )}
           {error && <Notice tone="error">{error}</Notice>}

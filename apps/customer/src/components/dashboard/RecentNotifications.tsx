@@ -11,7 +11,7 @@ export function RecentNotifications() {
     <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Recent Notifications</h3>
-        <Link to="/notifications" className="text-[#1a6cf0] dark:text-blue-400 hover:underline text-xs font-medium">
+        <Link to="/notifications" className="text-[#1764e0] dark:text-blue-400 hover:underline text-xs font-medium">
           View all →
         </Link>
       </div>

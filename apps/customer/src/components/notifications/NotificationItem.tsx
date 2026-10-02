@@ -52,11 +52,11 @@ export function NotificationItem({
         <p className={cn('text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug', compact && 'line-clamp-2 text-[11px]')}>
           {item.body}
         </p>
-        <span className="text-[10px] text-slate-400 dark:text-slate-500" title={formatDateTime(item.createdAt)}>
+        <span className="text-[10px] text-slate-500 dark:text-slate-500" title={formatDateTime(item.createdAt)}>
           {timeAgo(item.createdAt)}
         </span>
       </div>
-      {item.link && <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0 mt-1" strokeWidth={2} />}
+      {item.link && <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-500 shrink-0 mt-1" strokeWidth={2} />}
     </button>
   );
 }

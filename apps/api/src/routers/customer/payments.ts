@@ -20,6 +20,8 @@ import {
   requireIdempotencyKey,
   scopedId,
 } from './helpers';
+import { durableLimit } from '../../lib/rateLimit';
+import { getSettings } from '../../services/settings';
 import type { AuthVariables, Env } from '../../types/env';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
@@ -61,6 +63,19 @@ router.post('/payments', async (c) => {
   const key = requireIdempotencyKey(c);
   const body = await parseBody(c, CustomerInitiatePaymentRequestSchema);
 
+  const { payments: paySettings } = await getSettings(c.env);
+  if (!paySettings.customerTopupsEnabled) {
+    throw new HTTPException(503, {
+      message: paySettings.topupsDisabledMessage ?? 'Top-ups are temporarily unavailable. Please try again later.',
+    });
+  }
+  // Retries of an existing checkout replay (or 409) inside initiatePayment;
+  // only new checkouts count toward the limit.
+  const reference = await scopedId('pjc_', projectId, key);
+  if (!(await getPaymentByReference(c.env, reference))) {
+    await durableLimit(c.env, `topup:${projectId}`, 10, 60, 'checkout attempts');
+  }
+
   let units: number | undefined;
   let amountPesewas: number | undefined;
 
@@ -89,8 +104,6 @@ router.post('/payments', async (c) => {
   }
 
   const base = customerAppBaseUrl(c.req.header('Origin'), c.env.CUSTOMER_APP_URL);
-  const reference = await scopedId('pjc_', projectId, key);
-
   const result = await initiatePayment(c.env, {
     projectId,
     customerEmail: customer.email,

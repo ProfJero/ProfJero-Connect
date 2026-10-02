@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle, AlertTriangle, Plus, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -23,7 +23,7 @@ const DEFAULT_FORM = {
   expiresAt: '',
 };
 
-export function CreatePublishableKeyModal({
+function CreatePublishableKeyModalForm({
   open,
   projectId,
   onClose,
@@ -50,21 +50,6 @@ export function CreatePublishableKeyModal({
   const [expiresAt, setExpiresAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setName(DEFAULT_FORM.name);
-    setRecipientMode(DEFAULT_FORM.recipientMode);
-    setRecipientList([]);
-    setRecipientInput('');
-    setRateLimitPerMinute(DEFAULT_FORM.rateLimitPerMinute);
-    setRateLimitPerHour(DEFAULT_FORM.rateLimitPerHour);
-    setRateLimitPerDay(DEFAULT_FORM.rateLimitPerDay);
-    setLifetimeUnitCap(DEFAULT_FORM.lifetimeUnitCap);
-    setExpiresAt('');
-    setError(null);
-    setSubmitting(false);
-  }, [open]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -268,7 +253,7 @@ export function CreatePublishableKeyModal({
                       <button
                         type="button"
                         onClick={() => removeRecipient(r)}
-                        className="text-slate-400 hover:text-rose-600"
+                        className="text-slate-500 hover:text-rose-600"
                         aria-label={`Remove ${r}`}
                       >
                         <X className="w-3 h-3" strokeWidth={2.5} />
@@ -278,7 +263,7 @@ export function CreatePublishableKeyModal({
                 </div>
               )}
 
-              <p className="mt-1.5 text-[11px] text-slate-400">
+              <p className="mt-1.5 text-[11px] text-slate-500">
                 {recipientMode === 'allowlist'
                   ? 'Exact phone numbers this key may send to.'
                   : 'Phone number prefixes (e.g. +23353 allows any number starting with that).'}
@@ -312,7 +297,7 @@ export function CreatePublishableKeyModal({
               suffix="req"
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-slate-400">
+          <p className="mt-1.5 text-[11px] text-slate-500">
             Each recipient in a batch counts as one request. A 10-recipient
             send consumes 10 slots.
           </p>
@@ -334,7 +319,7 @@ export function CreatePublishableKeyModal({
               }
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
             />
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-[11px] text-slate-500">
               Max units this key can ever spend.
             </p>
           </div>
@@ -348,7 +333,7 @@ export function CreatePublishableKeyModal({
               onChange={(e) => setExpiresAt(e.target.value)}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
             />
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-[11px] text-slate-500">
               Key stops working after this date.
             </p>
           </div>
@@ -399,10 +384,18 @@ function NumberField({
           onChange={(e) => onChange(Math.max(1, Number(e.target.value) || 1))}
           className="w-full rounded-lg border border-slate-200 pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-[#1976d2] focus:ring-2 focus:ring-[#1976d2]/20"
         />
-        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
+        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 pointer-events-none">
           {suffix}
         </span>
       </div>
     </div>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function CreatePublishableKeyModal(props: Props) {
+  return props.open ? <CreatePublishableKeyModalForm {...props} /> : null;
 }

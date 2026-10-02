@@ -28,7 +28,7 @@ export function PaymentMetricCard({ metric }: { metric: PaymentMetric }) {
         <div className="text-base font-bold text-slate-900 tracking-tight">
           {metric.value}
         </div>
-        <div className="text-[11px] text-slate-400 font-normal mt-0.5">
+        <div className="text-[11px] text-slate-500 font-normal mt-0.5">
           {metric.footnote}
         </div>
       </div>

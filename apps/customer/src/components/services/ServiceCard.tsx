@@ -44,7 +44,7 @@ export function ServiceCard({ service }: { service: ServiceCardData }) {
         {isAvailable && service.ctaPath ? (
           <Link
             to={service.ctaPath}
-            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 border border-blue-500 text-[#1a6cf0] dark:text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
+            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 border border-blue-500 text-[#1764e0] dark:text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
           >
             <span>{service.ctaLabel}</span>
             <ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
@@ -52,7 +52,7 @@ export function ServiceCard({ service }: { service: ServiceCardData }) {
         ) : (
           <button
             disabled
-            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-lg text-xs font-semibold cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-500 rounded-lg text-xs font-semibold cursor-not-allowed"
           >
             <Bell className="w-3.5 h-3.5" strokeWidth={2} />
             <span>{service.ctaLabel}</span>
@@ -69,7 +69,7 @@ export function ServiceCard({ service }: { service: ServiceCardData }) {
                 {t.label}
               </span>
             ))}
-            <span className="text-[10px] text-slate-400 dark:text-slate-500">+ more</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-500">+ more</span>
           </div>
         )}
 
@@ -81,14 +81,14 @@ export function ServiceCard({ service }: { service: ServiceCardData }) {
                 className={cn(
                   'inline-flex items-center gap-1',
                   tag.tone === 'blue'
-                    ? 'text-[#1a6cf0] dark:text-blue-400'
+                    ? 'text-[#1764e0] dark:text-blue-400'
                     : 'text-slate-500 dark:text-slate-400',
                 )}
               >
                 <Check
                   className={cn(
                     'w-3 h-3',
-                    tag.tone === 'blue' ? 'text-[#1a6cf0] dark:text-blue-400' : 'text-slate-400 dark:text-slate-500',
+                    tag.tone === 'blue' ? 'text-[#1764e0] dark:text-blue-400' : 'text-slate-500 dark:text-slate-500',
                   )}
                   strokeWidth={2.5}
                 />

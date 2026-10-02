@@ -39,6 +39,8 @@ interface AuthContextValue {
   isReady: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-read /admin/me (e.g. after editing your own profile). */
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -143,15 +145,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const refresh = async () => {
+    const fbUser = firebaseAuth.currentUser;
+    if (fbUser) setUser(await buildAuthUser(fbUser));
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isReady, login, logout }}
+      value={{ user, isAuthenticated: !!user, isReady, login, logout, refresh }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');

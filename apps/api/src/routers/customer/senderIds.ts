@@ -14,6 +14,9 @@ import {
 import { requestSenderId } from '../../services/senderIds';
 import { notifyProject } from '../../services/notifications';
 import { parseBody } from './helpers';
+import { getSettings } from '../../services/settings';
+import { notifyAdmins } from '../../services/adminNotify';
+import { durableLimit } from '../../lib/rateLimit';
 import type { AuthVariables, Env } from '../../types/env';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
@@ -65,6 +68,7 @@ router.post('/sender-ids', async (c) => {
   const projectId = c.get('projectId')!;
   const input = await parseBody(c, CustomerRequestSenderIdSchema);
   const value = input.value.toUpperCase();
+  await durableLimit(c.env, `senderid:${projectId}`, 10, 86400, 'Sender ID requests today');
 
   let result;
   try {
@@ -84,15 +88,24 @@ router.post('/sender-ids', async (c) => {
     { purpose: input.purpose, description: input.description },
   );
 
+  const settings = await getSettings(c.env);
   await notifyProject(c.env, {
     projectId,
     id: `sender_id_request__${projectId}__${value}`,
     type: 'sender_id',
     severity: 'info',
     title: `Sender ID "${value}" submitted for review`,
-    body: `We've received your request for "${value}". Our team registers each Sender ID with the network before activation, which usually takes up to 1 business day. We'll notify you as soon as it's ready.`,
+    body: `We've received your request for "${value}". Our team registers each Sender ID with the network before activation, which usually takes ${settings.sms.senderIdReviewSla}. We'll notify you as soon as it's ready.`,
     link: '/messaging/sender-ids',
   });
+
+  const customer = c.get('customer')!;
+  await notifyAdmins(
+    c.env,
+    'emailOnSenderIdRequest',
+    `Sender ID request: ${value}`,
+    `${customer.organisationName ?? customer.email} requested Sender ID "${value}" (${input.purpose}).\n\n${input.description}\n\nRegister it with the provider, then approve it in Sender IDs.`,
+  );
 
   return c.json(
     {

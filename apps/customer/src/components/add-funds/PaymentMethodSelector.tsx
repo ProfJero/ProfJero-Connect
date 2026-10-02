@@ -52,7 +52,7 @@ export function PaymentMethodSelector({
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
             Payment Method
           </h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             Choose how you want to make the payment.
           </p>
         </div>
@@ -88,14 +88,14 @@ export function PaymentMethodSelector({
 
               <div>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-[#1a6cf0] dark:text-blue-400 shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-[#1764e0] dark:text-blue-400 shrink-0">
                     <Icon className="w-4 h-4" strokeWidth={2} />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
                       {method.name}
                     </div>
-                    <div className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-500 font-medium truncate">
                       {method.description}
                     </div>
                   </div>
@@ -145,13 +145,13 @@ function TelcoBadge({ tone }: { tone: 'mtn' | 'telecel' | 'airteltigo' }) {
         <span className="w-3.5 h-3.5 rounded-full bg-red-600 text-white text-[8px] font-bold flex items-center justify-center">
           t
         </span>
-        <span className="text-[9px] font-bold text-red-600">telecel</span>
+        <span className="text-[9px] font-bold text-red-700">telecel</span>
       </span>
     );
   }
   return (
     <span className="inline-flex items-center">
-      <span className="text-[10px] font-bold text-red-600">airtel</span>
+      <span className="text-[10px] font-bold text-red-700">airtel</span>
       <span className="text-[10px] font-bold text-blue-700">tigo</span>
     </span>
   );

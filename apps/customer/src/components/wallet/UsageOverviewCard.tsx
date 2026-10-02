@@ -21,7 +21,7 @@ export function UsageOverviewCard() {
     <div className="lg:col-span-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-5 sm:p-6 flex flex-col">
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-[#1a6cf0] dark:text-blue-400">
+          <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-[#1764e0] dark:text-blue-400">
             <BarChart3 className="w-4 h-4" strokeWidth={2} />
           </div>
           <div>

@@ -1,4 +1,4 @@
-import { Card, ViewAllLink } from '../ui/Card';
+import { Card } from '../ui/Card';
 import type { Project, ProjectStatus } from '@profjero/shared';
 
 const SEGMENTS: Array<{
@@ -32,11 +32,10 @@ export function ProjectStatusOverview({ projects }: Props) {
         <h4 className="font-bold text-xs text-slate-900">
           Project Status Overview
         </h4>
-        <ViewAllLink />
       </div>
 
       {total === 0 ? (
-        <div className="py-8 text-center text-[11px] text-slate-400">
+        <div className="py-8 text-center text-[11px] text-slate-500">
           No projects yet.
         </div>
       ) : (
@@ -72,7 +71,7 @@ export function ProjectStatusOverview({ projects }: Props) {
             ))}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+          <div className="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-500">
             {total} project{total === 1 ? '' : 's'} total
           </div>
         </>

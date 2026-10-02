@@ -24,7 +24,7 @@ const AVATAR_COLORS = [
   'bg-blue-600',
   'bg-sky-600',
   'bg-amber-500',
-  'bg-emerald-600',
+  'bg-emerald-700',
   'bg-purple-600',
   'bg-indigo-600',
 ];
@@ -96,7 +96,7 @@ export function PaymentsTable({
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {payments.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-slate-400 text-sm">
+                <td colSpan={9} className="py-12 text-center text-slate-500 text-sm">
                   {total === 0 ? 'No payments yet.' : 'No payments match your filters.'}
                 </td>
               </tr>
@@ -127,7 +127,7 @@ export function PaymentsTable({
                   </td>
                   <td className="py-3 px-3 whitespace-nowrap">
                     <div className="font-medium text-slate-800">{date}</div>
-                    <div className="text-[11px] text-slate-400">{time}</div>
+                    <div className="text-[11px] text-slate-500">{time}</div>
                   </td>
                   <td className="py-3 px-3 whitespace-nowrap">
                     <button
@@ -171,7 +171,7 @@ export function PaymentsTable({
                   </td>
                   <td className="py-3 px-3 text-center whitespace-nowrap">
                     {p.walletCreditedAt ? (
-                      <span className="text-emerald-600 font-semibold">Yes</span>
+                      <span className="text-emerald-700 font-semibold">Yes</span>
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}

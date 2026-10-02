@@ -43,7 +43,7 @@ export function LoginForm() {
         Don't have an account?{' '}
         <Link
           to="/signup"
-          className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline ml-1"
+          className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline ml-1"
         >
           Sign up
         </Link>
@@ -77,7 +77,7 @@ export function LoginForm() {
             Email Address
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 dark:text-slate-400">
               <Mail className="w-5 h-5" strokeWidth={1.8} />
             </span>
             <input
@@ -103,7 +103,7 @@ export function LoginForm() {
             Password
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 dark:text-slate-400">
               <Lock className="w-5 h-5" strokeWidth={1.8} />
             </span>
             <input
@@ -120,7 +120,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
@@ -140,13 +140,13 @@ export function LoginForm() {
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
               disabled={isLoading}
-              className="w-4 h-4 text-[#1a6cf0] border-slate-300 rounded focus:ring-[#1a6cf0]"
+              className="w-4 h-4 text-[#1764e0] border-slate-300 rounded focus:ring-[#1a6cf0]"
             />
             <span className="ml-2 font-normal">Remember me</span>
           </label>
           <Link
             to="/forgot-password"
-            className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline"
+            className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline"
           >
             Forgot password?
           </Link>
@@ -182,7 +182,7 @@ export function LoginForm() {
 
       {/* Security notice */}
       <div className="pt-6 flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-        <ShieldCheck className="w-4 h-4 text-[#1a6cf0] dark:text-blue-400 shrink-0" strokeWidth={2} />
+        <ShieldCheck className="w-4 h-4 text-[#1764e0] dark:text-blue-400 shrink-0" strokeWidth={2} />
         <span className="font-medium">Your information is secure and encrypted.</span>
       </div>
     </div>

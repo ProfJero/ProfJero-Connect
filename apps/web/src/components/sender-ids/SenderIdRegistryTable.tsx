@@ -79,7 +79,7 @@ export function SenderIdRegistryTable({
         <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
           <h3 className="text-sm font-bold text-slate-800">
             Registry
-            <span className="ml-2 text-slate-400 font-normal text-xs">
+            <span className="ml-2 text-slate-500 font-normal text-xs">
               {senderIds.length} of {total}
             </span>
           </h3>
@@ -92,7 +92,7 @@ export function SenderIdRegistryTable({
               placeholder="Search values or projects..."
               className="w-full sm:w-64 text-xs border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             />
-            <select
+            <select aria-label="Filter by status"
               value={filter}
               onChange={(e) =>
                 onFilterChange(e.target.value as SenderIdValueStatus | 'all')
@@ -135,7 +135,7 @@ export function SenderIdRegistryTable({
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 {senderIds.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={6} className="py-12 text-center text-slate-500 text-sm">
                       {total === 0
                         ? 'No Sender IDs registered yet.'
                         : 'No Sender IDs match your filters.'}
@@ -256,7 +256,7 @@ function RowGroup({
         onClick={onToggle}
         className="cursor-pointer hover:bg-slate-50/70 transition-colors"
       >
-        <td className="py-3 pl-3 text-slate-400">
+        <td className="py-3 pl-3 text-slate-500">
           <Chevron className="w-3.5 h-3.5" strokeWidth={2} />
         </td>
         <td className="py-3 px-3 font-mono font-semibold text-slate-900 whitespace-nowrap">
@@ -287,7 +287,7 @@ function RowGroup({
                 type="button"
                 onClick={onApproveValue}
                 disabled={busy === `v:${s.value}:approve`}
-                className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold disabled:opacity-50 transition"
+                className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold disabled:opacity-50 transition"
               >
                 <Check className="w-2.5 h-2.5" strokeWidth={3} />
                 Approve
@@ -296,7 +296,7 @@ function RowGroup({
                 type="button"
                 onClick={onRejectValue}
                 disabled={busy === `v:${s.value}:approve`}
-                className="flex items-center gap-1 px-2.5 py-1 rounded border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-[10px] font-semibold disabled:opacity-50 transition"
+                className="flex items-center gap-1 px-2.5 py-1 rounded border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-[10px] font-semibold disabled:opacity-50 transition"
               >
                 <X className="w-2.5 h-2.5" strokeWidth={3} />
                 Reject
@@ -313,7 +313,7 @@ function RowGroup({
               Project assignments
             </div>
             {s.assignments.length === 0 ? (
-              <div className="text-[11px] text-slate-400">
+              <div className="text-[11px] text-slate-500">
                 No projects assigned.
               </div>
             ) : (
@@ -327,7 +327,7 @@ function RowGroup({
                       <div className="text-xs font-medium text-slate-800 truncate">
                         {a.projectName}
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate font-mono">
+                      <div className="text-[10px] text-slate-500 truncate font-mono">
                         {a.projectId}
                       </div>
                     </div>
@@ -345,7 +345,7 @@ function RowGroup({
                           type="button"
                           onClick={() => onApproveAssignment(a.projectId)}
                           disabled={busy === `a:${s.value}:${a.projectId}:approve`}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold disabled:opacity-50 transition"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-semibold disabled:opacity-50 transition"
                         >
                           <Check className="w-2.5 h-2.5" strokeWidth={3} />
                           Approve
@@ -354,7 +354,7 @@ function RowGroup({
                           type="button"
                           onClick={() => onRejectAssignment(a.projectId)}
                           disabled={busy === `a:${s.value}:${a.projectId}:approve`}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-[10px] font-semibold disabled:opacity-50 transition"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded border border-rose-200 bg-white hover:bg-rose-50 text-rose-700 text-[10px] font-semibold disabled:opacity-50 transition"
                         >
                           <X className="w-2.5 h-2.5" strokeWidth={3} />
                           Reject

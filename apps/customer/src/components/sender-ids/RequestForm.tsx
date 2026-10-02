@@ -82,7 +82,7 @@ export function RequestForm({
           placeholder="e.g. YOURBRAND"
           className="w-full text-sm font-normal text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2.5 focus:ring-2 focus:ring-[#1a6cf0]/20 focus:border-[#1a6cf0] transition-all outline-none placeholder-slate-400 dark:placeholder-slate-500"
         />
-        <div className="flex justify-between items-center mt-1.5 text-xs text-slate-400 dark:text-slate-500 gap-3">
+        <div className="flex justify-between items-center mt-1.5 text-xs text-slate-500 dark:text-slate-500 gap-3">
           <span>
             Letters, numbers and spaces. Use your business or brand name.
           </span>
@@ -111,11 +111,11 @@ export function RequestForm({
               <option key={opt}>{opt}</option>
             ))}
           </select>
-          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 dark:text-slate-500">
+          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-500">
             <ChevronDown className="w-4 h-4" strokeWidth={2} />
           </span>
         </div>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+        <p className="text-xs text-slate-500 dark:text-slate-500 mt-1.5">
           Select the main purpose for this Sender ID.
         </p>
       </div>
@@ -136,7 +136,7 @@ export function RequestForm({
           onChange={(e) => setOrgName(e.target.value)}
           className="w-full text-sm font-normal text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3.5 py-2.5 focus:ring-2 focus:ring-[#1a6cf0]/20 focus:border-[#1a6cf0] transition-all outline-none"
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
+        <p className="text-xs text-slate-500 dark:text-slate-500 mt-1.5">
           Enter your organisation or business name.
         </p>
       </div>
@@ -160,7 +160,7 @@ export function RequestForm({
           onChange={(e) => setDescription(e.target.value)}
           className="w-full text-sm font-normal text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3.5 focus:ring-2 focus:ring-[#1a6cf0]/20 focus:border-[#1a6cf0] transition-all outline-none resize-none leading-relaxed"
         />
-        <div className="flex justify-between items-center mt-1 text-xs text-slate-400 dark:text-slate-500 gap-3">
+        <div className="flex justify-between items-center mt-1 text-xs text-slate-500 dark:text-slate-500 gap-3">
           <span>Provide a brief description of how you will use this Sender ID.</span>
           <span className="font-medium text-slate-500 dark:text-slate-400 shrink-0">
             {description.length}/{descriptionMaxLength - 150}

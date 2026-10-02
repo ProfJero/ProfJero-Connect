@@ -111,10 +111,10 @@ export function ProviderDetailPage() {
           <div className="flex-1 min-w-0">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
                   {provider.label}
-                </h2>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">
+                </h1>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">
                   {provider.id}
                 </p>
               </div>

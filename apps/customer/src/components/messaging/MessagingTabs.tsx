@@ -25,7 +25,7 @@ export function MessagingTabs() {
                 cn(
                   'flex items-center gap-2 py-2.5 border-b-2 transition-colors',
                   isActive
-                    ? 'text-[#1a6cf0] dark:text-blue-400 border-[#1a6cf0] dark:border-blue-400'
+                    ? 'text-[#1764e0] dark:text-blue-400 border-[#1a6cf0] dark:border-blue-400'
                     : 'text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-800 dark:hover:text-slate-200',
                 )
               }

@@ -15,7 +15,7 @@ export function SmsUsageChart({ stats, loading }: { stats: SmsStats | null; load
     <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
         <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">
-          SMS Usage <span className="font-normal text-slate-400 dark:text-slate-500 text-xs">(Last 7 Days)</span>
+          SMS Usage <span className="font-normal text-slate-500 dark:text-slate-500 text-xs">(Last 7 Days)</span>
         </h3>
         <div className="flex items-center gap-4 text-xs flex-wrap">
           <div className="flex items-center gap-1.5">
@@ -64,7 +64,7 @@ export function SmsUsageChart({ stats, loading }: { stats: SmsStats | null; load
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <p className="text-xs text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/80 px-3 py-1.5 rounded-lg pointer-events-auto">
                   No messages this week.{' '}
-                  <Link to="/messaging/sms" className="text-[#1a6cf0] dark:text-blue-400 font-semibold hover:underline">
+                  <Link to="/messaging/sms" className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline">
                     Send one
                   </Link>
                 </p>

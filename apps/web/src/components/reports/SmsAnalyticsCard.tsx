@@ -53,7 +53,7 @@ export function SmsAnalyticsCard({ daily, summary, periodLabel }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div>
           <h3 className="text-sm font-bold text-slate-900">SMS Analytics</h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Volume and performance overview · {periodLabel}
           </p>
         </div>
@@ -67,7 +67,7 @@ export function SmsAnalyticsCard({ daily, summary, periodLabel }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
         <div className="md:col-span-8 h-56">
           {!hasData ? (
-            <div className="h-full flex items-center justify-center text-xs text-slate-400">
+            <div className="h-full flex items-center justify-center text-xs text-slate-500">
               No SMS activity in this period.
             </div>
           ) : (
@@ -136,7 +136,7 @@ export function SmsAnalyticsCard({ daily, summary, periodLabel }: Props) {
                 className={cn(
                   'font-bold text-sm',
                   row.tone === 'emerald'
-                    ? 'text-emerald-600'
+                    ? 'text-emerald-700'
                     : row.tone === 'rose'
                       ? 'text-rose-600'
                       : 'text-slate-800',

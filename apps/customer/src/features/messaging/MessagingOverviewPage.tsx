@@ -46,7 +46,7 @@ export function MessagingOverviewPage() {
       <section className={`${cardClass} overflow-hidden`}>
         <div className="px-5 py-3.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Recent Messages</h3>
-          <Link to="/messaging/history" className="text-xs font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline">
+          <Link to="/messaging/history" className="text-xs font-semibold text-[#1764e0] dark:text-blue-400 hover:underline">
             View all →
           </Link>
         </div>

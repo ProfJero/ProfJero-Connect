@@ -43,11 +43,11 @@ export function TransactionsPage() {
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             loading={loading}
-            metric={{ label: 'Total top-ups', value: formatGhs(s?.totalPaidGhs ?? 0), footer: `${s?.successfulCount ?? 0} payments, all time`, icon: Wallet, iconBg: 'bg-blue-50 dark:bg-blue-500/10', iconColor: 'text-[#1a6cf0] dark:text-blue-400' }}
+            metric={{ label: 'Total top-ups', value: formatGhs(s?.totalPaidGhs ?? 0), footer: `${s?.successfulCount ?? 0} payments, all time`, icon: Wallet, iconBg: 'bg-blue-50 dark:bg-blue-500/10', iconColor: 'text-[#1764e0] dark:text-blue-400' }}
           />
           <MetricCard
             loading={loading}
-            metric={{ label: 'This month', value: formatGhs(s?.paidThisMonthGhs ?? 0), footer: monthLabel, icon: CalendarDays, iconBg: 'bg-emerald-50 dark:bg-emerald-500/10', iconColor: 'text-emerald-600 dark:text-emerald-400' }}
+            metric={{ label: 'This month', value: formatGhs(s?.paidThisMonthGhs ?? 0), footer: monthLabel, icon: CalendarDays, iconBg: 'bg-emerald-50 dark:bg-emerald-500/10', iconColor: 'text-emerald-700 dark:text-emerald-400' }}
           />
           <MetricCard
             loading={loading}
@@ -55,7 +55,7 @@ export function TransactionsPage() {
           />
           <MetricCard
             loading={loading}
-            metric={{ label: 'Pending payments', value: (s?.pendingCount ?? 0).toLocaleString(), footer: 'awaiting confirmation', icon: Clock, iconBg: 'bg-amber-50 dark:bg-amber-500/10', iconColor: 'text-amber-600 dark:text-amber-400' }}
+            metric={{ label: 'Pending payments', value: (s?.pendingCount ?? 0).toLocaleString(), footer: 'awaiting confirmation', icon: Clock, iconBg: 'bg-amber-50 dark:bg-amber-500/10', iconColor: 'text-amber-700 dark:text-amber-400' }}
           />
         </section>
       )}

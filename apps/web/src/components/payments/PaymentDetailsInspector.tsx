@@ -117,7 +117,7 @@ export function PaymentDetailsInspector({
         <h3 className="font-bold text-slate-800 text-sm">Payment Details</h3>
         <button
           onClick={onClose}
-          className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
+          className="text-slate-500 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
           aria-label="Close inspector"
         >
           <X className="w-4 h-4" strokeWidth={2} />
@@ -152,7 +152,7 @@ export function PaymentDetailsInspector({
         {canVerify && (
           <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
             <div className="flex items-start gap-2.5">
-              <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" strokeWidth={2} />
+              <Clock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" strokeWidth={2} />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold text-amber-900">
                   Awaiting confirmation
@@ -303,9 +303,9 @@ function StatusCard({
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
           {done ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" strokeWidth={2} />
+            <CheckCircle2 className="w-4 h-4 text-emerald-700" strokeWidth={2} />
           ) : (
-            <Clock className="w-4 h-4 text-slate-400" strokeWidth={2} />
+            <Clock className="w-4 h-4 text-slate-500" strokeWidth={2} />
           )}
           <span>{title}</span>
         </div>
@@ -322,7 +322,7 @@ function StatusCard({
       </div>
       <p className="text-[11px] text-slate-500 leading-relaxed">{description}</p>
       {reference && (
-        <p className="mt-1 font-mono text-[10px] text-slate-400 break-all">
+        <p className="mt-1 font-mono text-[10px] text-slate-500 break-all">
           {reference}
         </p>
       )}

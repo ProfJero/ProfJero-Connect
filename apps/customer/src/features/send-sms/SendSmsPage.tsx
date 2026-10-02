@@ -8,12 +8,10 @@ import { SendResult } from '../../components/send-sms/SendResult';
 import { ErrorState, SkeletonRows } from '../../components/ui/States';
 import { api, errorMessage, newIdempotencyKey } from '../../lib/api';
 import { useApi } from '../../lib/useApi';
-import { useRefreshAccount, useWallet } from '../../lib/account';
+import { usePlatformConfig, useRefreshAccount, useWallet } from '../../lib/account';
 import { parsePhoneList } from '../../lib/phone';
 import { emptyRecipients, summarizeRecipients, type RecipientDraft } from '../../lib/recipients';
 import type { BatchWithRecords, ContactGroup, CustomerSenderId } from '../../lib/types';
-
-const MAX_RECIPIENTS = 1000;
 
 /**
  * CP4 — compose and send. Uses the same reserve → send → confirm/release
@@ -21,6 +19,7 @@ const MAX_RECIPIENTS = 1000;
  * calculator, the same code the server bills with.
  */
 export function SendSmsPage() {
+  const { maxRecipientsPerSend } = usePlatformConfig();
   const senderIds = useApi<{ senderIds: CustomerSenderId[] }>('/customer/sender-ids');
   const groupsRes = useApi<{ groups: ContactGroup[] }>('/customer/contact-groups');
   const { data: wallet } = useWallet();
@@ -56,8 +55,8 @@ export function SendSmsPage() {
   if (summary.count === 0) blockers.push('Add at least one recipient.');
   if (summary.invalidManual.length > 0) blockers.push('Fix or remove the invalid phone numbers.');
   if (!message.trim()) blockers.push('Write a message.');
-  if (summary.count > MAX_RECIPIENTS && !summary.isUpperBound)
-    blockers.push(`Up to ${MAX_RECIPIENTS.toLocaleString()} recipients per send — split your list.`);
+  if (summary.count > maxRecipientsPerSend && !summary.isUpperBound)
+    blockers.push(`Up to ${maxRecipientsPerSend.toLocaleString()} recipients per send — split your list.`);
   if (balance !== null && !summary.isUpperBound && units > balance) blockers.push('Top up your wallet to cover this send.');
 
   const touch = <T,>(setter: (v: T) => void) => (v: T) => {
@@ -104,18 +103,18 @@ export function SendSmsPage() {
     <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-5 flex-1">
       <div>
         <nav aria-label="Breadcrumb" className="flex text-xs text-slate-500 dark:text-slate-400 mb-2 font-medium">
-          <Link to="/messaging" className="text-[#1a6cf0] dark:text-blue-400 hover:underline">
+          <Link to="/messaging" className="text-[#1764e0] dark:text-blue-400 hover:underline">
             Messaging
           </Link>
-          <span className="mx-1.5 text-slate-400 dark:text-slate-500">&gt;</span>
+          <span className="mx-1.5 text-slate-500 dark:text-slate-500">&gt;</span>
           <span className="text-slate-600 dark:text-slate-300">Send SMS</span>
         </nav>
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-[#1a6cf0] dark:text-blue-400 shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center text-[#1764e0] dark:text-blue-400 shrink-0">
             <Send className="w-5 h-5 -rotate-45" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Send SMS</h2>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Send SMS</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Send a message to one person or your whole list.
             </p>

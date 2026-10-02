@@ -61,6 +61,21 @@ v1PublicRouter.get('/pricing', async (c) => {
   return c.json(PricingCatalogResponseSchema.parse({ services }));
 });
 
+/**
+ * GET /v1/platform — public, for pre-login pages (signup, login): name,
+ * support contact and whether sign-ups are open.
+ */
+v1PublicRouter.get('/platform', async (c) => {
+  const { getSettings } = await import('../services/settings');
+  const s = await getSettings(c.env);
+  return c.json({
+    platformName: s.general.platformName,
+    supportEmail: s.general.supportEmail,
+    supportPhone: s.general.supportPhone,
+    customerSignupsEnabled: s.security.customerSignupsEnabled,
+  });
+});
+
 export const v1Router = new Hono<{
   Bindings: Env;
   Variables: ApiKeyVariables;
@@ -296,7 +311,7 @@ v1Router.post('/sms/send', async (c) => {
     }
     if (msg.includes('already exists')) {
       const existing = await getBatch(c.env, idempotencyKey);
-      if (existing) {
+      if (existing && existing.projectId === apiKey.projectId) {
         const records = await listRecordsForBatch(c.env, idempotencyKey);
         return c.json(
           SendSmsResponseSchema.parse({ batch: existing, records }),

@@ -47,7 +47,7 @@ export function createArkeselSmsProvider(
         recipients: normalized,
       };
       if (env.ARKESEL_SANDBOX === 'true') payload.sandbox = true;
-      if (env.ARKESEL_WEBHOOK_URL) payload.callback_url = env.ARKESEL_WEBHOOK_URL;
+      if (env.ARKESEL_WEBHOOK_URL) payload.callback_url = deliveryCallbackUrl(env);
 
       let res: Response;
       try {
@@ -101,10 +101,17 @@ export function createArkeselSmsProvider(
           summary,
           error: err,
         });
+        // 4xx = the provider rejected the request (bad sender, auth,
+        // validation): nothing was sent, so units can be returned.
+        // 5xx = the provider failed somewhere in its stack, possibly after
+        // accepting the messages (gateway timeouts are the classic case).
+        // Treat as unknown so units stay reserved until reconciliation
+        // confirms one way or the other (state.md §7: timeouts → unknown).
+        const ambiguous = res.status >= 500;
         return {
           results: recipients.map<SendResult>((r) => ({
             recipient: r,
-            status: 'failed',
+            status: ambiguous ? 'unknown' : 'failed',
             providerMessageId: null,
             error: err,
           })),
@@ -140,4 +147,10 @@ export function createArkeselSmsProvider(
       };
     },
   };
+}
+/** The callback URL, carrying the shared webhook token when configured. */
+export function deliveryCallbackUrl(env: Env): string {
+  const url = new URL(env.ARKESEL_WEBHOOK_URL!);
+  if (env.ARKESEL_WEBHOOK_SECRET) url.searchParams.set('token', env.ARKESEL_WEBHOOK_SECRET);
+  return url.toString();
 }

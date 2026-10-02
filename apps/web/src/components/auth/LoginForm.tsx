@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { cn } from '../../lib/utils';
@@ -61,7 +61,7 @@ export function LoginForm() {
           Email address
         </label>
         <div className="relative">
-          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
             <Mail className="w-4 h-4" strokeWidth={2} />
           </span>
           <input
@@ -83,15 +83,15 @@ export function LoginForm() {
           <label htmlFor="password" className="block text-xs font-semibold text-slate-700">
             Password
           </label>
-          <a
-            href="#"
+          <Link
+            to="/forgot-password"
             className="text-[11px] font-semibold text-[#1976d2] hover:text-blue-700"
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
         <div className="relative">
-          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
             <Lock className="w-4 h-4" strokeWidth={2} />
           </span>
           <input
@@ -107,7 +107,7 @@ export function LoginForm() {
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-600"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -153,7 +153,7 @@ export function LoginForm() {
       </button>
 
       {/* Footer note */}
-      <p className="text-center text-[11px] text-slate-400 pt-2">
+      <p className="text-center text-[11px] text-slate-500 pt-2">
         Protected by industry-standard encryption. Contact your administrator if you
         need an account.
       </p>

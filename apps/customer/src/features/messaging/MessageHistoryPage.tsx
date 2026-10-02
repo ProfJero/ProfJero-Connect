@@ -59,7 +59,7 @@ export function MessageHistoryPage() {
 
       <section className="flex flex-wrap items-center gap-3">
         <div className="flex-1 min-w-[220px] relative">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
+          <Search className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" strokeWidth={2} />
           <input
             className={cn(inputClass, 'pl-8')}
             placeholder="Search message text or reference…"
@@ -98,12 +98,12 @@ export function MessageHistoryPage() {
               setSource('');
               setSenderId('');
             }}
-            className="text-xs text-[#1a6cf0] dark:text-blue-400 font-medium px-2 py-1 hover:underline"
+            className="text-xs text-[#1764e0] dark:text-blue-400 font-medium px-2 py-1 hover:underline"
           >
             Clear
           </button>
         )}
-        {list.refreshing && !list.loading && <Spinner className="text-slate-400" />}
+        {list.refreshing && !list.loading && <Spinner className="text-slate-500 dark:text-slate-400" />}
       </section>
 
       <section className={cn(cardClass, 'overflow-hidden')}>

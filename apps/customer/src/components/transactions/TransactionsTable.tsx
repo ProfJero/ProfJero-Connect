@@ -44,7 +44,7 @@ const TYPE_STYLES: Record<
 const STATUS_STYLES = {
   Completed: {
     bg: 'bg-emerald-50 dark:bg-emerald-500/10',
-    text: 'text-emerald-600 dark:text-emerald-400',
+    text: 'text-emerald-700 dark:text-emerald-400',
     border: 'border-emerald-100 dark:border-emerald-500/20',
   },
 } as const;
@@ -73,7 +73,7 @@ export function TransactionsTable({ types }: { types?: string }) {
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
             {types ? 'No transactions of this type' : 'No transactions yet'}
           </p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
             Your transaction history will appear here.
           </p>
         </div>
@@ -134,7 +134,7 @@ export function TransactionsTable({ types }: { types?: string }) {
                       className={cn(
                         'py-4 px-6 font-semibold whitespace-nowrap',
                         amount.positive
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-emerald-700 dark:text-emerald-400'
                           : 'text-rose-500 dark:text-rose-400',
                       )}
                     >
@@ -165,7 +165,7 @@ export function TransactionsTable({ types }: { types?: string }) {
           <button
             onClick={loadMore}
             disabled={loadingMore}
-            className="text-xs font-semibold text-[#1a6cf0] dark:text-blue-400 hover:underline disabled:opacity-60"
+            className="text-xs font-semibold text-[#1764e0] dark:text-blue-400 hover:underline disabled:opacity-60"
           >
             {loadingMore ? 'Loading…' : 'Load more'}
           </button>

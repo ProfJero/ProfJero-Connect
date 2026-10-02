@@ -22,7 +22,7 @@ export const requireAuth: MiddlewareHandler<{
   try {
     verified = await verifyFirebaseIdToken(token, c.env);
   } catch (err) {
-    console.error('ID token verification failed:', err);
+    console.warn('ID token verification failed:', err instanceof Error ? `${err.name}: ${err.message}` : String(err));
     throw new HTTPException(401, { message: 'Invalid or expired token.' });
   }
 

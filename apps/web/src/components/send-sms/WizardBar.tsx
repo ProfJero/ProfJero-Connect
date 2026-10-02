@@ -32,7 +32,7 @@ export function WizardBar({ currentStep }: WizardBarProps) {
                   'w-7 h-7 rounded-full font-semibold text-xs flex items-center justify-center shrink-0',
                   isActive || isPast
                     ? 'bg-[#1976d2] text-white shadow'
-                    : 'border border-slate-300 text-slate-400 bg-white',
+                    : 'border border-slate-300 text-slate-500 bg-white',
                 )}
               >
                 {step.number}
@@ -44,7 +44,7 @@ export function WizardBar({ currentStep }: WizardBarProps) {
                     ? 'font-semibold text-slate-900'
                     : isPast
                       ? 'font-medium text-slate-700'
-                      : 'font-medium text-slate-400',
+                      : 'font-medium text-slate-500',
                 )}
               >
                 {step.label}

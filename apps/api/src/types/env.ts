@@ -30,6 +30,14 @@ export interface Env {
   ARKESEL_WEBHOOK_URL?: string;
 
   /**
+   * Shared secret for the delivery-status webhook. The provider doesn't
+   * sign callbacks, so when this is set we append `token=<secret>` to the
+   * callback URL and reject callbacks that don't carry it. Strongly
+   * recommended in production (see System → Configuration).
+   */
+  ARKESEL_WEBHOOK_SECRET?: string;
+
+  /**
    * Paystack secret key. Required for payment initiation and webhook
    * signature verification. Use sk_test_* in development, sk_live_* in
    * production. Never expose to a browser.

@@ -10,6 +10,8 @@ import { adminSenderIdsRouter } from './adminSenderIds';
 import { adminPricingRouter } from './adminPricing';
 import { adminPaymentsRouter } from './adminPayments';
 import { adminProvidersRouter } from './adminProviders';
+import { adminPlatformRouter } from './adminPlatform';
+import { auditMiddleware } from '../services/audit';
 
 export const adminRouter = new Hono<{
   Bindings: Env;
@@ -17,6 +19,8 @@ export const adminRouter = new Hono<{
 }>();
 
 adminRouter.use('*', requireAuth);
+// After auth so the actor is known; records successful mutations.
+adminRouter.use('*', auditMiddleware);
 
 adminRouter.get('/me', (c) => {
   const admin = c.get('admin');
@@ -43,3 +47,4 @@ adminRouter.route('/sender-ids', adminSenderIdsRouter);
 adminRouter.route('/pricing', adminPricingRouter);
 adminRouter.route('/payments', adminPaymentsRouter);
 adminRouter.route('/providers', adminProvidersRouter);
+adminRouter.route('/', adminPlatformRouter);

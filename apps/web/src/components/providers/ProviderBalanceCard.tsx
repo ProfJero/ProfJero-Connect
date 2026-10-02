@@ -98,7 +98,7 @@ export function ProviderBalanceCard({ provider, onChanged }: Props) {
       </div>
 
       {lastChecked && (
-        <div className="mt-3 text-[10px] text-slate-400">
+        <div className="mt-3 text-[10px] text-slate-500">
           Last checked {lastChecked.date} {lastChecked.time}
         </div>
       )}

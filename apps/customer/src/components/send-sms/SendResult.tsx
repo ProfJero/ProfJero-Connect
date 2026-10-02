@@ -25,7 +25,7 @@ export function SendResult({ batch, onNew }: { batch: SmsBatch; onNew: () => voi
         {batch.totalUnitsCharged.toLocaleString()} units charged
         {batch.totalUnitsReleased > 0 && ` · ${batch.totalUnitsReleased.toLocaleString()} returned to your wallet`}.
       </p>
-      <p className="text-[11px] text-slate-400 mt-3">
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3">
         "Accepted" means the network has the message. Delivery to each phone is confirmed separately and shown in
         Message History.
       </p>

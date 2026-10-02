@@ -60,7 +60,7 @@ export function TransactionHistory({ transactions, total }: Props) {
         <h3 className="font-bold text-slate-800 text-sm">
           Unit Transaction History
         </h3>
-        <p className="text-[11px] text-slate-400 mt-0.5">
+        <p className="text-[11px] text-slate-500 mt-0.5">
           Most recent {transactions.length} of {total} ledger entries
         </p>
       </div>
@@ -68,7 +68,7 @@ export function TransactionHistory({ transactions, total }: Props) {
       <TableScroll>
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="text-[11px] font-semibold text-slate-400 border-b border-slate-100 uppercase tracking-wider bg-slate-50/40">
+            <tr className="text-[11px] font-semibold text-slate-500 border-b border-slate-100 uppercase tracking-wider bg-slate-50/40">
               <th className="py-2.5 px-3 font-semibold">#</th>
               <th className="py-2.5 px-3 font-semibold">Date &amp; Time</th>
               <th className="py-2.5 px-3 font-semibold">Project</th>
@@ -82,7 +82,7 @@ export function TransactionHistory({ transactions, total }: Props) {
           <tbody className="divide-y divide-slate-100 text-slate-700">
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-400 text-sm">
+                <td colSpan={8} className="py-12 text-center text-slate-500 text-sm">
                   No transactions yet.
                 </td>
               </tr>
@@ -93,10 +93,10 @@ export function TransactionHistory({ transactions, total }: Props) {
               const previous = t.availableAfter - t.availableDelta;
               return (
                 <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-2.5 px-3 text-slate-400">{idx + 1}</td>
+                  <td className="py-2.5 px-3 text-slate-500">{idx + 1}</td>
                   <td className="py-2.5 px-3 whitespace-nowrap text-slate-600">
                     <div>{date}</div>
-                    <div className="text-slate-400 text-[10px]">{time}</div>
+                    <div className="text-slate-500 text-[10px]">{time}</div>
                   </td>
                   <td className="py-2.5 px-3 font-semibold text-blue-600 whitespace-nowrap">
                     {t.projectName}
@@ -107,7 +107,7 @@ export function TransactionHistory({ transactions, total }: Props) {
                   <td
                     className={cn(
                       'py-2.5 px-3 text-right font-bold whitespace-nowrap',
-                      delta >= 0 ? 'text-emerald-600' : 'text-rose-600',
+                      delta >= 0 ? 'text-emerald-700' : 'text-rose-600',
                     )}
                   >
                     {formatSigned(delta)}

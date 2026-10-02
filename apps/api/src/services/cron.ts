@@ -1,10 +1,14 @@
 import { reconcileUnknownRecords } from './reconciliation';
+import { recordJobRun } from './systemStatus';
+import { refreshProviderBalances } from './providerBalance';
 import type { Env } from '../types/env';
 
 /**
  * Scheduled handler entry point. Cloudflare invokes this on each cron
  * expression configured in wrangler.toml. We route based on the expression.
  */
+export { runReconciliation, runBalanceRefresh };
+
 export async function handleScheduled(
   controller: ScheduledController,
   env: Env,
@@ -15,6 +19,7 @@ export async function handleScheduled(
 
   if (cron === '*/15 * * * *') {
     await runReconciliation(env);
+    await runBalanceRefresh(env);
     return;
   }
 
@@ -26,7 +31,19 @@ export async function handleScheduled(
   console.warn(`[cron] no handler for expression: ${cron}`);
 }
 
+async function runBalanceRefresh(env: Env): Promise<void> {
+  const started = Date.now();
+  try {
+    const summary = await refreshProviderBalances(env);
+    await recordJobRun(env, 'balanceRefresh', { lastRunAt: new Date().toISOString(), ok: true, summary, durationMs: Date.now() - started });
+  } catch (err) {
+    console.error('[cron] balance refresh failed:', err);
+    await recordJobRun(env, 'balanceRefresh', { lastRunAt: new Date().toISOString(), ok: false, summary: String(err).slice(0, 300), durationMs: Date.now() - started });
+  }
+}
+
 async function runReconciliation(env: Env): Promise<void> {
+  const started = Date.now();
   try {
     const result = await reconcileUnknownRecords(env, {
       olderThanMinutes: 30,
@@ -34,16 +51,12 @@ async function runReconciliation(env: Env): Promise<void> {
       dryRun: false,
     });
 
-    if (result.scanned === 0) {
-      console.log('[cron] reconciliation: nothing to do');
-      return;
-    }
-
-    console.log(
-      `[cron] reconciliation: scanned=${result.scanned} confirmed=${result.confirmed} released=${result.released} keptUnknown=${result.keptUnknown} errors=${result.errors}`,
-    );
+    const summary = `scanned=${result.scanned} confirmed=${result.confirmed} released=${result.released} keptUnknown=${result.keptUnknown} errors=${result.errors}`;
+    console.log(`[cron] reconciliation: ${summary}`);
+    await recordJobRun(env, 'reconciliation', { lastRunAt: new Date().toISOString(), ok: result.errors === 0, summary, durationMs: Date.now() - started });
   } catch (err) {
     console.error('[cron] reconciliation failed:', err);
+    await recordJobRun(env, 'reconciliation', { lastRunAt: new Date().toISOString(), ok: false, summary: String(err).slice(0, 300), durationMs: Date.now() - started });
   }
 }
 
@@ -89,7 +102,9 @@ async function runProviderRequestCleanup(env: Env): Promise<void> {
     console.log(
       `[cron] provider cleanup: deleted=${deleted} skipped=${skipped}`,
     );
+    await recordJobRun(env, 'providerCleanup', { lastRunAt: new Date().toISOString(), ok: true, summary: `deleted=${deleted} skipped=${skipped}`, durationMs: 0 });
   } catch (err) {
     console.error('[cron] provider cleanup failed:', err);
+    await recordJobRun(env, 'providerCleanup', { lastRunAt: new Date().toISOString(), ok: false, summary: String(err).slice(0, 300), durationMs: 0 });
   }
 }

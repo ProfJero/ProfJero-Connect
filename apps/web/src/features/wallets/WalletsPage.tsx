@@ -101,6 +101,7 @@ export function WalletsPage() {
 
   return (
     <main className="p-4 sm:p-6 lg:p-7 space-y-6 flex-1">
+      <h1 className="sr-only">Wallets &amp; Units</h1>
       {error && (
         <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />

@@ -54,7 +54,7 @@ export function PackagesTable({
         <div>
           <h3 className="text-sm font-bold text-slate-800">
             Packages
-            <span className="ml-2 text-slate-400 font-normal text-xs">
+            <span className="ml-2 text-slate-500 font-normal text-xs">
               {packages.length}
             </span>
           </h3>
@@ -101,7 +101,7 @@ export function PackagesTable({
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {packages.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={7} className="py-12 text-center text-slate-500 text-sm">
                     No packages yet.
                   </td>
                 </tr>
@@ -114,7 +114,7 @@ export function PackagesTable({
                     p.active ? 'hover:bg-slate-50/70' : 'opacity-60',
                   )}
                 >
-                  <td className="py-3 px-4 text-right text-slate-400">
+                  <td className="py-3 px-4 text-right text-slate-500">
                     {idx + 1}
                   </td>
                   <td className="py-3 px-3 font-semibold text-slate-900">

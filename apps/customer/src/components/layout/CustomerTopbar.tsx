@@ -76,7 +76,7 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
             <div className="font-bold text-slate-800 dark:text-slate-100 text-[11px]">
               {wallet.data ? `${wallet.data.availableUnits.toLocaleString()} units` : '—'}
             </div>
-            <div className="text-[10px] text-slate-400 dark:text-slate-500">
+            <div className="text-[10px] text-slate-500 dark:text-slate-500">
               Wallet Balance <span className="text-blue-600 dark:text-blue-400 font-semibold">→</span>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
               <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[110px]">
                 {displayName}
               </div>
-              <div className="text-[10px] text-slate-400 dark:text-slate-500">Account owner</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-500">Account owner</div>
             </div>
           </button>
 
@@ -112,7 +112,7 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
               <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-slate-200 dark:border-slate-800 py-1 z-50">
                 <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                   <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{displayName}</div>
-                  <div className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{user?.email}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-500 truncate">{user?.email}</div>
                 </div>
                 <Link
                   to="/settings"

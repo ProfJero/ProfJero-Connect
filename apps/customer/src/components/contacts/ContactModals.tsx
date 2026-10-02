@@ -216,7 +216,7 @@ export function ImportContactsModal({
               {result.skipped.slice(0, 100).map((s, i) => (
                 <div key={i} className="px-3 py-1.5 flex justify-between gap-3">
                   <span className="font-mono">{s.phone}</span>
-                  <span className="text-slate-400">{s.reason}</span>
+                  <span className="text-slate-500 dark:text-slate-400">{s.reason}</span>
                 </div>
               ))}
             </div>
@@ -238,8 +238,8 @@ export function ImportContactsModal({
             onClick={() => inputRef.current?.click()}
             className="w-full border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-5 text-center hover:border-[#1a6cf0]"
           >
-            <Upload className="w-5 h-5 text-slate-400 mx-auto" strokeWidth={2} />
-            <span className="block text-xs font-semibold text-[#1a6cf0] dark:text-blue-400 mt-2">
+            <Upload className="w-5 h-5 text-slate-500 dark:text-slate-400 mx-auto" strokeWidth={2} />
+            <span className="block text-xs font-semibold text-[#1764e0] dark:text-blue-400 mt-2">
               {fileName ? `${fileName} — ${rows?.length.toLocaleString()} rows` : 'Choose a CSV file'}
             </span>
           </button>

@@ -56,7 +56,7 @@ export function ApiKeysTable({ apiKeys, loading, onChanged }: Props) {
       <div className="px-4 sm:px-5 py-3.5 border-b border-slate-100">
         <h3 className="text-sm font-bold text-slate-800">
           API keys
-          <span className="ml-2 text-slate-400 font-normal text-xs">
+          <span className="ml-2 text-slate-500 font-normal text-xs">
             {apiKeys.length}
           </span>
         </h3>
@@ -92,7 +92,7 @@ export function ApiKeysTable({ apiKeys, loading, onChanged }: Props) {
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {apiKeys.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={9} className="py-12 text-center text-slate-500 text-sm">
                     No API keys yet.
                   </td>
                 </tr>
@@ -150,13 +150,13 @@ export function ApiKeysTable({ apiKeys, loading, onChanged }: Props) {
                           <span className="font-semibold text-slate-800">
                             {k.lifetimeUnitsSpent}
                           </span>
-                          <span className="text-slate-400">
+                          <span className="text-slate-500">
                             {' '}
                             / {k.lifetimeUnitCap}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-slate-500">—</span>
                       )}
                     </td>
                     <td className="py-3 px-3 text-[11px] text-slate-500 whitespace-nowrap">
@@ -183,7 +183,7 @@ export function ApiKeysTable({ apiKeys, loading, onChanged }: Props) {
                     </td>
                     <td className="py-3 px-3 text-right whitespace-nowrap">
                       {isRevoked ? (
-                        <span className="text-[11px] text-slate-400">—</span>
+                        <span className="text-[11px] text-slate-500">—</span>
                       ) : isConfirming ? (
                         <div className="inline-flex items-center gap-1.5">
                           <button
@@ -207,7 +207,7 @@ export function ApiKeysTable({ apiKeys, loading, onChanged }: Props) {
                         <button
                           type="button"
                           onClick={() => setConfirmRevokeId(k.id)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-rose-200 text-rose-600 text-[10px] font-semibold hover:bg-rose-50 transition"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-rose-200 text-rose-700 text-[10px] font-semibold hover:bg-rose-50 transition"
                         >
                           <Ban className="w-3 h-3" strokeWidth={2.5} />
                           Revoke
