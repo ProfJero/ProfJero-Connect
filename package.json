@@ -16,5 +16,8 @@
     "apps/*",
     "packages/*"
   ],
-  "private": "true"
+  "private": "true",
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.5"
+  }
 }
