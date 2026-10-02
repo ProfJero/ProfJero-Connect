@@ -2,22 +2,26 @@
  * Browser origins allowed to call the API. Shared by the CORS middleware
  * and by the customer payment flow, which only redirects back to an
  * allowed origin (never to an arbitrary client-supplied URL).
+ *
+ * URL mapping (updated 2026-10-02):
+ *   - profjeroconnect.pages.dev        → customer platform
+ *   - manage-profjeroconnect.pages.dev → admin dashboard
  */
 export const allowedOrigins = [
   // Admin dashboard
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://profjeroconnect.pages.dev',
+  'https://manage-profjeroconnect.pages.dev',
   // Customer platform
   'http://localhost:5174',
   'http://127.0.0.1:5174',
-  'https://profjeroconnect-customer.pages.dev', // ← confirm/adjust
+  'https://profjeroconnect.pages.dev',
 ];
 
 const customerOrigins = new Set([
   'http://localhost:5174',
   'http://127.0.0.1:5174',
-  'https://profjeroconnect-customer.pages.dev',
+  'https://profjeroconnect.pages.dev',
 ]);
 
 /**
