@@ -43,9 +43,15 @@ export function SignupForm() {
       return;
     }
 
-    setIsLoading(true);
+  setIsLoading(true);
     try {
-      await signUp({ email: email.trim(), password, displayName: fullName.trim(), companyName: companyName.trim() });
+      await signUp({
+        email,
+        password,
+        displayName: fullName,
+        companyName,
+        acceptedTerms: agreedToTerms,
+      });
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed. Please try again.');
@@ -96,7 +102,7 @@ export function SignupForm() {
             icon={User}
             type="text"
             autoComplete="name"
-            placeholder="Jane Doe"
+            placeholder="Prof Jero"
             value={fullName}
             onChange={setFullName}
           />
@@ -106,7 +112,7 @@ export function SignupForm() {
             icon={Building2}
             type="text"
             autoComplete="organization"
-            placeholder="SunnyTech Ltd"
+            placeholder="ProfJero Digital Studio"
             value={companyName}
             onChange={setCompanyName}
           />

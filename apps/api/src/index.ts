@@ -7,14 +7,20 @@ import { adminRouter } from './routers/admin';
 import { v1Router, v1PublicRouter } from './routers/v1';
 import { webhooksRouter } from './routers/webhooks';
 import { handleScheduled } from './services/cron';
+import { customerRouter } from './routers/customer';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 // ---- CORS ----
 const allowedOrigins = [
+  // Admin dashboard
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://profjeroconnect.pages.dev',
+  // Customer platform
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'https://profjeroconnect-customer.pages.dev', // ← confirm/adjust
 ];
 
 app.use(
@@ -43,6 +49,7 @@ app.onError(errorHandler);
 app.route('/v1', v1PublicRouter);
 app.route('/v1', v1Router);
 app.route('/admin', adminRouter);
+app.route('/customer', customerRouter);
 app.route('/webhooks', webhooksRouter);
 app.route('/', healthRouter);
 

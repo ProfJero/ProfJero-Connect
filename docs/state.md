@@ -1,463 +1,631 @@
-# ProfJero Connect — Project State
+# ProfJero SMS — Project State
 
-_Last updated: 2026-09-24. Single source of truth for anyone continuing this
-project. If picking up from a fresh chat, read this file first._
+_Last updated: 2026-09-26. This is the single source of truth for anyone
+continuing this project — human developer or AI assistant. If you're picking
+up from a fresh chat, read this file first._
+
+---
+
+## 0. Read first
+
+If you're picking up this project from a new chat:
+
+1. Read this file in full. It covers the entire platform — admin + customer.
+2. Check the current git status and confirm what's deployed:
+   `npx wrangler deployments list --env production` from `apps/api`.
+3. If you're doing backend work, also see `docs/customer-platform.md` for
+   the product vision of the customer side.
+
+Then ask before assuming. The platform has been through many iterations and
+some decisions are non-obvious. When in doubt, check the reasoning in §7
+(Architectural decisions) before improvising.
 
 ---
 
 ## 1. What this project is
 
-ProfJero Connect is a multi-service communication platform that sits between
-many client applications and backend service providers. SMS is the first
-service shipped; Airtime, Data Bundles, and others will be added over time
-using the same infrastructure.
+**ProfJero Connect** is a central SMS and communications infrastructure
+platform. Two distinct product surfaces serve two distinct audiences:
 
-**Problem it solves:** each client project currently integrates with service
-providers directly. ProfJero Connect becomes the single gateway with:
+### Admin platform (`apps/web`)
+Serves the operator (you). Manages:
+- External client projects (GABS, DBI, Church A, Pharmacy, School, etc.)
+- Per-project wallets with an append-only ledger
+- API keys issued to clients
+- Arkesel provider account
+- Payments received via Paystack
+- Reports, settings, audit logs
 
-- Per-project API credentials (ProfJero-issued API keys, no client-side
-  database config ever stored)
-- A per-project wallet with an append-only ledger, denominated in ProfJero
-  Units (internal credits, independent of any provider's balance)
-- Full audit trails for messages, wallet changes, and payments
-- A provider abstraction layer so backend services can change without
-  touching client integrations
-- Automated payment settlement via Paystack
+**Tech-independence rule:** clients authenticate with ProfJero-issued API
+keys. No client Firebase/Supabase/DB config is ever stored on our side.
 
-**Two product surfaces:**
+### Customer platform (`apps/customer`)
+Serves ProfJero's own customers — businesses, organisations or individuals
+who want to send SMS without their own system. They:
+- Sign up self-service
+- Buy units via mobile money or card
+- Send SMS
+- Track transactions and history
+- Request Sender IDs
+- Integrate via API
 
-1. **Admin dashboard** (built): the operator's command centre for managing
-   client projects, wallets, Sender IDs, pricing, and provider accounts.
-2. **Customer platform** (not built): a self-service surface where clients
-   sign up, buy units, request Sender IDs, and send messages without operator
-   involvement.
+**Product direction:** SMS-first, multi-service-ready (Airtime, Data
+Bundles to follow on the same infrastructure).
 
-**Current status:** Admin dashboard is complete and deployed. Customer
-platform is the next major milestone.
+### Central SMS infrastructure
+Both surfaces feed the same backend. Client calls go:
+External Project (API key) ──┐
+├──► ProfJero API ──► Firestore + Arkesel
+Customer platform (Firebase) ┘
+
+text
+
+**Status:**
+- Admin platform: **built, deployed, functional**.
+- Customer platform: **frontend complete, backend not started**.
 
 ---
 
-## 2. Where it's deployed
+## 2. Current status (at a glance)
 
-| Layer | URL | Notes |
-|---|---|---|
-| Admin dashboard | https://profjeroconnect.pages.dev | Cloudflare Pages |
-| API (Worker) | https://profjero-sms-api-prod.amoakob947.workers.dev | Cloudflare Workers |
-| API (source) | apps/api | Wrangler-deployed |
-| Web (source) | apps/web | Wrangler Pages deployed |
-| Database | Firestore | Project: profjero-sms-gateway |
-| Auth | Firebase Authentication | Email/password, admin accounts only |
-
-The API worker name is `profjero-sms-api-prod` (a legacy name from before the
-rebrand). Renaming means re-uploading all secrets and updating any mobile
-clients — defer until there's a reason to.
+| Area | Status |
+|---|---|
+| **Admin frontend** (React, 10 screens) | ✅ Done, desktop + mobile |
+| **Admin backend** (Cloudflare Workers + Hono) | ✅ Done, deployed |
+| **Admin auth** (Firebase Auth, roles) | ✅ Done |
+| **Public Project API** (`/v1/*`) | ✅ Done |
+| **Admin API** (`/admin/*`) | ✅ Done |
+| **Paystack webhook** | ✅ Done |
+| **Arkesel integration** | ✅ Done |
+| **Wallet ledger logic** | ✅ Done |
+| **Customer frontend** (React, 13 screens) | ✅ Done, desktop + mobile |
+| **Customer backend** (`/customer/*` surface) | ❌ Not started |
+| **Customer auth** (self-signup, Firebase) | ❌ Not started |
+| **Customer-facing Paystack flow** | ❌ Not started |
+| **Notifications system** (in-app + email) | ❌ Not started |
+| **Arkesel delivery receipts** | ⚠️ Not firing in production (see §10.5) |
 
 ---
 
 ## 3. Repository structure
-profjero-sms/ (repo name — legacy, unrenamed)
+profjero-sms/
 ├── apps/
-│ ├── api/ Cloudflare Worker (Hono + TypeScript)
+│ ├── web/ # ADMIN dashboard (React + Vite)
 │ │ ├── src/
-│ │ │ ├── lib/ firestore, phone, datetime, domainError
-│ │ │ ├── middleware/ auth, roles, apiKeyAuth, errors
-│ │ │ ├── providers/ arkesel, paystack, mock provider switch
-│ │ │ ├── repositories/ Firestore access per collection
-│ │ │ ├── routers/ admin, v1, webhooks, health
-│ │ │ ├── services/ business logic (sms, wallet, pricing, ...)
-│ │ │ ├── types/ Env, AuthVariables
-│ │ │ └── index.ts Worker entry (fetch + scheduled)
-│ │ ├── wrangler.toml
-│ │ └── .dev.vars gitignored
+│ │ │ ├── components/
+│ │ │ │ ├── layout/ # AppLayout, Sidebar, Topbar
+│ │ │ │ ├── ui/ # Card, StatusBadge, StatusDot, TableScroll
+│ │ │ │ ├── dashboard/ # Admin dashboard components
+│ │ │ │ ├── projects/ # Project list + details components
+│ │ │ │ ├── sms-logs/
+│ │ │ │ ├── wallets/
+│ │ │ │ ├── payments/
+│ │ │ │ ├── arkesel/
+│ │ │ │ ├── reports/
+│ │ │ │ ├── settings/
+│ │ │ │ ├── auth/ # LoginPage pieces (LoginHero, LoginForm)
+│ │ │ │ └── send-sms/ # WizardBar, ComposeForm, SendSmsSidebar
+│ │ │ ├── features/ # Page-level components (one per route)
+│ │ │ ├── lib/
+│ │ │ │ ├── utils.ts # cn() helper
+│ │ │ │ ├── nav.ts
+│ │ │ │ └── auth.tsx # Admin auth context (Firebase)
+│ │ │ ├── mock/ # ⚠️ All mock data labelled clearly
+│ │ │ ├── App.tsx
+│ │ │ ├── main.tsx
+│ │ │ └── index.css
+│ │ └── package.json
 │ │
-│ └── web/ React + Vite admin dashboard
+│ └── customer/ # CUSTOMER platform (React + Vite)
 │ ├── src/
-│ │ ├── components/ shared UI + per-feature components
-│ │ ├── features/ page-level components
-│ │ ├── lib/ api client, auth, useApi, helpers
-│ │ └── App.tsx router
-│ ├── index.html
-│ └── .env gitignored
+│ │ ├── components/
+│ │ │ ├── layout/ # CustomerLayout, CustomerSidebar, CustomerTopbar
+│ │ │ ├── ui/ # Card, StatusBadge, TableScroll
+│ │ │ ├── auth/ # LoginHero, LoginForm, SignupForm, ProtectedRoute
+│ │ │ ├── dashboard/ # Customer dashboard components
+│ │ │ ├── messaging/ # MessagingTabs, MessagingStatCard, etc.
+│ │ │ ├── send-sms/ # ComposeForm, MessageSummary
+│ │ │ ├── contacts/ # ContactsStats, ContactsTable, GroupCard
+│ │ │ ├── sender-ids/ # SenderIdStatusBadge, RequestForm, etc.
+│ │ │ ├── wallet/ # BalanceCard, SpendingOverviewCard, etc.
+│ │ │ ├── add-funds/ # AmountSelector, PaymentMethodSelector, etc.
+│ │ │ ├── transactions/ # TransactionMetricCard, TransactionsTable
+│ │ │ ├── api/ # ApiStatusCard, ApiKeyCard, UsageMetrics
+│ │ │ ├── notifications/ # NotificationFilters, NotificationItem
+│ │ │ ├── services/ # FeaturedServiceBanner, ServiceCard
+│ │ │ └── settings/ # SettingsNav, SettingsCards, Org* cards
+│ │ ├── features/ # Page-level components
+│ │ │ ├── auth/ # LoginPage, SignupPage
+│ │ │ ├── dashboard/
+│ │ │ ├── messaging/ # MessagingOverviewPage, CampaignsPage, MessageHistoryPage
+│ │ │ ├── send-sms/
+│ │ │ ├── contacts/ # ContactsPage, ContactGroupsPage
+│ │ │ ├── sender-ids/ # SenderIdsPage, RequestSenderIdPage
+│ │ │ ├── wallet/ # WalletPage, AddFundsPage
+│ │ │ ├── transactions/
+│ │ │ ├── api/
+│ │ │ ├── notifications/
+│ │ │ ├── services/
+│ │ │ ├── settings/ # SettingsPage, OrganisationProfilePage
+│ │ │ └── PlaceholderPage.tsx
+│ │ ├── lib/
+│ │ │ ├── utils.ts
+│ │ │ ├── nav.ts
+│ │ │ ├── auth.tsx # Customer auth context (stubbed)
+│ │ │ └── theme.tsx # Dark/light mode provider
+│ │ ├── mock/
+│ │ │ ├── dashboard.ts
+│ │ │ ├── messaging.ts
+│ │ │ ├── sendSms.ts
+│ │ │ ├── contacts.ts
+│ │ │ ├── contactGroups.ts
+│ │ │ ├── senderIds.ts
+│ │ │ ├── requestSenderId.ts
+│ │ │ ├── wallet.ts
+│ │ │ ├── addFunds.ts
+│ │ │ ├── transactions.ts
+│ │ │ ├── api.ts
+│ │ │ ├── notifications.ts
+│ │ │ ├── services.ts
+│ │ │ ├── settings.ts
+│ │ │ └── organisation.ts
+│ │ ├── App.tsx
+│ │ ├── main.tsx
+│ │ └── index.css
+│ └── package.json
+│
+├── apps/api/ # Cloudflare Worker (backend, built)
+│ ├── src/
+│ │ ├── routers/
+│ │ │ ├── public/ # /v1/* — API-key auth
+│ │ │ ├── admin/ # /admin/* — Firebase Auth + roles
+│ │ │ └── webhooks/ # /webhooks/* — signature verification
+│ │ ├── middleware/
+│ │ ├── services/ # Domain logic: wallet, sms, payment, etc.
+│ │ ├── providers/ # Arkesel, Paystack adapters
+│ │ ├── repositories/ # Firestore access
+│ │ └── lib/
+│ └── wrangler.toml
 │
 ├── packages/
-│ └── shared/ Zod schemas + types shared by api and web
-│ └── src/schemas/ admin, apiKey, dashboard, payment,
-│ pricing, project, provider, senderId,
-│ sms, v1, wallet, health
+│ └── shared/ # Types + Zod schemas (shared web/api)
+│
+├── firebase/
+│ ├── firestore.rules
+│ └── firestore.indexes.json
 │
 ├── docs/
-│ └── state.md This file
-├── firebase/ (empty — reserved for rules + indexes)
-└── package.json npm workspaces root
+│ ├── state.md # This file
+│ └── customer-platform.md # Product brief for customer platform
+│
+├── .gitignore
+├── package.json # Root workspace config
+└── package-lock.json
 
 text
 
-**Root uses npm workspaces:** `["apps/*", "packages/*"]`
+**Root `package.json`** uses npm workspaces:
+```json
+{ "workspaces": ["apps/*", "packages/*"] }
+Root scripts:
 
----
+npm run dev:web — starts admin dashboard on :5173
 
-## 4. Tech stack
+npm run dev:customer — starts customer platform on :5174
 
-**Frontend:**
-- React 19
-- TypeScript 6
-- Vite 8
-- Tailwind CSS 3.4 (v3, not v4)
-- Lucide React (icons)
-- Recharts (charts)
-- React Router 7
+4. Tech stack
+Frontend (both apps)
+React 19.2
 
-**Backend:**
-- Cloudflare Workers
-- Hono 4
-- TypeScript 6
-- Firebase Admin via `jose` + Firestore REST (no firebase-admin SDK — the SDK doesn't work cleanly on Workers)
+TypeScript 6.0
 
-**Data:**
-- Firestore (native mode)
-- Firebase Auth (admin accounts only)
+Vite 8
 
-**Integrations:**
-- Arkesel (SMS provider, v2 API)
-- Paystack (payments, test mode currently)
+Tailwind CSS 3.4 (v3, NOT v4)
 
-**Hosting:**
-- Cloudflare Workers (API)
-- Cloudflare Pages (dashboard)
+Lucide React 1.47 — icons
 
----
+Recharts 3.10 — charts (admin + customer)
 
-## 5. Design system
+React Router 7 — routing
 
-**Colors:**
-- Sidebar background: `#0c1e38`
-- Primary action: `#1976d2` (hover: blue-600)
-- Active nav: `#1976d2`
-- Body background: `#f1f5f9`
-- Cards: white with `border-slate-200/80`
-- Status colors: emerald (success), rose (danger), amber (warning), blue (info), purple (refunded)
+TanStack Query — server state (customer app only, once wired)
 
-**Typography:**
-- Font: Inter (Google Fonts, loaded in index.html)
-- Base size: 13px
-- Card titles: `text-sm font-bold text-slate-800`
-- Section labels: `text-xs text-slate-500`
+Backend (built)
+Cloudflare Workers
 
-**Components:**
-- Cards: `bg-white rounded-xl border border-slate-200/80 shadow-xs`
-- Buttons: `rounded-lg`, small text (`text-xs`)
-- Tables: `text-xs`, `divide-y divide-slate-100`
-- Modal: bottom sheet on mobile, centered panel on sm+
+Hono
 
-**Layout:**
-- Desktop (≥ lg): fixed sidebar, content scrolls independently
-- Mobile: sidebar becomes drawer with backdrop
-- Page padding: `p-4 sm:p-6 lg:p-7`
-- Wide tables wrapped in `<TableScroll>`
+TypeScript
 
----
+Firebase Admin SDK
 
-## 6. Architecture decisions
+Data
+Firestore — primary database
 
-These have been implemented and must not be improvised against.
+Firebase Auth — admin + (future) customer auth
 
-### Two-layer Sender ID approval
-Client requests → ProfJero approves → operator registers manually with Arkesel.
-Arkesel has no public API for Sender ID management; registration is dashboard-only.
-At scale, batch manual registration rather than building automation.
+Integrations
+Arkesel — SMS provider (admin-side)
 
-### Wallet model — Reserve / Confirm / Release
-Units are never deducted directly. The flow is:
+Paystack — payment gateway
+
+Hosting
+Cloudflare (Workers + Pages for static assets)
+
+5. Design system
+Admin tokens
+Sidebar: #0c1e38 (bg), #1976d2 (active)
+
+Body: #f1f5f9
+
+Content text: text-slate-800, base font 13px
+
+Card: bg-white rounded-xl border border-slate-200/80 shadow-xs
+
+Primary action: #1976d2
+
+Font: Inter
+
+Customer tokens
+Sidebar: #0c192c (bg), #1a6cf0 (active)
+
+Body: #f5f7fb
+
+Content text: text-slate-800, base font default (16px) — no text-[13px]
+
+Card: bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs
+
+Primary action: #1a6cf0
+
+Font: Inter
+
+Dark mode: class-based (darkMode: 'class' in tailwind config), toggled from topbar, persisted in localStorage
+
+Shared conventions
+Rounded corners: rounded-xl for cards, rounded-lg for buttons/inputs
+
+Shadows: shadow-xs (custom token)
+
+Status colors (both apps): Success = emerald, Danger = rose, Warning = amber, Info = blue, Refunded = purple
+
+Layout rules
+Desktop (≥ lg / 1024px): fixed sidebar, content scrolls independently
+
+Mobile (< lg): sidebar becomes drawer with backdrop, hamburger in topbar
+
+Page padding: p-4 sm:p-6 lg:p-7 (admin), p-4 sm:p-6 lg:p-8 (customer)
+
+Wide tables: wrapped in <TableScroll> — horizontal scroll + right-edge fade hint (dark mode aware)
+
+Two-column page grids default to lg: breakpoint.
+
+6. What's built
+Admin frontend (apps/web, routes in App.tsx)
+Route	Page
+/login	Admin login
+/dashboard	Dashboard — 8 KPI cards, 2 charts, tables
+/projects	Projects / Clients list
+/projects/:id	Project Details (header, 7 KPIs, usage, API, wallet)
+/sms-logs	SMS Logs — 5 KPIs, filter bar, 11-col table
+/wallets	Wallets & Units — 4 KPIs, wallets table, donut
+/payments	Payments — 7 narrow KPIs, 12-col table
+/arkesel	Arkesel Account — provider grid, Sender IDs, API monitoring
+/reports	Reports — KPIs, 5 charts, 2 tables
+/settings	Settings — 7 tabs, forms
+/send-sms	Send SMS — 3-step wizard, compose + summary
+Customer frontend (apps/customer, routes in App.tsx)
+Route	Page	Status
+/login	Customer login (split hero + form)	✅
+/signup	Self-service signup	✅
+/dashboard	Dashboard — balance, quick actions, KPIs, charts, recent	✅
+/messaging	Messaging hub — Overview tab	✅
+/messaging/sms	Send SMS — compose + summary	✅
+/messaging/sender-ids	Sender IDs list	✅
+/messaging/sender-ids/request	Request Sender ID form	✅
+/messaging/campaigns	Campaigns — placeholder	✅ (stub)
+/messaging/history	Message History — placeholder	✅ (stub)
+/contacts	Contacts list	✅
+/contacts/groups	Contact Groups grid	✅
+/services	Services hub (featured hero + catalog)	✅
+/services/data	Data — placeholder	✅ (stub)
+/services/airtime	Airtime — placeholder	✅ (stub)
+/wallet	Wallet — balance, spending chart, activity table	✅
+/wallet/add-funds	Add Funds — amount + method selector	✅
+/transactions	Transactions — metrics, filter bar, table	✅
+/api	API & Integrations — status, key, usage, integrations	✅
+/notifications	Notifications — filters, list, summary	✅
+/settings	Settings hub — 6 cards + sub-nav	✅
+/settings/organisation	Organisation Profile	✅
+Bulk SMS: intentionally dropped. Send SMS already handles bulk via its
+Bulk Upload / Import from File recipient tabs. Deeper bulk features
+(personalisation, scheduling, CSV mapping) are Campaigns territory — deferred
+until Campaigns is scoped. See §10.5.
+
+Backend (apps/api)
+Public Project API (/v1/*, API-key auth):
+
+GET /v1/pricing — public, no auth
+
+GET /v1/me, GET /v1/wallet, GET /v1/wallet/transactions
+
+GET /v1/sms/batches, GET /v1/sms/batches/:id
+
+POST /v1/sms/send
+
+GET /v1/sender-ids
+
+Admin API (/admin/*, Firebase Auth + roles):
+
+Projects, wallets, ledger, api keys, sender IDs, payments, refunds
+
+Packages, reports, audit logs, Arkesel monitoring
+
+Admin CRUD for everything the admin dashboard manages
+
+Webhooks (/webhooks/*, signature verification):
+
+POST /webhooks/paystack — working
+
+POST /webhooks/arkesel — not firing in production
+
+Shared packages
+packages/shared — Zod schemas + inferred types consumed by both apps
+
+7. Architectural decisions
+These were agreed during Stage 2 & Stage 3 planning. The backend follows
+them. Do not improvise.
+
+Wallet model — Reserve / Confirm / Release
+Units are never deducted directly. Flow:
+
+text
 AVAILABLE → RESERVED → SEND TO PROVIDER → CONFIRM (success) OR RELEASE (failure)
+Wallet doc has availableUnits and reservedUnits. Every change goes
+through a walletTransactions entry.
+
+Ledger semantics
+Every entry has availableDelta and reservedDelta:
+
+Type	availableDelta	reservedDelta
+reserve	-N	+N
+confirm	0	-N
+release	+N	-N
+purchase	+N	0
+refund	-N	0
+manual_credit	+N	0
+manual_debit	-N	0
+reversal	signed	signed
+adjustment	signed	signed
+The ledger is the immutable source of truth; the wallet is a snapshot.
+Ledger entries are never updated or deleted. Corrections use compensating
+entries. Doc IDs for reserve/confirm/release/purchase/refund/reversal are
+deterministic (reserve__{batchId}, confirm__{batchId}__{recordId}).
+
+No provider call inside a Firestore transaction
+External API calls (Arkesel, Paystack) never occur inside a Firestore
+transaction. Transaction retries would cause duplicate external operations.
+
+Correct flow:
+
+Firestore transaction: claim idempotency + reserve units + create batch
+
+Commit
+
+Provider call (outside any transaction)
+
+Firestore transaction: confirm or release + update records
+
+Idempotency — atomic claim
+Dedicated collection with states processing, completed, failed. Claim
+happens inside a Firestore transaction so two concurrent requests can't
+both see a missing key.
+
+Doc ID pattern: {scope}__{projectId}__{key} (deterministic).
+
+Per-recipient accounting
+A batch request creates one smsBatch and N smsRecords. Each record owns
+its own unitsReserved, unitsCharged, unitsReleased. Partial batch
+outcomes resolve per-record — never charge or release the whole batch.
+
+SMS statuses
+queued, submitting, submitted, delivered, failed, unknown, released
+
+submitted means the provider accepted the request. It does NOT mean the
+recipient received the message. Delivery confirmation is future work.
+
+Treat provider timeouts as unknown — do not release units immediately.
+Reconciliation handles these.
+
+Idempotency for public API
+POST /v1/sms/send requires an idempotency key
+
+Webhooks use the gateway's event ID
+
+Same key + different body → 409
+
+Refunds vs Reversals
+Three distinct concepts:
+
+Payment — the customer paid
+
+Gateway Refund — money returned via Paystack
+
+Wallet Reversal — compensating ledger entry (may partially recover units;
+shortfall recorded in unitsUnrecovered)
+
+Marking a payment refunded does NOT auto-reverse the wallet credit.
+
+Three API surfaces
+Public Project API (/v1/*) — API-key auth
+
+Admin API (/admin/*) — Firebase Auth + role check
+
+Webhook API (/webhooks/*) — signature verification
+
+Customer platform will add a fourth surface: /customer/* — Firebase
+ID token auth (customer accounts, not admins). Decision documented in
+docs/customer-platform.md §14 (CP2 fork). This is not yet built.
+
+API keys
+Cryptographically random
+
+Prefix for fast lookup (not secret)
+
+HMAC-SHA256 or Argon2id hash (never plaintext)
+
+Plaintext shown once at creation
+
+Revoked keys rejected immediately
+
+Rotation = create new + overlap window + revoke old
+
+Provider abstraction
+SMS and Payments each behind a provider interface
+
+Arkesel is the first SMS provider
+
+Paystack is the first payment provider
+
+Multiple providers can be added without touching domain services
+
+No over-engineering for v1
+No Kafka, no Kubernetes, no CQRS, no event sourcing, no microservices, no
+unnecessary Durable Objects. Reliable, correct, secure — not fashionable.
+
+Customer-facing rules (from customer-platform.md)
+No provider names in customer UI. Never "Arkesel" or "Paystack" in
+customer-facing copy, URLs, or API responses.
+
+Units are the currency. Customers buy units, spend units. They never
+see the provider's SMS credits or per-credit cost.
+
+Two-layer Sender ID approval. Customer requests → ProfJero approves →
+provider registered. Manual registration means honest expectation-setting
+("reviewed within X hours"), never instant approval.
+
+Mobile-first. Customer platform is used on phones far more than the
+admin dashboard.
+
+8. Data model
+Full field-level spec was designed during Stage 3 (admin) and CP1-CP8
+(customer). Summary of collections:
+
+Collection	Purpose
+admins	Admin users. Roles: super_admin, admin, finance, support, viewer
+projects	External clients (API integrators)
+apiKeys	Per-project credentials. keyHash, keyPrefix, status
+wallets	One doc per project. availableUnits, reservedUnits, thresholds
+walletTransactions	Append-only ledger. Authority for wallet state
+smsBatches	One per send request
+smsRecords	One per recipient. Owns its own reservation/charge/release
+senderIds	Global Sender ID registry
+senderIdAssignments	M:N link — which project may use which Sender ID
+payments	Paystack payments. Links to wallet credit
+refunds	Gateway refunds + wallet reversal outcome
+packages	Purchasable unit bundles
+providerAccounts	Arkesel account metadata (secrets in Worker env)
+providerRequests	Rolling operational log of provider calls
+idempotencyKeys	Atomic claim with TTL
+auditLogs	Every sensitive admin/system action
+notifications	Low balance, payment, failed SMS, provider errors
+settings	Fixed ID docs: platform, sms, payments, notifications, security
+Customer platform additions (planned):
+
+Collection	Purpose
+customers	Customer accounts (keyed by Firebase Auth UID)
+tenants	Future multi-tenant org (not v1)
+Field specs available in the chat history. Reconstruct before coding —
+do not improvise.
+
+9. What's mocked
+Everything under apps/customer/src/mock/*.ts is mock data for UI
+development. Every file starts with a clear comment:
 
 text
-Every change goes through a `walletTransactions` entry with deterministic doc IDs
-(e.g. `reserve__{batchId}`, `confirm__{batchId}__{recordId}`). This makes
-idempotency atomic — a replay attempt fails at the Firestore level.
+// ⚠️ MOCK DATA — replace with /customer/* API calls once that surface exists.
+Files: dashboard, messaging, sendSms, contacts, contactGroups,
+senderIds, requestSenderId, wallet, addFunds, transactions, api,
+notifications, services, settings, organisation.
 
-### No provider call inside a Firestore transaction
-External APIs never run inside transactions. Transaction retries would cause
-duplicate external operations. Correct flow:
-1. Firestore transaction: claim idempotency + reserve units + create batch
-2. Commit
-3. Provider call (outside any transaction)
-4. Firestore transaction: confirm or release + update records
+Admin mocks were the same, now mostly replaced with real API calls.
 
-### Segment-aware SMS billing
-ProfJero Units are charged per SMS segment, matching GSM 03.38:
-- GSM-7 (160 chars single, 153 per segment when split, extended chars count as 2)
-- UCS-2 (70 chars single, 67 per segment when split, emoji = 2 units)
-The calculator lives in `packages/shared/src/lib/smsSegments.ts`. Used by both
-backend (billing) and frontend (live cost preview).
+Do not present mocked values as real. When the customer backend lands,
+each mock file gets replaced with an API call + loading/error states.
 
-### Provider abstraction
-Every backend service is behind a provider interface. Today:
-- SMS: `sms_gw_01` → Arkesel driver
-- Payments: Paystack driver (not yet abstracted into multiple providers)
+10. What's next
+Frontend — done
+✅ Admin: 10 screens
 
-Provider IDs are opaque (`{service}_gw_{NN}`). The driver name (`arkesel`,
-`paystack`) never leaves the backend — not in API responses, not in URLs.
-This is deliberate: clients should never know which upstream providers we use.
+✅ Customer: 13 screens + auth
 
-### Publishable vs. secret API keys
-- **Secret keys** (`pk_live_...`) — server-side only, full API access
-- **Publishable keys** (`pub_live_...`) — browser-safe, with:
-  - Recipient restrictions (allowlist / prefix / any)
-  - Rate limits (per minute/hour/day)
-  - Lifetime spend cap
+✅ Bulk SMS: intentionally dropped (see §10.5)
 
-Browser keys can send to multiple recipients per request, but each recipient
-counts as one rate-limit slot. Rate limits and spend cap are enforced via
-Firestore counters on the key doc.
+✅ State document (this file)
 
-### Currency
-All monetary values stored as integers in the smallest unit (pesewas for GHS).
-Never store money as floats.
+Backend — customer platform (start a fresh chat)
+Extend API with /customer/* surface — Firebase ID token auth (not
+API keys). New routers, middleware, services.
 
----
+Customer auth — self-signup, email/password, customers collection.
+Swap the stubbed useAuth() in apps/customer/src/lib/auth.tsx for real
+Firebase Auth. Keep the same interface so page code doesn't change.
 
-## 7. Data model
+Customer wallet — top-up (mobile money / card via Paystack), balance,
+ledger. Reuse the existing wallet service with a customer-scoped view.
 
-### Core collections
+Customer send SMS — scoped to the customer's own project, using the
+existing reserve/confirm/release flow.
 
-| Collection | Doc ID pattern | Purpose |
-|---|---|---|
-| `admins` | Firebase Auth UID | Dashboard users with roles |
-| `projects` | auto | External clients |
-| `wallets` | projectId | Balance + reserved units per project |
-| `walletTransactions` | deterministic | Append-only ledger. Authority for wallet state |
-| `apiKeys` | auto | Per-project credentials (secret + publishable) |
-| `senderIds` | value (e.g. "GABS") | Global Sender ID registry |
-| `senderIdAssignments` | `{projectId}__{senderId}` | Which project can use which Sender ID |
-| `smsBatches` | `{idempotencyKey}` | One per send request |
-| `smsRecords` | `{batchId}__r{N}` | Per-recipient record |
-| `payments` | `{reference}` | Paystack payment records |
-| `packages` | auto | Purchasable unit bundles |
-| `pricingSettings` | service (`sms`, `airtime`, `data`) | Unit rate + package config |
-| `providers` | `{service}_gw_{NN}` | Provider configuration |
-| `providerRequests` | auto (7-day retention) | Rolling log of provider API calls |
+Sender ID request flow — customer submits → admin reviews → provider
+registration. Notification on approval.
 
-### Wallet semantics
+Notifications — in-app collection + email (Resend recommended). Needed
+for Sender ID approval, payment receipts, low balance.
 
-Every `walletTransactions` entry has `availableDelta` and `reservedDelta`:
+Reports/analytics — replace mock aggregates with real queries.
 
-| Type | availableDelta | reservedDelta |
-|---|---|---|
-| `reserve` | -N | +N |
-| `confirm` | 0 | -N |
-| `release` | +N | -N |
-| `purchase` | +N | 0 |
-| `refund` | -N | 0 |
-| `manual_credit` | +N | 0 |
-| `manual_debit` | -N | 0 |
+Hardening — rate limits, reconciliation, security review.
 
-Wallet doc has `availableUnits` and `reservedUnits`. Ledger is the authority;
-wallet is a snapshot.
+Deploy customer app — likely connect.profjero.com or
+profjeroconnect.pages.dev for now.
 
-### SMS record statuses
+Admin backend — maintenance
+Arkesel delivery receipts — see §10.5
 
-`queued` → `submitting` → `submitted` → `delivered` | `failed` | `unknown` | `released`
+Audit log viewer (currently empty UI)
 
-- **submitted** = provider accepted the request. Not the same as delivered.
-- **unknown** = no definitive answer (provider timeout, network error). Units stay reserved.
-- **delivered** = provider confirmed delivery via webhook or polling.
+10.5 Known issues / cleanup
+Intentional decisions
+Send SMS breakpoint at sm: (640px) on admin — earlier than other
+screens. Do not "fix" without testing; the form/summary look good side
+by side from 640px+.
 
----
+Customer platform base font is default (16px), not 13px like admin.
+This was a deliberate decision — customer UI needs more breathing room.
 
-## 8. Integrations
+Bulk SMS dropped. Send SMS already handles bulk via recipient tabs.
+Deeper bulk features = Campaigns territory, deferred.
 
-### Arkesel (SMS provider)
-- **API key**: stored as `ARKESEL_API_KEY` Worker secret
-- **Sandbox mode**: `ARKESEL_SANDBOX=true` (dev/staging), `false` (production)
-- **Webhook URL**: `ARKESEL_WEBHOOK_URL` — passed as `callback_url` on every send
-- **Endpoints used**: `POST /api/v2/sms/send`, `GET /api/v2/clients/balance-details`, `POST /api/v2/sms/message-reports`, `GET /api/v2/sms/{uuid}`
-- **Not available**: Sender ID management API. Registration is manual via dashboard.
-- **Note**: In practice, unregistered Sender IDs have been observed to work for Ghana traffic despite docs claiming they should fail with error `106`.
+Mock unit calculation on Send SMS — HTML showed "97 chars, 2 units"
+but real GSM-7 calc is 1 unit. Mock preserves HTML values for parity; real
+calc lives in the backend.
 
-### Paystack (payment provider)
-- **API key**: `PAYSTACK_SECRET_KEY` Worker secret (currently `sk_test_...`)
-- **Webhook**: signature-verified via HMAC-SHA512 using the secret key
-- **Events handled**: `charge.success`, `charge.failed`
-- **Settlement**: automatic — webhook credits wallet on `charge.success`. Manual verify endpoint exists as a fallback.
-- **Idempotency**: deterministic `purchase__{reference}` ledger IDs prevent double-crediting
+ProjectDetailsPage (admin) ignores URL :id — always shows GABS.
+Replace with real fetch when backend exists.
 
-### Firebase Admin (via jose + REST)
-- ID token verification: fetches Google x509 certs, caches per isolate
-- Firestore access: mints OAuth2 access token from service account private key
-- All secrets stored as Worker secrets
+Open backend issues
+Arkesel delivery receipts not firing. /webhooks/arkesel receives
+nothing. Need to confirm Arkesel's mechanism (webhook vs polling). Until
+resolved, SMS records show submitted, not delivered.
 
----
+ComingSoon.tsx (admin) — unused. Can be deleted.
 
-## 9. API surface
+Defensive redirects
+/messaging/bulk-sms → /messaging/sms (customer)
 
-### Public (no auth)
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/health` | Health check |
-| GET | `/v1/pricing` | Public pricing catalog |
-| POST | `/webhooks/arkesel` | Arkesel delivery callbacks |
-| POST | `/webhooks/paystack` | Paystack payment events |
-
-### Client API (API key auth)
-| Method | Path | Secret | Publishable |
-|---|---|---|---|
-| GET | `/v1/me` | ✓ | ✓ |
-| GET | `/v1/whoami` | ✓ | ✓ (alias) |
-| GET | `/v1/wallet` | ✓ (full) | ✓ (limited) |
-| GET | `/v1/wallet/transactions` | ✓ | ✗ |
-| GET | `/v1/sms/batches` | ✓ | ✗ |
-| GET | `/v1/sms/batches/:id` | ✓ | ✓ (own project only) |
-| POST | `/v1/sms/send` | ✓ (unrestricted) | ✓ (recipient + rate + spend restrictions) |
-| GET | `/v1/sender-ids` | ✓ | ✓ |
-
-### Admin API (Firebase Auth)
-Every route under `/admin/*` except `/admin/me` and `/admin/health` requires a role.
-Full endpoint list mirrors the dashboard's capability surface. See individual
-router files in `apps/api/src/routers/` for exact paths.
-
-### Scheduled (Cloudflare cron)
-| Expression | Job |
-|---|---|
-| `*/15 * * * *` | Reconciliation sweep — polls `unknown` SMS records against Arkesel |
-| `0 4 * * *` | Provider request log cleanup (7-day retention) |
-
----
-
-## 10. What's built (admin dashboard)
-
-All routes are live and functional.
-
-| Route | Purpose | Status |
-|---|---|---|
-| `/login` | Firebase Auth sign-in | ✓ |
-| `/dashboard` | KPIs, charts, activity, low-balance alerts, pending Sender IDs | ✓ real data |
-| `/projects` | Client list with filters, sorting, create/edit/archive | ✓ real data |
-| `/projects/:id` | Project details + Sender IDs + API keys summary | ✓ real data |
-| `/projects/:id/api-keys` | Manage secret + publishable keys | ✓ real data |
-| `/sender-ids` | Sender ID registry + approval queue | ✓ real data |
-| `/pricing` | Unit rate + package catalog editor | ✓ real data |
-| `/sms-logs` | Batch list with per-recipient details | ✓ real data |
-| `/wallets` | Wallet list, distribution, transaction history, quick actions | ✓ real data |
-| `/payments` | Payment list, initiate (walk-in flow), verify | ✓ real data |
-| `/providers` | Provider list grouped by service | ✓ real data |
-| `/providers/:id` | Provider details, balance refresh, request log | ✓ real data |
-| `/reports` | KPIs, charts, financial analytics, provider activity | ✓ real data |
-| `/send-sms` | 3-step wizard: project → compose → review | ✓ real data |
-| `/settings` | Platform settings | ⏳ still mock — deferred |
-
----
-
-## 11. What's not built
-
-### Customer platform (next major milestone)
-The self-service surface for clients. Scope to be designed:
-
-- Public signup (Firebase Auth, separate from admin)
-- Self-service dashboard (different UI from admin)
-- Package purchase flow
-- Sender ID request flow (submits for admin approval)
-- Public API documentation + client-facing SDKs/snippets
-- Support/invoicing/receipts
-
-### Deferred admin features
-- Settings page (currently mock)
-- Team / Admin management (deferred from earlier — you're the only admin)
-- Notifications system (low balance, failed payments, pending Sender IDs)
-- Global rate limits / security hardening
-- Webhook signature verification for Arkesel (they don't provide one — we rely on UUID recognition)
-- Arkesel delivery webhook verification — live test showed webhook didn't fire; deferring to real-traffic diagnosis
-
-### Infrastructure
-- Custom domain (`api.profjero.com`, `profjeroconnect.com`)
-- Staging worker (config exists, not deployed)
-- Firestore TTL policies (rate limit buckets, provider request log)
-- Automated backups
-- Error tracking (Sentry or similar)
-
----
-
-## 12. Environment variables
-
-### apps/api/.dev.vars (local dev, gitignored)
-FIREBASE_PROJECT_ID=profjero-sms-gateway
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-SMS_PROVIDER=arkesel
-ARKESEL_API_KEY=...
-ARKESEL_SANDBOX=true
-DEFAULT_SMS_PROVIDER_ID=sms_gw_01
-PAYSTACK_SECRET_KEY=sk_test_...
-
-text
-
-### Cloudflare Worker secrets (production)
-Set via `npx wrangler secret put <NAME> --env production`:
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_CLIENT_EMAIL`
-- `FIREBASE_PRIVATE_KEY`
-- `SMS_PROVIDER`
-- `ARKESEL_API_KEY`
-- `ARKESEL_SANDBOX`
-- `ARKESEL_WEBHOOK_URL`
-- `PAYSTACK_SECRET_KEY`
-- `DEFAULT_SMS_PROVIDER_ID`
-
-### apps/web/.env (gitignored)
-VITE_API_URL=https://profjero-sms-api-prod.amoakob947.workers.dev
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=profjero-sms-gateway.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=profjero-sms-gateway
-VITE_FIREBASE_APP_ID=...
-
-text
-
----
-
-## 13. Operations
-
-### Deploy the API
-```cmd
-cd apps\api
-npm run typecheck
-npx wrangler deploy --env production
-Deploy the web
-cmd
-cd apps\web
-npm run build
-npx wrangler pages deploy dist --project-name=profjeroconnect
-Watch live logs
-cmd
-cd apps\api
-npx wrangler tail --env production --format pretty
-Manually trigger reconciliation
-powershell
-Invoke-RestMethod -Uri "https://profjero-sms-api-prod.amoakob947.workers.dev/admin/sms/reconcile" `
-  -Method Post -Headers $h -ContentType "application/json" `
-  -Body (@{ olderThanMinutes = 30; limit = 200 } | ConvertTo-Json)
-Switch Arkesel sandbox mode
-cmd
-npx wrangler secret put ARKESEL_SANDBOX --env production
-# enter: true or false
-14. Known issues
-Arkesel delivery webhook never fired during live tests. SMS delivers fine; the webhook callback isn't arriving at /webhooks/arkesel. Fallback: the cron poll endpoint resolves delivery status every 15 minutes.
-
-Submitted records aren't swept by reconciliation. Reconciliation only sweeps unknown records. Submitted records that never receive delivery confirmation stay submitted indefinitely. Fix: extend the reconciliation cron to also poll stale submitted records (small follow-up).
-
-Firestore TTL not configured for apiKeyRateLimits (removed in C.19c.1) or providerRequests. Cron cleanup handles providerRequests daily; rate limits now live on the key doc.
-
-apiKeyRateLimits collection may contain orphaned docs from before C.19c.1. Safe to manually delete.
-
-Old providerSettings collection may still exist (superseded by providers). Safe to delete.
-
-features/arkesel/, components/arkesel/, mock/arkesel.ts — dead code from before the rebrand. Nothing imports them.
-
-apps/web/src/mock/* — several mock files are still on disk but not imported. Cleanup pending.
-
-Firebase Auth password resets have been frequent during development. Consider a password manager for the admin account.
-
-15. Conventions
-Code:
-
+11. Conventions
+Code
 TypeScript strict mode
 
 Functional components with hooks
@@ -466,71 +634,87 @@ Feature-based folder structure
 
 import type for type-only imports
 
-Named exports for components and pages
+Named exports for components and pages; App.tsx uses default export
+
+Prefer small, focused components over large pages
 
 Business logic in lib/ or feature hooks, not in components
 
-No any
-
-Styling:
-
+Styling
 Tailwind classes inline
 
-Brand colors used literally where needed (#1976d2, #0c1e38)
+Never arbitrary hex values where a Tailwind token exists — but brand colors
+(#1976d2, #1a6cf0, #0c1e38, #0c192c) are used literally
 
-rounded-xl for cards, rounded-lg for buttons/inputs
+Rounded: rounded-xl cards, rounded-lg buttons/inputs
 
-shadow-xs (custom, defined in Tailwind config)
+Shadows: shadow-xs
 
-Data:
+Data
+Typed props; interfaces in the same file or in mock/*.ts
 
-All components accept typed props
+No any
 
-Data never hardcoded in components
+Never hardcode data inside components — put it in mock/ files
 
-Zod schemas in packages/shared are the source of truth for both API and frontend
-
-Git:
-
+Git
 Commit after each screen or significant refactor
 
-Message style: feat:, refactor:, fix:, chore:, docs:
+Style: feat:, refactor:, fix:, chore:, docs:
 
-Icons:
+Icons
+Lucide React only — both apps
 
-Lucide React only
+If an icon is missing, swap to closest equivalent — no new libraries
 
-16. Notes for the next assistant
-Run npm run typecheck before every deploy. It catches type errors that Wrangler's build silently ignores.
+12. How to run
+From repo root:
 
-.dev.vars and .env are gitignored. Never commit them. Never paste real secrets in chat.
+cmd
+npm run dev:web        # Admin dashboard → http://localhost:5173
+npm run dev:customer   # Customer platform → http://localhost:5174
+Or cd into an app and run npm run dev:
 
-The user prefers step-by-step batches — split large deliveries into "Batch A" and "Batch B" so they can verify between steps.
+cmd
+cd apps\web && npm run dev
+cd apps\customer && npm run dev
+Backend (from apps/api):
 
-User is on Windows — use del, mkdir, dir, not bash equivalents.
+cmd
+npx wrangler dev              # local dev server
+npx wrangler deploy           # deploy
+npx wrangler deployments list --env production   # check status
+Build:
 
-User is on VS Code. Occasionally files land in the wrong folder if the explorer selection is off — dir /s /b src\*{filename}* finds duplicates.
+cmd
+npm run build --workspace=apps/web
+npm run build --workspace=apps/customer
+Environment variables: see apps/api/.dev.vars.example for the backend.
+Frontend apps don't need env vars yet — customer Firebase config will be
+added during CP1.
+
+13. Notes for the next assistant / developer
+User prefers step-by-step batches. When delivering code, split into
+"Batch A" (routing/small files) and "Batch B" (larger content) so they can
+verify between steps.
+
+User is on Windows Command Prompt. Use del, mkdir, dir /s /b,
+not bash.
+
+User uses VS Code. Occasionally files land in the wrong folder if the
+explorer selection is off — if an import fails, run
+dir /s /b src\*{filename}* to find duplicates.
 
 User is learning. Explain why a decision is made, not just what.
 
-Do not silently mock things. Label mock data clearly.
+Do not silently mock things. If something is faked, label it clearly.
 
 Do not use placeholder functionality and pretend it's production-ready.
 
-Test responsive behavior in DevTools (Ctrl+Shift+M). Windows display scaling can cause wide monitors to report narrow viewports.
+Test responsive in DevTools (Ctrl+Shift+M) with specific viewport
+widths. Windows display scaling can make wide monitors report narrow
+viewports, triggering mobile breakpoints unexpectedly.
 
-text
+Two design languages. Admin uses #1976d2 / #0c1e38 / 13px. Customer
+uses #1a6cf0 / #0c192c / 16px + dark mode. Do not mix them.
 
----
-
-## Verify checklist for C
-
-- [ ] The file at `docs/state.md` is replaced with the content above
-- [ ] No factual errors (compare against what you know of the system)
-- [ ] Nothing you consider wrong is stated as fact
-
-## Once that's saved
-
-C is done. Then we're at the natural pre-customer-platform checkpoint. When you're ready, we design the customer platform milestone — signup, self-service dashboard, purchase flow, Sender ID request flow.
-
-Also — check the tail. It should have fired by now. If you see `[cron] trigger fired` and `[cron] reconciliation: nothing to do`, **B is verified and done**.

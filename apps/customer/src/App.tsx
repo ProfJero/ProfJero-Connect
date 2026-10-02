@@ -23,6 +23,7 @@ import { ApiPage } from './features/api/ApiPage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { OrganisationProfilePage } from './features/settings/OrganisationProfilePage';
+import { CompleteSetupPage } from './features/auth/CompleteSetupPage';
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/complete-setup" element={<CompleteSetupPage />} />
 
             {/* Protected */}
             <Route element={<ProtectedRoute />}>

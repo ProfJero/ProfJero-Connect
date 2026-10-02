@@ -1,4 +1,4 @@
-import { decodeProtectedHeader, importX509, jwtVerify } from 'jose';
+import { decodeProtectedHeader, importPKCS8, importX509, jwtVerify, SignJWT } from 'jose';
 import type { Env } from '../types/env';
 
 const FIREBASE_CERT_URL =
@@ -32,10 +32,15 @@ async function getFirebaseCerts(): Promise<Record<string, string>> {
   return certs;
 }
 
+/**
+ * `customer` is the custom claim set by POST /customer/register.
+ * Absent = false. Only the customer surface reads this.
+ */
 export interface VerifiedToken {
   uid: string;
   email: string | null;
   name: string | null;
+  customer: boolean;
 }
 
 export async function verifyFirebaseIdToken(
@@ -66,5 +71,114 @@ export async function verifyFirebaseIdToken(
     uid,
     email: typeof payload.email === 'string' ? payload.email : null,
     name: typeof payload.name === 'string' ? payload.name : null,
+    customer: payload.customer === true,
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Custom claims management (Firebase Auth Admin REST API)
+// ─────────────────────────────────────────────────────────────────────
+
+interface AccessTokenCache {
+  token: string;
+  expiresAt: number;
+}
+let authAccessTokenCache: AccessTokenCache | null = null;
+
+/**
+ * Mints a Google OAuth2 access token scoped to identitytoolkit only
+ * (Firebase Auth Admin API). Deliberately separate from the datastore
+ * token cache in firestore.ts — each module only requests what it needs.
+ */
+async function getAuthAccessToken(env: Env): Promise<string> {
+  const now = Date.now();
+  if (
+    authAccessTokenCache &&
+    authAccessTokenCache.expiresAt > now + 60_000
+  ) {
+    return authAccessTokenCache.token;
+  }
+
+  const privateKeyPem = env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+  const key = await importPKCS8(privateKeyPem, 'RS256');
+
+  const nowSec = Math.floor(now / 1000);
+  const assertion = await new SignJWT({
+    scope: 'https://www.googleapis.com/auth/identitytoolkit',
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuer(env.FIREBASE_CLIENT_EMAIL)
+    .setSubject(env.FIREBASE_CLIENT_EMAIL)
+    .setAudience('https://oauth2.googleapis.com/token')
+    .setIssuedAt(nowSec)
+    .setExpirationTime(nowSec + 3600)
+    .sign(key);
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `Failed to mint Google access token (${res.status}): ${text}`,
+    );
+  }
+
+  const json = (await res.json()) as {
+    access_token: string;
+    expires_in: number;
+  };
+  authAccessTokenCache = {
+    token: json.access_token,
+    expiresAt: now + (json.expires_in - 60) * 1000,
+  };
+  return json.access_token;
+}
+
+/**
+ * Sets custom claims on a Firebase Auth user.
+ *
+ * Firebase REPLACES the entire customAttributes blob; it does not merge.
+ * Do not call on a user with claims you want to keep — merge them into
+ * `claims` first.
+ */
+export async function setCustomUserClaims(
+  env: Env,
+  uid: string,
+  claims: Record<string, unknown>,
+): Promise<void> {
+  const accessToken = await getAuthAccessToken(env);
+
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/accounts:update`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        localId: uid,
+        customAttributes: JSON.stringify(claims),
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `setCustomUserClaims failed for uid ${uid} (${res.status}): ${text}`,
+    );
+  }
+}
+
+/** Convenience wrapper — claim name lives in one place. */
+export async function setCustomerClaim(env: Env, uid: string): Promise<void> {
+  return setCustomUserClaims(env, uid, { customer: true });
 }
