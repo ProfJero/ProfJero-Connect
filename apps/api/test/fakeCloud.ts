@@ -27,6 +27,17 @@ export interface FakeCloud {
   claims: Map<string, Record<string, unknown>>;
   emails: Array<{ to: string[]; subject: string; text: string }>;
   gatewayStatus: Map<string, string>;
+  /** Firebase Auth users: email → { uid, disabled }. */
+  authUsers: Map<string, { uid: string; disabled: boolean }>;
+  /**
+   * SMS provider behaviour for SMS_PROVIDER=arkesel tests:
+   * ok | http400 | http503 | network. reports: providerMessageId → status.
+   */
+  provider: { mode: 'ok' | 'http400' | 'http503' | 'network'; reports: Map<string, string>; balance: number; sent: number };
+  /** Simulate a database outage: every Firestore call returns 503. */
+  firestoreDown: boolean;
+  /** Count of Firestore HTTP calls (for load/efficiency checks). */
+  firestoreCalls: number;
   fetch: typeof fetch;
   /** Decoded view of one document, for assertions. */
   get(path: string): Record<string, unknown> | null;
@@ -85,6 +96,9 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
   const emails: FakeCloud['emails'] = [];
   const gatewayStatus = new Map<string, string>();
   const gatewayAmounts = new Map<string, number>();
+  const authUsers = new Map<string, { uid: string; disabled: boolean }>();
+  const provider: FakeCloud['provider'] = { mode: 'ok', reports: new Map(), balance: 50_000, sent: 0 };
+  const state = { firestoreDown: false, firestoreCalls: 0 };
   let clock = 0;
   let autoId = 0;
 
@@ -251,13 +265,58 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
     if (url.href === 'https://oauth2.googleapis.com/token') {
       return json({ access_token: 'fake-access-token', expires_in: 3600 });
     }
-    if (url.hostname === 'identitytoolkit.googleapis.com' && url.pathname.endsWith('accounts:update')) {
-      const body = JSON.parse(String(init.body));
-      claims.set(body.localId, JSON.parse(body.customAttributes));
-      return json({ localId: body.localId });
+    if (url.hostname === 'identitytoolkit.googleapis.com') {
+      const body = init.body ? JSON.parse(String(init.body)) : {};
+      if (url.pathname.endsWith('accounts:update')) {
+        if (body.customAttributes) claims.set(body.localId, JSON.parse(body.customAttributes));
+        if (typeof body.disableUser === 'boolean') {
+          for (const u of authUsers.values()) if (u.uid === body.localId) u.disabled = body.disableUser;
+        }
+        return json({ localId: body.localId });
+      }
+      if (url.pathname.endsWith('accounts:lookup')) {
+        const email = String(body.email?.[0] ?? '').toLowerCase();
+        const u = authUsers.get(email);
+        return json(u ? { users: [{ localId: u.uid, email, disabled: u.disabled }] } : {});
+      }
+      if (url.pathname.endsWith('accounts:sendOobCode')) {
+        return json({ email: body.email, oobLink: `https://auth.example/reset?email=${encodeURIComponent(body.email)}&code=${++autoId}` });
+      }
+      if (url.pathname.endsWith('/accounts')) {
+        const email = String(body.email).toLowerCase();
+        if (authUsers.has(email)) return json({ error: { code: 400, message: 'EMAIL_EXISTS' } }, 400);
+        const uid = `fbuid${++autoId}`;
+        authUsers.set(email, { uid, disabled: false });
+        return json({ localId: uid, email });
+      }
     }
     if (url.hostname === 'firestore.googleapis.com') {
+      state.firestoreCalls += 1;
+      if (state.firestoreDown) return fsError(503, 'UNAVAILABLE', 'The service is currently unavailable.');
       return handleFirestore(url, init);
+    }
+    if (url.hostname === 'sms.arkesel.com') {
+      if (url.pathname.endsWith('/sms/send')) {
+        if (provider.mode === 'network') throw new TypeError('fetch failed: ECONNRESET');
+        if (provider.mode === 'http400') return json({ status: 'error', message: 'Invalid Sender Id' }, 400);
+        if (provider.mode === 'http503') return json({ status: 'error', message: 'Service Unavailable' }, 503);
+        const body = JSON.parse(String(init.body));
+        const data = (body.recipients as string[]).map((r) => ({ recipient: r, id: `prov-${++autoId}` }));
+        provider.sent += data.length;
+        return json({ status: 'success', data });
+      }
+      if (url.pathname.endsWith('/sms/message-reports')) {
+        const body = JSON.parse(String(init.body));
+        const data: Record<string, unknown> = {};
+        for (const id of body.msg_ids as string[]) {
+          const st = provider.reports.get(id);
+          if (st) data[id] = { status: st };
+        }
+        return json({ status: 'success', data });
+      }
+      if (url.pathname.endsWith('/clients/balance-details')) {
+        return json({ status: 'success', data: { sms_balance: provider.balance, main_balance: 12.5 } });
+      }
     }
     if (url.href === 'https://api.paystack.co/transaction/initialize') {
       const body = JSON.parse(String(init.body));
@@ -290,6 +349,20 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
     claims,
     emails,
     gatewayStatus,
+    authUsers,
+    provider,
+    get firestoreDown() {
+      return state.firestoreDown;
+    },
+    set firestoreDown(v: boolean) {
+      state.firestoreDown = v;
+    },
+    get firestoreCalls() {
+      return state.firestoreCalls;
+    },
+    set firestoreCalls(v: number) {
+      state.firestoreCalls = v;
+    },
     fetch: fakeFetch,
     get(path) {
       const d = docs.get(path);
