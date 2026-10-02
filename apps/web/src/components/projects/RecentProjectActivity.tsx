@@ -1,4 +1,4 @@
-import { Card, ViewAllLink } from '../ui/Card';
+import { Card } from '../ui/Card';
 import { TableScroll } from '../ui/TableScroll';
 import { cn } from '../../lib/utils';
 import { splitDateTime } from '../../lib/datetime';
@@ -40,7 +40,6 @@ export function RecentProjectActivity({ projects, onProjectClick }: Props) {
         <h4 className="font-bold text-xs text-slate-900">
           Recent Project Activity
         </h4>
-        <ViewAllLink />
       </div>
 
       {recent.length === 0 ? (

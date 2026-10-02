@@ -27,20 +27,11 @@ export function ViewAllLink({
   href,
 }: {
   label?: string;
-  href?: string;
+  href: string;
 }) {
-  const className =
-    'text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1';
-  if (href) {
-    return (
-      <Link to={href} className={className}>
-        {label} →
-      </Link>
-    );
-  }
   return (
-    <button type="button" className={className}>
+    <Link to={href} className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
       {label} →
-    </button>
+    </Link>
   );
 }

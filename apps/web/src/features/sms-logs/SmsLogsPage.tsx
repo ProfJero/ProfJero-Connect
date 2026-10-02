@@ -8,6 +8,7 @@ import {
 import { SmsLogsTable } from '../../components/sms-logs/SmsLogsTable';
 import { SmsDetailsInspector } from '../../components/sms-logs/SmsDetailsInspector';
 import { useApi } from '../../lib/useApi';
+import { downloadCsv } from '../../lib/csv';
 import type {
   SmsBatchListResponse,
   SmsBatchDetailResponse,
@@ -155,8 +156,18 @@ export function SmsLogsPage() {
         <button
           className="flex items-center justify-center gap-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold shadow-xs transition-all shrink-0"
           type="button"
-          disabled
-          title="Export not yet available"
+          disabled={filtered.length === 0}
+          title={filtered.length === 0 ? 'Nothing to export' : `Export ${filtered.length} batches (current filters) as CSV`}
+          onClick={() =>
+            downloadCsv(
+              `sms-logs-${new Date().toISOString().slice(0, 10)}.csv`,
+              ['batch_id', 'created_at', 'project', 'sender_id', 'status', 'recipients', 'submitted', 'delivered', 'failed', 'unknown', 'units_charged', 'units_released', 'message'],
+              filtered.map((b) => [
+                b.id, b.createdAt, b.projectName, b.senderId, b.status, b.totalRecipients, b.submittedCount,
+                b.deliveredCount, b.failedCount, b.unknownCount, b.totalUnitsCharged, b.totalUnitsReleased, b.message,
+              ]),
+            )
+          }
         >
           <Download className="w-4 h-4" strokeWidth={2} />
           <span>Export Logs</span>

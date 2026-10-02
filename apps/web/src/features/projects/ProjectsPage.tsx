@@ -12,6 +12,7 @@ import {
 } from '../../components/projects/ProjectsFilterBar';
 import type { RowAction } from '../../components/projects/RowActionsMenu';
 import { useApi } from '../../lib/useApi';
+import { useNewParam } from '../../lib/useNewParam';
 import { apiFetch, ApiError } from '../../lib/api';
 import type {
   Project,
@@ -32,6 +33,7 @@ export function ProjectsPage() {
     useApi<ProjectListResponse>('/admin/projects');
 
   const [formState, setFormState] = useState<FormState>({ mode: 'closed' });
+  const [newRequested, dismissNew] = useNewParam();
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
@@ -272,11 +274,15 @@ export function ProjectsPage() {
       </div>
 
       <ProjectFormModal
-        open={formState.mode !== 'closed'}
+        open={formState.mode !== 'closed' || newRequested}
         project={formState.mode === 'edit' ? formState.project : null}
-        onClose={() => setFormState({ mode: 'closed' })}
+        onClose={() => {
+          setFormState({ mode: 'closed' });
+          dismissNew();
+        }}
         onSaved={() => {
           setFormState({ mode: 'closed' });
+          dismissNew();
           reload();
         }}
       />

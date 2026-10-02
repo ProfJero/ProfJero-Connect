@@ -29,7 +29,7 @@ export function ProjectsTable({ topProjects, onProjectClick }: Props) {
         <h3 className="text-sm font-bold text-slate-900">
           Top Projects by SMS Activity
         </h3>
-        <ViewAllLink />
+        <ViewAllLink href="/projects" />
       </div>
 
       <TableScroll>

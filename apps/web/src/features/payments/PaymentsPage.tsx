@@ -13,6 +13,7 @@ import { PaymentsFilterBar } from '../../components/payments/PaymentsFilterBar';
 import { PaymentsTable } from '../../components/payments/PaymentsTable';
 import { PaymentDetailsInspector } from '../../components/payments/PaymentDetailsInspector';
 import { InitiatePaymentModal } from '../../components/payments/InitiatePaymentModal';
+import { useNewParam } from '../../lib/useNewParam';
 import { PaymentUrlModal } from '../../components/payments/PaymentUrlModal';
 import { useApi } from '../../lib/useApi';
 import type {
@@ -34,6 +35,7 @@ export function PaymentsPage() {
   const [page, setPage] = useState(1);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
   const [initiateOpen, setInitiateOpen] = useState(false);
+  const [newRequested, dismissNew] = useNewParam();
   const [urlResponse, setUrlResponse] =
     useState<InitiatePaymentResponse | null>(null);
 
@@ -214,11 +216,15 @@ export function PaymentsPage() {
       </section>
 
       <InitiatePaymentModal
-        open={initiateOpen}
+        open={initiateOpen || newRequested}
         projects={projects}
-        onClose={() => setInitiateOpen(false)}
+        onClose={() => {
+          setInitiateOpen(false);
+          dismissNew();
+        }}
         onInitiated={(resp) => {
           setInitiateOpen(false);
+          dismissNew();
           setUrlResponse(resp);
           paymentsApi.reload();
         }}

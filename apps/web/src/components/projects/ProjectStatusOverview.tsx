@@ -1,4 +1,4 @@
-import { Card, ViewAllLink } from '../ui/Card';
+import { Card } from '../ui/Card';
 import type { Project, ProjectStatus } from '@profjero/shared';
 
 const SEGMENTS: Array<{
@@ -32,7 +32,6 @@ export function ProjectStatusOverview({ projects }: Props) {
         <h4 className="font-bold text-xs text-slate-900">
           Project Status Overview
         </h4>
-        <ViewAllLink />
       </div>
 
       {total === 0 ? (

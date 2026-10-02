@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { navItems } from '../../lib/nav';
+import { useAdminData } from '../../lib/adminData';
+import { useAuth } from '../../lib/auth';
+import { timeAgo } from '../../lib/datetime';
 
 function QuickAction({
   icon: Icon,
@@ -20,7 +23,7 @@ function QuickAction({
   icon: LucideIcon;
   label: string;
   variant?: 'primary' | 'secondary';
-  to?: string;
+  to: string;
 }) {
   const className = cn(
     'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all',
@@ -36,12 +39,10 @@ function QuickAction({
     </>
   );
 
-  return to ? (
+  return (
     <Link to={to} className={className}>
       {content}
     </Link>
-  ) : (
-    <button className={className}>{content}</button>
   );
 }
 
@@ -52,6 +53,9 @@ export function Sidebar({
   open?: boolean;
   onClose?: () => void;
 }) {
+  const { user } = useAuth();
+  const canManage = user?.role === 'super_admin' || user?.role === 'admin';
+  const canBill = canManage || user?.role === 'finance';
   return (
     <>
       <div
@@ -120,35 +124,58 @@ export function Sidebar({
             </span>
             <div className="space-y-2">
               <QuickAction icon={Send} label="Send SMS" variant="primary" to="/send-sms" />
-              <QuickAction icon={Plus} label="Add Project" />
-              <QuickAction icon={CreditCard} label="Buy SMS Units" />
+              {canManage && <QuickAction icon={Plus} label="Add Project" to="/projects?new=1" />}
+              {canBill && <QuickAction icon={CreditCard} label="Create Payment Link" to="/payments?new=1" />}
             </div>
           </div>
         </div>
 
         <div className="p-4 space-y-4">
-          <div className="bg-[#122646] border border-slate-700/60 rounded-xl p-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0">
-              <Database className="w-5 h-5" />
-            </div>
-            <div className="overflow-hidden">
-              <div className="text-[11px] text-slate-400 font-medium">SMS Balance</div>
-              <div className="text-white font-bold text-sm tracking-wide">
-                12,000{' '}
-                <span className="text-[11px] font-normal text-slate-300">SMS Credits</span>
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-[10px] text-emerald-400 font-medium">Connected</span>
-              </div>
-            </div>
-          </div>
+          <ProviderBalance onNavigate={onClose} />
           <div className="px-1 text-[11px] text-slate-400 leading-snug">
-            <div>ProfJero Connect v2.0.0</div>
-            <div>© 2025 ProfJero Digital Studio</div>
+            <div>ProfJero Connect admin</div>
+            <div>© {new Date().getFullYear()} ProfJero Digital Studio</div>
           </div>
         </div>
       </aside>
     </>
+  );
+}
+/**
+ * Live SMS provider balance (credits on the upstream account), refreshed
+ * by the 15-minute cron and on demand from the provider page. The status
+ * dot reflects the provider record, not a hardcoded "Connected".
+ */
+function ProviderBalance({ onNavigate }: { onNavigate?: () => void }) {
+  const { smsProvider: p, providersLoading } = useAdminData();
+  const status =
+    !p ? { label: providersLoading ? 'Loading…' : 'Not set up', dot: 'bg-slate-500', text: 'text-slate-400' }
+    : p.status === 'active' ? { label: 'Active', dot: 'bg-emerald-500', text: 'text-emerald-400' }
+    : p.status === 'error' ? { label: 'Error', dot: 'bg-rose-500', text: 'text-rose-400' }
+    : { label: 'Inactive', dot: 'bg-amber-500', text: 'text-amber-400' };
+
+  return (
+    <Link
+      to={p ? `/providers/${p.id}` : '/providers'}
+      onClick={onNavigate}
+      className="bg-[#122646] border border-slate-700/60 rounded-xl p-3 flex items-center gap-3 hover:border-slate-500/70 transition-colors"
+      title="SMS provider balance"
+    >
+      <div className="w-9 h-9 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0">
+        <Database className="w-5 h-5" />
+      </div>
+      <div className="overflow-hidden">
+        <div className="text-[11px] text-slate-400 font-medium">SMS Provider Balance</div>
+        <div className="text-white font-bold text-sm tracking-wide">
+          {p?.credits != null ? p.credits.toLocaleString() : '—'}{' '}
+          <span className="text-[11px] font-normal text-slate-300">credits</span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className={cn('w-2 h-2 rounded-full', status.dot)} />
+          <span className={cn('text-[10px] font-medium', status.text)}>{status.label}</span>
+          {p?.balanceCheckedAt && <span className="text-[10px] text-slate-500 truncate">· {timeAgo(p.balanceCheckedAt)}</span>}
+        </div>
+      </div>
+    </Link>
   );
 }

@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import { Card, ViewAllLink } from '../ui/Card';
+import { Card } from '../ui/Card';
 import { cn } from '../../lib/utils';
 import type { WalletListEntry } from '@profjero/shared';
 
@@ -27,7 +27,6 @@ export function LowBalanceProjects({ entries, onProjectClick }: Props) {
           <AlertTriangle className="w-4 h-4 text-rose-500" strokeWidth={2} />
           <h4 className="text-xs font-bold text-slate-800">Low Balance Projects</h4>
         </div>
-        <ViewAllLink label="View all" />
       </div>
 
       {flagged.length === 0 ? (

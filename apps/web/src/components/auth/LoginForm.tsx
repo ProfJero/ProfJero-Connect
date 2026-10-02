@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { cn } from '../../lib/utils';
@@ -83,12 +83,12 @@ export function LoginForm() {
           <label htmlFor="password" className="block text-xs font-semibold text-slate-700">
             Password
           </label>
-          <a
-            href="#"
+          <Link
+            to="/forgot-password"
             className="text-[11px] font-semibold text-[#1976d2] hover:text-blue-700"
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
         <div className="relative">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
