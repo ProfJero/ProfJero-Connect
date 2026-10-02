@@ -17,7 +17,7 @@ export function SenderIdsPage() {
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const all = listApi.data?.senderIds ?? [];
+  const all = useMemo(() => listApi.data?.senderIds ?? [], [listApi.data?.senderIds]);
   const queue = queueApi.data;
 
   const filtered = useMemo(() => {

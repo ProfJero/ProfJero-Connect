@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -12,39 +12,25 @@ interface Props {
   onSaved: () => void;
 }
 
-export function EditSettingsModal({
+function EditSettingsModalForm({
   open,
   service,
   settings,
   onClose,
   onSaved,
 }: Props) {
-  const [unitPriceGhs, setUnitPriceGhs] = useState('');
-  const [minPurchaseUnits, setMinPurchaseUnits] = useState('');
-  const [maxPurchaseUnits, setMaxPurchaseUnits] = useState('');
+  const [unitPriceGhs, setUnitPriceGhs] = useState(
+    settings.unitPriceGhs !== null ? String(settings.unitPriceGhs) : '',
+  );
+  const [minPurchaseUnits, setMinPurchaseUnits] = useState(
+    settings.minPurchaseUnits !== null ? String(settings.minPurchaseUnits) : '',
+  );
+  const [maxPurchaseUnits, setMaxPurchaseUnits] = useState(
+    settings.maxPurchaseUnits !== null ? String(settings.maxPurchaseUnits) : '',
+  );
   const [active, setActive] = useState(settings.active);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setUnitPriceGhs(
-      settings.unitPriceGhs !== null ? String(settings.unitPriceGhs) : '',
-    );
-    setMinPurchaseUnits(
-      settings.minPurchaseUnits !== null
-        ? String(settings.minPurchaseUnits)
-        : '',
-    );
-    setMaxPurchaseUnits(
-      settings.maxPurchaseUnits !== null
-        ? String(settings.maxPurchaseUnits)
-        : '',
-    );
-    setActive(settings.active);
-    setError(null);
-    setSubmitting(false);
-  }, [open, settings]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -213,4 +199,12 @@ export function EditSettingsModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function EditSettingsModal(props: Props) {
+  return props.open ? <EditSettingsModalForm {...props} /> : null;
 }

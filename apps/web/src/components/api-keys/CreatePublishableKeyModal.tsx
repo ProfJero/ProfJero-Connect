@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle, AlertTriangle, Plus, X } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -23,7 +23,7 @@ const DEFAULT_FORM = {
   expiresAt: '',
 };
 
-export function CreatePublishableKeyModal({
+function CreatePublishableKeyModalForm({
   open,
   projectId,
   onClose,
@@ -50,21 +50,6 @@ export function CreatePublishableKeyModal({
   const [expiresAt, setExpiresAt] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setName(DEFAULT_FORM.name);
-    setRecipientMode(DEFAULT_FORM.recipientMode);
-    setRecipientList([]);
-    setRecipientInput('');
-    setRateLimitPerMinute(DEFAULT_FORM.rateLimitPerMinute);
-    setRateLimitPerHour(DEFAULT_FORM.rateLimitPerHour);
-    setRateLimitPerDay(DEFAULT_FORM.rateLimitPerDay);
-    setLifetimeUnitCap(DEFAULT_FORM.lifetimeUnitCap);
-    setExpiresAt('');
-    setError(null);
-    setSubmitting(false);
-  }, [open]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -405,4 +390,12 @@ function NumberField({
       </div>
     </div>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function CreatePublishableKeyModal(props: Props) {
+  return props.open ? <CreatePublishableKeyModalForm {...props} /> : null;
 }

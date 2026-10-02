@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
+import { useApi } from '../../lib/useApi';
 import { cn } from '../../lib/utils';
 import type {
   InitiatePaymentResponse,
@@ -19,51 +20,31 @@ interface Props {
 
 type PurchaseMode = 'package' | 'custom';
 
-export function InitiatePaymentModal({
+function InitiatePaymentModalForm({
   open,
   projects,
   onClose,
   onInitiated,
 }: Props) {
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(projects[0]?.id ?? '');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [mode, setMode] = useState<PurchaseMode>('package');
-  const [packageId, setPackageId] = useState('');
+  const [chosenMode, setMode] = useState<PurchaseMode>('package');
+  const [chosenPackageId, setPackageId] = useState('');
   const [units, setUnits] = useState('');
   const [amountGhs, setAmountGhs] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [packagesLoading, setPackagesLoading] = useState(false);
 
-  // Load packages once on open.
-  useEffect(() => {
-    if (!open) return;
-    setProjectId(projects[0]?.id ?? '');
-    setCustomerEmail('');
-    setMode('package');
-    setPackageId('');
-    setUnits('');
-    setAmountGhs('');
-    setError(null);
-    setSubmitting(false);
-  }, [open, projects]);
-
-  useEffect(() => {
-    if (!open || packages.length > 0 || packagesLoading) return;
-    setPackagesLoading(true);
-    apiFetch<PricingResponse>('/admin/pricing/sms')
-      .then((resp) => {
-        const active = resp.pricing.packages.filter((p) => p.active);
-        setPackages(active);
-        if (active.length > 0) setPackageId(active[0].id);
-      })
-      .catch(() => {
-        // Fall back to custom mode if packages can't be loaded.
-        setMode('custom');
-      })
-      .finally(() => setPackagesLoading(false));
-  }, [open, packages.length, packagesLoading]);
+  const pricing = useApi<PricingResponse>('/admin/pricing/sms');
+  const packages: Package[] = useMemo(
+    () => (pricing.data?.pricing.packages ?? []).filter((p) => p.active),
+    [pricing.data],
+  );
+  const packagesLoading = pricing.loading;
+  // Fall back to custom mode if packages can't be loaded; default to the
+  // first package until the operator picks one.
+  const mode: PurchaseMode = pricing.error ? 'custom' : chosenMode;
+  const packageId = chosenPackageId || packages[0]?.id || '';
 
   const handleClose = () => {
     if (submitting) return;
@@ -83,7 +64,7 @@ export function InitiatePaymentModal({
       return;
     }
 
-    let body: Record<string, unknown> = {
+    const body: Record<string, unknown> = {
       projectId,
       customerEmail: customerEmail.trim(),
     };
@@ -297,4 +278,9 @@ export function InitiatePaymentModal({
       </form>
     </Modal>
   );
+}
+
+/** Mounted only while open, so every opening starts from a fresh form. */
+export function InitiatePaymentModal(props: Props) {
+  return props.open ? <InitiatePaymentModalForm key={props.projects.length} {...props} /> : null;
 }

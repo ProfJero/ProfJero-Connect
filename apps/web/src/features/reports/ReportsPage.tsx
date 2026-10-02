@@ -69,6 +69,8 @@ function dailyLabels(days: number): string {
 
 export function ReportsPage() {
   const [period, setPeriod] = useState<PeriodKey>('30d');
+  // "Now" for the summary windows, fixed when the page opens (render must be pure).
+  const [now] = useState(() => Date.now());
   const periodDays = PERIODS.find((p) => p.key === period)?.days ?? 30;
 
   const batchesApi = useApi<SmsBatchListResponse>(
@@ -99,8 +101,8 @@ export function ReportsPage() {
     return new Map(projects.map((p) => [p.id, p.name]));
   }, [projectsApi.data]);
 
-  const allBatches = batchesApi.data?.batches ?? [];
-  const allPayments = paymentsApi.data?.payments ?? [];
+  const allBatches = useMemo(() => batchesApi.data?.batches ?? [], [batchesApi.data?.batches]);
+  const allPayments = useMemo(() => paymentsApi.data?.payments ?? [], [paymentsApi.data?.payments]);
 
   const filteredBatches = useMemo(
     () => filterByPeriod(allBatches, periodDays),
@@ -175,7 +177,6 @@ export function ReportsPage() {
       : null;
 
   // Summary
-  const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const dailySms = filteredBatches
     .filter((b) => new Date(b.createdAt).getTime() >= now - dayMs)

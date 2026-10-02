@@ -40,7 +40,10 @@ export function UnitDistribution({ entries }: Props) {
 
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  let cumulativeOffset = 0;
+  // Where each arc starts along the circle (sum of the arcs before it).
+  const starts = segments.map((_, i) =>
+    segments.slice(0, i).reduce((sum, x) => sum + (x.value / 100) * circumference, 0),
+  );
 
   return (
     <Card className="p-4" data-purpose="unit-distribution-card">
@@ -64,11 +67,10 @@ export function UnitDistribution({ entries }: Props) {
                 stroke="#e2e8f0"
                 strokeWidth="4.5"
               />
-              {segments.map((seg) => {
+              {segments.map((seg, i) => {
                 const dash = (seg.value / 100) * circumference;
                 const gap = circumference - dash;
-                const offset = -cumulativeOffset;
-                cumulativeOffset += dash;
+                const offset = -starts[i];
                 return (
                   <circle
                     key={seg.name}

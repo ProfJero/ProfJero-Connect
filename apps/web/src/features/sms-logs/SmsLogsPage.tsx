@@ -32,7 +32,7 @@ export function SmsLogsPage() {
     selectedBatchId ? `/admin/sms/batches/${selectedBatchId}` : null,
   );
 
-  const allBatches = batchesApi.data?.batches ?? [];
+  const allBatches = useMemo(() => batchesApi.data?.batches ?? [], [batchesApi.data?.batches]);
   const projects = projectsApi.data?.projects ?? [];
 
   const filtered = useMemo(() => {

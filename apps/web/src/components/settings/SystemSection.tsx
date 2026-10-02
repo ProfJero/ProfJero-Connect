@@ -61,6 +61,7 @@ export function SystemSection() {
   const { user } = useAuth();
   const { refreshAlerts } = useAdminData();
   const { data, loading, error, reload } = useApi<SystemResponse>('/admin/system');
+  const [openedAt] = useState(() => Date.now());
   const [action, setAction] = useState<{ busy: string | null; result: string | null }>({ busy: null, result: null });
   const isSuper = user?.role === 'super_admin';
 
@@ -84,7 +85,7 @@ export function SystemSection() {
   if (error || !data) return <Card className="p-6 text-xs text-rose-600">{error?.message ?? 'Unavailable'}</Card>;
 
   const recon = data.jobs.reconciliation;
-  const reconAgeMin = recon ? (Date.now() - new Date(recon.lastRunAt).getTime()) / 60000 : Infinity;
+  const reconAgeMin = recon ? Math.max(0, openedAt - new Date(recon.lastRunAt).getTime()) / 60000 : Infinity;
   const isProd = data.environment === 'production';
 
   return (

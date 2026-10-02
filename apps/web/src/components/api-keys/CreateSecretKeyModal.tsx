@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -11,7 +11,7 @@ interface Props {
   onCreated: (response: ApiKeyCreateResponse) => void;
 }
 
-export function CreateSecretKeyModal({
+function CreateSecretKeyModalForm({
   open,
   projectId,
   onClose,
@@ -20,13 +20,6 @@ export function CreateSecretKeyModal({
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setName('');
-    setError(null);
-    setSubmitting(false);
-  }, [open]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -122,4 +115,12 @@ export function CreateSecretKeyModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function CreateSecretKeyModal(props: Props) {
+  return props.open ? <CreateSecretKeyModalForm {...props} /> : null;
 }

@@ -39,8 +39,8 @@ export function PaymentsPage() {
   const [urlResponse, setUrlResponse] =
     useState<InitiatePaymentResponse | null>(null);
 
-  const projects = projectsApi.data?.projects ?? [];
-  const allPayments = paymentsApi.data?.payments ?? [];
+  const projects = useMemo(() => projectsApi.data?.projects ?? [], [projectsApi.data?.projects]);
+  const allPayments = useMemo(() => paymentsApi.data?.payments ?? [], [paymentsApi.data?.payments]);
   const projectNames = useMemo(
     () => new Map(projects.map((p) => [p.id, p.name])),
     [projects],

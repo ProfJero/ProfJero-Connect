@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -37,7 +37,7 @@ const COPY: Record<
   },
 };
 
-export function WalletActionModal({
+function WalletActionModalForm({
   open,
   mode,
   entries,
@@ -45,30 +45,17 @@ export function WalletActionModal({
   onClose,
   onSaved,
 }: Props) {
-  const [projectId, setProjectId] = useState('');
+  const preset = presetProjectId
+    ? entries.find((e) => e.project.id === presetProjectId)
+    : null;
+  const [projectId, setProjectId] = useState(presetProjectId ?? entries[0]?.project.id ?? '');
   const [units, setUnits] = useState('');
   const [description, setDescription] = useState('');
-  const [threshold, setThreshold] = useState('');
+  const [threshold, setThreshold] = useState(
+    preset?.wallet.lowBalanceThreshold != null ? String(preset.wallet.lowBalanceThreshold) : '',
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Reset on open / mode / preset change.
-  useEffect(() => {
-    if (!open) return;
-    setProjectId(presetProjectId ?? entries[0]?.project.id ?? '');
-    setUnits('');
-    setDescription('');
-    const preset = presetProjectId
-      ? entries.find((e) => e.project.id === presetProjectId)
-      : null;
-    setThreshold(
-      preset?.wallet.lowBalanceThreshold != null
-        ? String(preset.wallet.lowBalanceThreshold)
-        : '',
-    );
-    setError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, mode, presetProjectId]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -269,4 +256,12 @@ export function WalletActionModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function WalletActionModal(props: Props) {
+  return props.open ? <WalletActionModalForm key={`${props.mode}:${props.presetProjectId ?? ''}`} {...props} /> : null;
 }

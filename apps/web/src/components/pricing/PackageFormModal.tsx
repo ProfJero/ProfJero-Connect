@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -13,7 +13,7 @@ interface Props {
   onSaved: () => void;
 }
 
-export function PackageFormModal({
+function PackageFormModalForm({
   open,
   service,
   existing,
@@ -22,26 +22,14 @@ export function PackageFormModal({
 }: Props) {
   const isEdit = existing !== null;
 
-  const [name, setName] = useState('');
-  const [units, setUnits] = useState('');
-  const [priceGhs, setPriceGhs] = useState('');
-  const [description, setDescription] = useState('');
-  const [active, setActive] = useState(true);
-  const [displayOrder, setDisplayOrder] = useState('0');
+  const [name, setName] = useState(existing?.name ?? '');
+  const [units, setUnits] = useState(existing ? String(existing.units) : '');
+  const [priceGhs, setPriceGhs] = useState(existing ? String(existing.priceGhs) : '');
+  const [description, setDescription] = useState(existing?.description ?? '');
+  const [active, setActive] = useState(existing?.active ?? true);
+  const [displayOrder, setDisplayOrder] = useState(existing ? String(existing.displayOrder) : '0');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setName(existing?.name ?? '');
-    setUnits(existing ? String(existing.units) : '');
-    setPriceGhs(existing ? String(existing.priceGhs) : '');
-    setDescription(existing?.description ?? '');
-    setActive(existing?.active ?? true);
-    setDisplayOrder(existing ? String(existing.displayOrder) : '0');
-    setError(null);
-    setSubmitting(false);
-  }, [open, existing]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -251,4 +239,12 @@ export function PackageFormModal({
       </form>
     </Modal>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function PackageFormModal(props: Props) {
+  return props.open ? <PackageFormModalForm key={props.existing?.id ?? 'new'} {...props} /> : null;
 }

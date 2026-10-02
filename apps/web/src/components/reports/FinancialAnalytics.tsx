@@ -1,7 +1,6 @@
 import { DollarSign } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { cn } from '../../lib/utils';
-import { formatGhs } from '../../lib/reportAggregation';
 
 export interface FinancialCard {
   label: string;
@@ -49,5 +48,3 @@ export function FinancialAnalytics({ cards }: Props) {
     </Card>
   );
 }
-
-export { formatGhs };

@@ -41,7 +41,7 @@ export function ProjectsPage() {
   const [sort, setSort] = useState<SortOption>('name-asc');
   const [page, setPage] = useState(1);
 
-  const projects = data?.projects ?? [];
+  const projects = useMemo(() => data?.projects ?? [], [data?.projects]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();

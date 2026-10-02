@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { apiFetch, ApiError } from '../../lib/api';
@@ -12,30 +12,16 @@ interface Props {
   onSaved: (projectId: string) => void;
 }
 
-export function ProjectFormModal({ open, project, onClose, onSaved }: Props) {
+function ProjectFormModalForm({ open, project, onClose, onSaved }: Props) {
   const isEdit = !!project;
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
+  const [name, setName] = useState(project?.name ?? '');
+  const [description, setDescription] = useState(project?.description ?? '');
+  const [contactEmail, setContactEmail] = useState(project?.contactEmail ?? '');
+  const [contactPhone, setContactPhone] = useState(project?.contactPhone ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  // Sync form state whenever the modal opens or targets a different project.
-  // Using project?.id (not the whole object) as a dep so parent re-renders
-  // that pass a new object reference don't blow away in-progress edits.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!open) return;
-    setName(project?.name ?? '');
-    setDescription(project?.description ?? '');
-    setContactEmail(project?.contactEmail ?? '');
-    setContactPhone(project?.contactPhone ?? '');
-    setError(null);
-    setFieldErrors({});
-  }, [open, project?.id]);
 
   const handleClose = () => {
     if (submitting) return;
@@ -244,4 +230,12 @@ function Field({
       {error && <p className="mt-1 text-[11px] text-rose-600">{error}</p>}
     </div>
   );
+}
+
+/**
+ * Mounted only while open, so every opening starts from a fresh form
+ * (no state-reset effect needed).
+ */
+export function ProjectFormModal(props: Props) {
+  return props.open ? <ProjectFormModalForm key={props.project?.id ?? 'new'} {...props} /> : null;
 }
