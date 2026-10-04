@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { RouteTitle } from './components/RouteTitle';
+import { DevelopersPage } from './features/developers/DevelopersPage';
 import { AuthProvider } from './lib/auth';
 import { ThemeProvider } from './lib/theme';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -37,6 +38,7 @@ export default function App() {
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/developers" element={<DevelopersPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/complete-setup" element={<CompleteSetupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
