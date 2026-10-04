@@ -488,6 +488,85 @@ await step('publishable keys can’t create payments or schedules', async () => 
   );
 });
 
+// =====================================================================
+section('Monitoring');
+// =====================================================================
+
+const rootTok = await h.token('root', 'root@ops.example');
+
+await step('every request is counted by route, status and latency', async () => {
+  for (let i = 0; i < 5; i++) await call('GET', '/customer/wallet', { token: ama.token });
+  const m = await call('GET', '/admin/monitoring?range=1h', { token: rootTok });
+  assert.equal(m.status, 200, JSON.stringify(m.body).slice(0, 200));
+  assert.ok(m.body.totals.requests >= 5, `requests ${m.body.totals.requests}`);
+  assert.ok(m.body.routes.some((r: { route: string }) => r.route === 'customer/wallet'));
+  assert.ok(m.body.totals.p95Ms !== null);
+  assert.equal(m.body.series.length, 60);
+  assert.ok(m.body.sms.sent > 0, 'SMS delivery counted');
+  assert.ok(m.body.sms.providerCalls > 0);
+});
+
+await step('bad API keys and failed sign-ins are recorded as security events with the IP', async () => {
+  for (let i = 0; i < 3; i++) {
+    await call('GET', '/v1/balance', { token: 'pk_live_000000000000000000_garbage', headers: { 'CF-Connecting-IP': '198.51.100.7' } });
+  }
+  await call('GET', '/customer/me', { token: 'not.a.token', headers: { 'CF-Connecting-IP': '198.51.100.7' } });
+  const m = await call('GET', '/admin/monitoring?range=1h', { token: rootTok });
+  assert.ok(m.body.security.byType.bad_api_key >= 3, JSON.stringify(m.body.security));
+  assert.ok(m.body.security.byType.auth_failed >= 1);
+  assert.ok(m.body.security.topIps.some((x: { ip: string; events: number }) => x.ip === '198.51.100.7' && x.events >= 4));
+  assert.ok(m.body.events.security.some((e: { type: string; ip: string }) => e.type === 'bad_api_key' && e.ip === '198.51.100.7'));
+});
+
+await step('server errors are captured with their request ID', async () => {
+  cloud.put('admins/broken', { email: 'broken@ops.example', role: 'not-a-role', status: 'active', createdAt: new Date().toISOString() });
+  const r = await call('GET', '/admin/me', { token: await h.token('broken', 'broken@ops.example') });
+  assert.equal(r.status, 500);
+  const m = await call('GET', '/admin/monitoring?range=1h', { token: rootTok });
+  assert.ok(m.body.totals.errors5xx >= 1);
+  const ev = m.body.events.errors.find((e: { requestId: string }) => e.requestId === r.body.error.requestId);
+  assert.ok(ev, 'the error event carries the same request ID the user saw');
+  assert.ok(m.body.routes.find((x: { route: string; errors: number }) => x.route === 'admin/me')!.errors >= 1);
+});
+
+await step('browser crashes reported by the apps show up (validated, rate-limited)', async () => {
+  const ok = await call('POST', '/monitor/client-error', { body: { app: 'customer', message: 'TypeError: x is undefined', url: '/wallet', stack: 'at Wallet (wallet.tsx:10)' } });
+  assert.equal(ok.status, 202);
+  assert.equal((await call('POST', '/monitor/client-error', { body: { app: 'hacker', message: 'x' } })).status, 400);
+  assert.equal((await call('POST', '/monitor/client-error', { raw: 'x'.repeat(9000) })).status, 413);
+  const m = await call('GET', '/admin/monitoring?range=1h', { token: rootTok });
+  assert.ok(m.body.totals.clientErrors >= 1);
+  assert.ok(m.body.events.client.some((e: { message: string }) => e.message.includes('x is undefined')));
+  const statuses: number[] = [];
+  for (let i = 0; i < 35; i++) statuses.push((await call('POST', '/monitor/client-error', { body: { app: 'admin', message: 'spam' }, headers: { 'CF-Connecting-IP': '203.0.113.50' } })).status);
+  assert.ok(statuses.includes(429), 'reports are rate-limited per IP');
+});
+
+await step('monitoring is for admins only', async () => {
+  const viewer = await h.seedAdmin('mon_viewer', 'viewer');
+  assert.equal((await call('GET', '/admin/monitoring', { token: viewer })).status, 403);
+  assert.equal((await call('GET', '/admin/monitoring', { token: ama.token })).status, 403);
+});
+
+await step('an error spike raises a bell alert and emails operators once', async () => {
+  await call('PUT', '/admin/settings/notifications', {
+    token: rootTok,
+    body: { adminAlertEmails: ['ops@example.com'], emailOnSenderIdRequest: false, emailOnNewCustomer: false, emailOnPaymentReceived: false, emailOnProviderLowBalance: false, emailOnIncidents: true, providerLowBalanceCredits: null },
+  });
+  h.reset();
+  const { minuteKey } = await import('../src/lib/monitor');
+  const key = minuteKey(new Date());
+  cloud.put(`metricsMinute/${key}`, { ...(cloud.get(`metricsMinute/${key}`) ?? {}), req: 100, e5: 30 });
+  const alerts = await call('GET', '/admin/alerts', { token: rootTok });
+  assert.ok(alerts.body.alerts.some((a: { type: string }) => a.type === 'error_spike'), JSON.stringify(alerts.body.alerts.map((a: { type: string }) => a.type)));
+  const { checkIncidents } = await import('../src/services/monitoring');
+  const before = cloud.emails.length;
+  await checkIncidents(h.env);
+  await checkIncidents(h.env);
+  const sent = cloud.emails.slice(before).filter((e) => e.subject.includes('Server errors'));
+  assert.equal(sent.length, 1, 'once per hour, not every check');
+});
+
 await step('everything above left every wallet consistent with its ledger', async () => {
   assertIntegrity();
 });

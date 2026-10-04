@@ -2,6 +2,8 @@ import { reconcileUnknownRecords } from './reconciliation';
 import { recordJobRun } from './systemStatus';
 import { refreshProviderBalances } from './providerBalance';
 import { resumeStalledBatches } from './sms';
+import { flushMetrics } from '../lib/monitor';
+import { checkIncidents } from './monitoring';
 import { dispatchDueCampaigns } from './campaigns';
 import type { Env } from '../types/env';
 
@@ -21,12 +23,15 @@ export async function handleScheduled(
 
   if (cron === '* * * * *') {
     await runDispatcher(env);
+    await flushMetrics(env);
     return;
   }
 
   if (cron === '*/15 * * * *') {
     await runReconciliation(env);
     await runBalanceRefresh(env);
+    await checkIncidents(env);
+    await flushMetrics(env);
     return;
   }
 

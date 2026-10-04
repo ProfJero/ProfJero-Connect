@@ -14,6 +14,7 @@ import { getSegmentInfo } from '@profjero/shared';
 import { DomainError } from '../lib/domainError';
 import { firestoreBatchWrite, firestoreGetDoc, runTransaction, type FirestoreWrite } from '../lib/firestore';
 import { notifyProject } from './notifications';
+import { count, flushMetrics } from '../lib/monitor';
 import type { SendResult } from '../providers/sms';
 import type { Env } from '../types/env';
 import type { SmsBatch, SmsBatchStatus, SmsRecord } from '@profjero/shared';
@@ -263,18 +264,22 @@ export async function deliverBatch(env: Env, batchId: string, actor: string): Pr
     const byText = new Map<string, string[]>();
     for (const r of chunk) byText.set(r.message, [...(byText.get(r.message) ?? []), r.recipient]);
     for (const [text, recipients] of byText) {
+      const t0 = Date.now();
       try {
         const res = await provider.send({ recipients, message: text, senderId: batch.senderId });
         for (const o of res.results) outcomes.set(o.recipient, o);
+        count({ prov_calls: 1, prov_ms: Date.now() - t0 });
       } catch (err) {
         // We don't know which of these went out: unknown, units held.
         catastrophic = err instanceof Error ? err.message : 'Provider error';
+        count({ prov_calls: 1, prov_ms: Date.now() - t0, prov_err: 1 });
       }
     }
     await settleChunk(env, batch, chunk, outcomes, actor, catastrophic ?? 'No provider response for recipient', chunkNo);
   }
 
   records = await listRecordsForBatch(env, batchId);
+  await flushMetrics(env);
   if (records.some((r) => r.status === 'queued' || r.status === 'submitting')) return;
   await finalizeBatch(env, batch, records);
 }
@@ -297,6 +302,7 @@ async function settleChunk(
   const now = new Date().toISOString();
   let confirm = 0;
   let release = 0;
+  const tally = { sms_submitted: 0, sms_failed: 0, sms_unknown: 0 };
   const writes: FirestoreWrite[] = [];
   for (const r of chunk) {
     const o = outcomes.get(r.recipient);
@@ -304,11 +310,14 @@ async function settleChunk(
     if (o?.status === 'submitted') {
       confirm += r.unitsPerMessage;
       fields = { status: 'submitted', unitsCharged: r.unitsPerMessage, providerMessageId: o.providerMessageId, providerError: null };
+      tally.sms_submitted += 1;
     } else if (o?.status === 'failed') {
       release += r.unitsPerMessage;
       fields = { status: 'failed', unitsReleased: r.unitsPerMessage, providerError: o.error ?? 'Provider failure' };
+      tally.sms_failed += 1;
     } else {
       fields = { status: 'unknown', providerMessageId: o?.providerMessageId ?? null, providerError: o?.error ?? missingReason };
+      tally.sms_unknown += 1;
     }
     fields.updatedAt = now;
     writes.push({
@@ -318,6 +327,7 @@ async function settleChunk(
       precondition: { exists: true },
     });
   }
+  count(tally);
   // Records already settled by a concurrent attempt must not be settled
   // again: the deterministic ledger IDs (first record id in the chunk)
   // make the second commit abort.

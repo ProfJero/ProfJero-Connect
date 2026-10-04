@@ -213,9 +213,33 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
         const update = w.update as { name: string; fields: FsFields };
         const path = update.name.replace(`${root}/`, '');
         const mask = (w.updateMask as { fieldPaths?: string[] } | undefined)?.fieldPaths;
+        const transforms = (w.updateTransforms as Array<{ fieldPath: string; increment?: FsValue }> | undefined) ?? [];
+        if (transforms.length > 0) {
+          // Masked fields first, then server-side increments (doc created if missing).
+          const cur = docs.get(path);
+          const fields: FsFields = { ...(cur?.fields ?? {}) };
+          for (const k of mask ?? []) if (update.fields?.[k]) fields[k] = update.fields[k];
+          for (const t of transforms) {
+            const prev = fields[t.fieldPath] ? Number(decodeValue(fields[t.fieldPath])) : 0;
+            fields[t.fieldPath] = encodeValue(prev + Number(decodeValue(t.increment!)));
+          }
+          write(path, fields);
+          continue;
+        }
         write(path, update.fields ?? {}, mask);
       }
       return json({ commitTime: now() });
+    }
+
+    if (url.pathname.endsWith(':batchGet')) {
+      const names: string[] = body.documents ?? [];
+      return json(
+        names.map((n) => {
+          const path = n.replace(`${root}/`, '');
+          const d = docs.get(path);
+          return d ? { found: toFs(path, d) } : { missing: n, readTime: now() };
+        }),
+      );
     }
 
     const parts = rest.split('/');
