@@ -253,6 +253,10 @@ await step('personalised send: each recipient gets their own text, billed by its
   const charged = before - Number(walletOf(ama.pid).availableUnits);
   assert.equal(charged, pv.body.units, 'preview units = units charged');
   assert.equal(cloud.get(`smsBatches/${r.body.batch.id}`)!.personalized, true);
+  await drainBackground();
+  const done = cloud.get(`smsBatches/${r.body.batch.id}`)!;
+  // Esi's number ends in 01, which the test provider reports as "unknown".
+  assert.deepEqual([done.status, done.submittedCount, done.unknownCount], ['partial', 2, 1]);
   assertIntegrity();
 });
 

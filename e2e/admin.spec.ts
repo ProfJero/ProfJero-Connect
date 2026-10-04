@@ -1,4 +1,4 @@
-import { test, expect, adminLogin, adminApi, customerSignup, ADMIN_URL, CUSTOMER_URL, VIEWER } from './fixtures';
+import { test, expect, adminLogin, adminApi, customerSignup, API, ADMIN_URL, CUSTOMER_URL, VIEWER } from './fixtures';
 
 const NAV = ['Dashboard', 'Projects / Clients', 'Sender IDs', 'Pricing', 'SMS Logs', 'Wallets & Units', 'Payments', 'Providers', 'Reports', 'Settings'];
 
@@ -137,4 +137,32 @@ test.describe('admin dashboard', () => {
     await page.getByRole('menuitem', { name: /sign out/i }).click();
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test('monitoring shows live health, traffic and security events', async ({ page }) => {
+    // Some traffic, including a blocked request.
+    await fetch(`${API}/v1/balance`, { headers: { Authorization: 'Bearer pk_live_000000000000000000_bad' } });
+    await adminLogin(page);
+    await page.getByRole('navigation', { name: 'Sidebar Navigation' }).getByRole('link', { name: 'Monitoring' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Monitoring' })).toBeVisible();
+    await expect(page.getByText('Requests', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Server error rate')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'System health' })).toBeVisible();
+    await page.getByRole('tab', { name: /Security events/ }).click();
+    await expect(page.getByText('Invalid API keys').first()).toBeVisible();
+    await page.getByRole('button', { name: '24 hours' }).click();
+    await expect(page.getByRole('button', { name: '24 hours' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('monitoring is hidden from viewers', async ({ page }) => {
+    await adminLogin(page, VIEWER);
+    await expect(page.getByRole('navigation', { name: 'Sidebar Navigation' }).getByRole('link', { name: 'Monitoring' })).toHaveCount(0);
+  });
+
+  test('the real logo and favicon are used', async ({ page }) => {
+    await page.goto(`${ADMIN_URL}/login`);
+    await expect(page.locator('img[src="/logo-tile.webp"]').first()).toBeVisible();
+    await expect(page.locator('link[rel="icon"][href="/favicon.ico"]')).toHaveCount(1);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+  });
 });
+

@@ -10,7 +10,8 @@ function siteUrl(mode: string): Plugin {
   const url = (env.VITE_SITE_URL || 'https://profjeroconnect.pages.dev').replace(/\/+$/, '')
   return {
     name: 'site-url',
-    transformIndexHtml: (html) => html.replaceAll('__SITE_URL__', url),
+    // 'pre' so the URL is absolute before Vite rewrites asset paths in dev.
+    transformIndexHtml: { order: 'pre', handler: (html) => html.replaceAll('__SITE_URL__', url) },
   }
 }
 

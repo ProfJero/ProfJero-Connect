@@ -65,6 +65,7 @@ export function SettingsPage() {
                 key={t.id}
                 type="button"
                 aria-current={on ? 'page' : undefined}
+                title={t.description}
                 onClick={() => select(t.id)}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition whitespace-nowrap lg:w-full',
@@ -80,11 +81,8 @@ export function SettingsPage() {
           })}
         </nav>
 
-        <section id="settings-panel" aria-labelledby="settings-panel-title" className="flex-1 w-full min-w-0 space-y-4 scroll-mt-20">
-          <div>
-            <h2 id="settings-panel-title" className="text-base font-bold text-slate-900 dark:text-slate-100">{active.label}</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{active.description}</p>
-          </div>
+        {/* Each card carries its own heading, so the panel only needs a label. */}
+        <section id="settings-panel" aria-label={active.label} className="flex-1 w-full min-w-0 space-y-4 scroll-mt-20">
           {/* key: each visit to a tab starts fresh */}
           <div key={tab} className="max-w-3xl">
             {tab === 'profile' && <ProfileCard />}

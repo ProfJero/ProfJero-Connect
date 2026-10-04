@@ -86,7 +86,7 @@ export function CustomerSidebar({
               </a>
             ) : (
               <Link
-                to="/api"
+                to="/developers"
                 onClick={onClose}
                 className="mt-3 w-full py-1.5 px-3 bg-slate-800/80 hover:bg-slate-700/80 text-white rounded-lg border border-slate-700 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors"
               >
