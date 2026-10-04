@@ -33,7 +33,7 @@ export interface FakeCloud {
    * SMS provider behaviour for SMS_PROVIDER=arkesel tests:
    * ok | http400 | http503 | network. reports: providerMessageId → status.
    */
-  provider: { mode: 'ok' | 'http400' | 'http503' | 'network'; reports: Map<string, string>; balance: number; sent: number };
+  provider: { mode: 'ok' | 'http400' | 'http503' | 'network'; reports: Map<string, string>; balance: number; sent: number; calls: number; delayMs: number };
   /** Simulate a database outage: every Firestore call returns 503. */
   firestoreDown: boolean;
   /** Count of Firestore HTTP calls (for load/efficiency checks). */
@@ -97,7 +97,7 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
   const gatewayStatus = new Map<string, string>();
   const gatewayAmounts = new Map<string, number>();
   const authUsers = new Map<string, { uid: string; disabled: boolean }>();
-  const provider: FakeCloud['provider'] = { mode: 'ok', reports: new Map(), balance: 50_000, sent: 0 };
+  const provider: FakeCloud['provider'] = { mode: 'ok', reports: new Map(), balance: 50_000, sent: 0, calls: 0, delayMs: 0 };
   const state = { firestoreDown: false, firestoreCalls: 0 };
   let clock = 0;
   let autoId = 0;
@@ -297,6 +297,8 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
     }
     if (url.hostname === 'sms.arkesel.com') {
       if (url.pathname.endsWith('/sms/send')) {
+        provider.calls += 1;
+        if (provider.delayMs) await new Promise((r) => setTimeout(r, provider.delayMs));
         if (provider.mode === 'network') throw new TypeError('fetch failed: ECONNRESET');
         if (provider.mode === 'http400') return json({ status: 'error', message: 'Invalid Sender Id' }, 400);
         if (provider.mode === 'http503') return json({ status: 'error', message: 'Service Unavailable' }, 503);

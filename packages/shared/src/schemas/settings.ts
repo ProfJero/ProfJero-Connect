@@ -28,7 +28,7 @@ export const SmsSettingsSchema = z.object({
   /** Low-balance alert level given to new customer wallets. null = off. */
   defaultLowBalanceThreshold: z.number().int().min(1).max(10_000_000).nullable(),
   /** Hard cap on unique recipients per customer send. */
-  maxRecipientsPerSend: z.number().int().min(1).max(1000),
+  maxRecipientsPerSend: z.number().int().min(1).max(10000),
   /** Shown to customers when they request a Sender ID. */
   senderIdReviewSla: z.string().trim().min(1).max(80),
 });

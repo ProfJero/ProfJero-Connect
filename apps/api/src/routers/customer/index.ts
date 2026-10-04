@@ -13,6 +13,7 @@ import { customerContactsRouter } from './contacts';
 import { customerApiKeysRouter } from './apiKeys';
 import { customerNotificationsRouter } from './notifications';
 import { customerConfigRouter } from './config';
+import { customerCampaignsRouter } from './campaigns';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -46,5 +47,6 @@ router.route('/', customerContactsRouter);
 router.route('/', customerApiKeysRouter);
 router.route('/', customerNotificationsRouter);
 router.route('/', customerConfigRouter);
+router.route('/', customerCampaignsRouter);
 
 export { router as customerRouter };

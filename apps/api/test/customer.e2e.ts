@@ -64,7 +64,8 @@ async function idToken(uid: string, email: string): Promise<string> {
     .sign(signingKey);
 }
 
-const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as ExecutionContext;
+const pendingWork: Promise<unknown>[] = [];
+const ctx = { waitUntil(p: Promise<unknown>) { pendingWork.push(p); }, passThroughOnException() {} } as unknown as ExecutionContext;
 
 interface Res<T = Record<string, any>> {
   status: number;
@@ -84,6 +85,8 @@ async function call<T = Record<string, any>>(
     body: opts.raw ?? (opts.body === undefined ? undefined : JSON.stringify(opts.body)),
   });
   const res = await worker.fetch(req as never, env, ctx);
+  // Let background work (SMS delivery) finish, as it would on Workers.
+  while (pendingWork.length > 0) await Promise.allSettled(pendingWork.splice(0));
   const text = await res.text();
   return { status: res.status, body: text ? JSON.parse(text) : null };
 }
@@ -359,10 +362,13 @@ await step('send merges numbers + group, dedupes, charges only accepted', async 
   batchId = r.body.batch.id;
   // 0201234567 is both typed and in the group → 4 unique recipients.
   assert.equal(r.body.batch.totalRecipients, 4);
-  assert.equal(r.body.batch.failedCount, 1);
-  assert.equal(r.body.batch.submittedCount, 3);
-  assert.equal(r.body.batch.status, 'partial');
+  // The send is accepted immediately; delivery happens in the background.
+  assert.equal(r.body.batch.status, 'submitting');
   assert.equal(r.body.batch.source, 'dashboard');
+  const done = (await call('GET', `/customer/sms/batches/${batchId}`, { token })).body;
+  assert.equal(done.batch.failedCount, 1);
+  assert.equal(done.batch.submittedCount, 3);
+  assert.equal(done.batch.status, 'partial');
   assert.doesNotMatch(JSON.stringify(r.body), /providerMessageId|apiKeyId/);
   const after = (await call('GET', '/customer/wallet', { token })).body;
   assert.equal(after.availableUnits, before - 3);

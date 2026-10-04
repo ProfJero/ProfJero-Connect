@@ -1,8 +1,10 @@
 import {
+  firestoreBatchWrite,
   firestoreCreateDoc,
   firestoreGetDoc,
   firestoreQuery,
   firestoreUpdateDoc,
+  type BatchWrite,
   type FirestoreDoc,
 } from '../lib/firestore';
 import type { Env } from '../types/env';
@@ -38,6 +40,8 @@ function parseBatch(id: string, d: Record<string, unknown>): SmsBatch {
     unknownCount: Number(d.unknownCount ?? 0),
     deliveredCount: Number(d.deliveredCount ?? 0),
     idempotencyKey: (d.idempotencyKey as string | null) ?? null,
+    personalized: d.personalized === true,
+    campaignId: (d.campaignId as string | null) ?? null,
     createdAt: String(d.createdAt),
     updatedAt: String(d.updatedAt),
     completedAt: (d.completedAt as string | null) ?? null,
@@ -82,32 +86,46 @@ export async function listRecordsForBatch(
   return docs.map((d) => parseRecord(d.id, d.data));
 }
 
+export interface BatchItem {
+  recipient: string;
+  /** This recipient's final text (personalised or the shared message). */
+  message: string;
+  unitsPerMessage: number;
+}
+
 export interface CreateBatchArgs {
   batchId: string;
   projectId: string;
   apiKeyId: string | null;
   senderId: string | null;
+  /** The message as written (a template when personalised). */
   message: string;
   messageEncoding: 'GSM-7' | 'UCS-2';
   messageSegments: number;
-  recipients: string[];
-  unitsPerMessage: number;
+  items: BatchItem[];
   idempotencyKey: string | null;
+  personalized: boolean;
+  campaignId: string | null;
 }
 
+export const recordIdFor = (batchId: string, index: number) => `${batchId}__r${index}`;
+
 /**
- * Create the batch document plus one record per recipient, then update the
- * batch counts. Uses deterministic record IDs so retries don't duplicate.
+ * Create the batch document (status "queued"), then all its records in
+ * bulk commits of up to 500 writes. Creating the batch first makes it the
+ * idempotency gate: a concurrent duplicate fails with ALREADY_EXISTS before
+ * writing any records. Record IDs are deterministic, so a retry rewrites
+ * the same documents rather than duplicating them.
  *
- * Note: does NOT reserve wallet units — that happens in the service, after
- * the docs are in place, inside a single transaction.
+ * Does NOT reserve wallet units — the service does that next, in one
+ * transaction that also moves the batch to "submitting".
  */
 export async function createBatchWithRecords(
   env: Env,
   args: CreateBatchArgs,
 ): Promise<{ batch: SmsBatch; records: SmsRecord[] }> {
   const now = new Date().toISOString();
-  const totalUnits = args.recipients.length * args.unitsPerMessage;
+  const totalUnits = args.items.reduce((s, i) => s + i.unitsPerMessage, 0);
 
   const batchDoc = await firestoreCreateDoc(
     env,
@@ -120,7 +138,7 @@ export async function createBatchWithRecords(
       messageEncoding: args.messageEncoding,
       messageSegments: args.messageSegments,
       status: 'queued',
-      totalRecipients: args.recipients.length,
+      totalRecipients: args.items.length,
       totalUnitsReserved: totalUnits,
       totalUnitsCharged: 0,
       totalUnitsReleased: 0,
@@ -129,6 +147,9 @@ export async function createBatchWithRecords(
       unknownCount: 0,
       deliveredCount: 0,
       idempotencyKey: args.idempotencyKey,
+      personalized: args.personalized,
+      campaignId: args.campaignId,
+      leaseUntil: null,
       createdAt: now,
       updatedAt: now,
       completedAt: null,
@@ -137,33 +158,35 @@ export async function createBatchWithRecords(
   );
 
   const records: SmsRecord[] = [];
-  for (let i = 0; i < args.recipients.length; i++) {
-    const recordId = `${args.batchId}__r${i}`;
-    const doc = await firestoreCreateDoc(
-      env,
-      RECORDS,
-      {
-        batchId: args.batchId,
-        projectId: args.projectId,
-        recipient: args.recipients[i],
-        message: args.message,
-        senderId: args.senderId,
-        unitsPerMessage: args.unitsPerMessage,
-        status: 'queued',
-        unitsReserved: args.unitsPerMessage,
-        unitsCharged: 0,
-        unitsReleased: 0,
-        providerMessageId: null,
-        providerError: null,
-        createdAt: now,
-        updatedAt: now,
-      },
-      { docId: recordId },
-    );
-    records.push(parseRecord(doc.id, doc.data));
-  }
+  const writes: BatchWrite[] = args.items.map((item, i) => {
+    const fields = {
+      batchId: args.batchId,
+      projectId: args.projectId,
+      recipient: item.recipient,
+      message: item.message,
+      senderId: args.senderId,
+      unitsPerMessage: item.unitsPerMessage,
+      status: 'queued',
+      unitsReserved: item.unitsPerMessage,
+      unitsCharged: 0,
+      unitsReleased: 0,
+      providerMessageId: null,
+      providerError: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    records.push(parseRecord(recordIdFor(args.batchId, i), fields));
+    return { path: `${RECORDS}/${recordIdFor(args.batchId, i)}`, fields };
+  });
+  await firestoreBatchWrite(env, writes);
 
   return { batch: parseBatch(batchDoc.id, batchDoc.data), records };
+}
+
+/** Batches still being delivered (for the background resume job). */
+export async function listSubmittingBatches(env: Env): Promise<Array<SmsBatch & { leaseUntil: string | null }>> {
+  const docs = await firestoreQuery(env, BATCHES, [{ field: 'status', op: 'EQUAL', value: 'submitting' }]);
+  return docs.map((d) => ({ ...parseBatch(d.id, d.data), leaseUntil: (d.data.leaseUntil as string | null) ?? null }));
 }
 
 export async function updateBatch(

@@ -130,8 +130,8 @@ export function SmsSection(props: SectionProps<SmsSettings>) {
         <Field label="Default low-balance alert (units)" htmlFor="s-thresh" hint="Given to new customer wallets. Leave empty for no default alert.">
           <NumberInput id="s-thresh" nullable min={1} disabled={ro} value={v.defaultLowBalanceThreshold} onChange={(n) => draft.set('defaultLowBalanceThreshold', n)} placeholder="Off" />
         </Field>
-        <Field label="Max recipients per customer send" htmlFor="s-max" hint="Between 1 and 1,000. Larger lists are rejected before any units are reserved.">
-          <NumberInput id="s-max" min={1} max={1000} disabled={ro} value={v.maxRecipientsPerSend} onChange={(n) => draft.set('maxRecipientsPerSend', n ?? 1)} />
+        <Field label="Max recipients per customer send" htmlFor="s-max" hint="Between 1 and 10,000. Larger lists are rejected before any units are reserved. Big sends are delivered in the background.">
+          <NumberInput id="s-max" min={1} max={10000} disabled={ro} value={v.maxRecipientsPerSend} onChange={(n) => draft.set('maxRecipientsPerSend', n ?? 1)} />
         </Field>
         <Field label="Sender ID review time (shown to customers)" htmlFor="s-sla" hint={<>Completes the sentence “usually takes <em>…</em>”.</>}>
           <input id="s-sla" required maxLength={80} disabled={ro} value={v.senderIdReviewSla} onChange={(e) => draft.set('senderIdReviewSla', e.target.value)} className={inputCls} />

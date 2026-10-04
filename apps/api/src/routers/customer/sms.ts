@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { z } from 'zod';
 import {
   CustomerSendSmsRequestSchema,
+  getSegmentInfo,
   type SmsBatch,
   type SmsRecord,
 } from '@profjero/shared';
-import { normalizePhone, isValidNormalizedPhone } from '../../lib/phone';
 import { scrubProviderNames } from '../../lib/scrub';
 import { DomainError } from '../../lib/domainError';
 import {
@@ -14,7 +15,7 @@ import {
   listRecordsForBatch,
 } from '../../repositories/sms';
 import { sendSmsBatch } from '../../services/sms';
-import { resolveContactPhones } from '../../services/contacts';
+import { composeSend } from '../../services/compose';
 import {
   paginateByCreatedAt,
   parseBody,
@@ -110,40 +111,13 @@ router.post('/sms/send', async (c) => {
   const MAX_RECIPIENTS = settings.sms.maxRecipientsPerSend;
   await durableLimit(c.env, `send:${projectId}`, settings.security.customerSendsPerMinute, 60, 'sends');
 
-  const invalid: string[] = [];
-  const phones: string[] = [];
-  for (const raw of body.recipients ?? []) {
-    const p = normalizePhone(raw);
-    if (isValidNormalizedPhone(p)) phones.push(p);
-    else invalid.push(raw);
-  }
-  if (invalid.length > 0) {
-    const sample = invalid.slice(0, 3).map((v) => `"${v}"`).join(', ');
-    throw new HTTPException(400, {
-      message: `${invalid.length} invalid phone number${invalid.length === 1 ? '' : 's'}: ${sample}${invalid.length > 3 ? '…' : ''}. Use the format +233XXXXXXXXX or 0XXXXXXXXX.`,
-    });
-  }
-
-  phones.push(
-    ...(await resolveContactPhones(
-      c.env,
-      projectId,
-      body.contactIds ?? [],
-      body.groupIds ?? [],
-    )),
-  );
-  const recipients = [...new Set(phones)];
-
-  if (recipients.length === 0) {
-    throw new HTTPException(400, {
-      message: 'No recipients — the selected contacts or groups are empty.',
-    });
-  }
-  if (recipients.length > MAX_RECIPIENTS) {
-    throw new HTTPException(400, {
-      message: `Too many recipients (${recipients.length.toLocaleString('en-US')}). The maximum per send is ${MAX_RECIPIENTS.toLocaleString('en-US')}.`,
-    });
-  }
+  const composed = await composeSend(c.env, projectId, {
+    message: body.message,
+    recipients: body.recipients,
+    contactIds: body.contactIds,
+    groupIds: body.groupIds,
+    maxRecipients: MAX_RECIPIENTS,
+  });
 
   try {
     const result = await sendSmsBatch(c.env, {
@@ -151,10 +125,11 @@ router.post('/sms/send', async (c) => {
       apiKeyId: null,
       senderId: body.senderId,
       message: body.message,
-      recipients,
+      recipients: composed.recipients,
+      personalized: composed.personalized,
       idempotencyKey: batchId,
       actor: `customer:${customer.uid}`,
-    });
+    }, { background: (work) => c.executionCtx.waitUntil(work) });
     return c.json(
       {
         batch: toCustomerBatch(result.batch),
@@ -172,6 +147,34 @@ router.post('/sms/send', async (c) => {
     }
     throw err;
   }
+});
+
+/**
+ * POST /customer/sms/preview — what a send would do, without sending:
+ * recipient count, exact units (personalised messages differ per person),
+ * and a few rendered samples. Errors (missing variables, too many
+ * recipients) come back exactly as the send would return them.
+ */
+router.post('/sms/preview', async (c) => {
+  const projectId = c.get('projectId')!;
+  const body = await parseBody(c, CustomerSendSmsRequestSchema.innerType().extend({ senderId: z.string().max(11).optional() }));
+  const settings = await getSettings(c.env);
+  const composed = await composeSend(c.env, projectId, {
+    message: body.message,
+    recipients: body.recipients,
+    contactIds: body.contactIds,
+    groupIds: body.groupIds,
+    maxRecipients: settings.sms.maxRecipientsPerSend,
+  });
+  const texts = composed.recipients.map((r) => composed.personalized?.get(r) ?? body.message);
+  const units = texts.reduce((sum, t) => sum + getSegmentInfo(t).segmentCount, 0);
+  return c.json({
+    recipients: composed.recipients.length,
+    units,
+    personalized: !!composed.personalized,
+    variables: composed.variables,
+    samples: composed.recipients.slice(0, 3).map((phone, i) => ({ phone: `+${phone}`, message: texts[i], segments: getSegmentInfo(texts[i]).segmentCount })),
+  });
 });
 
 /**

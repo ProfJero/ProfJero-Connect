@@ -49,7 +49,13 @@ const env: Env = {
   CUSTOMER_APP_URL: 'http://localhost:5174',
 };
 const key = await importPKCS8(keyPem, 'RS256');
-const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as ExecutionContext;
+// Background work runs after the response, like Workers' waitUntil.
+const ctx = {
+  waitUntil(p: Promise<unknown>) {
+    p.catch((err) => console.error('[background]', err));
+  },
+  passThroughOnException() {},
+} as unknown as ExecutionContext;
 
 /** Firebase-style ID token, carrying any custom claims the fake has set. */
 async function mint(uid: string, email: string): Promise<string> {

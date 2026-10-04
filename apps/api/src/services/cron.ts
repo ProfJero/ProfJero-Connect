@@ -1,13 +1,15 @@
 import { reconcileUnknownRecords } from './reconciliation';
 import { recordJobRun } from './systemStatus';
 import { refreshProviderBalances } from './providerBalance';
+import { resumeStalledBatches } from './sms';
+import { dispatchDueCampaigns } from './campaigns';
 import type { Env } from '../types/env';
 
 /**
  * Scheduled handler entry point. Cloudflare invokes this on each cron
  * expression configured in wrangler.toml. We route based on the expression.
  */
-export { runReconciliation, runBalanceRefresh };
+export { runReconciliation, runBalanceRefresh, runDispatcher };
 
 export async function handleScheduled(
   controller: ScheduledController,
@@ -16,6 +18,11 @@ export async function handleScheduled(
   const cron = controller.cron;
 
   console.log(`[cron] trigger fired: ${cron} at ${new Date().toISOString()}`);
+
+  if (cron === '* * * * *') {
+    await runDispatcher(env);
+    return;
+  }
 
   if (cron === '*/15 * * * *') {
     await runReconciliation(env);
@@ -29,6 +36,27 @@ export async function handleScheduled(
   }
 
   console.warn(`[cron] no handler for expression: ${cron}`);
+}
+
+/**
+ * Every minute: continue SMS deliveries whose background worker stopped,
+ * and send scheduled campaigns that are due.
+ */
+async function runDispatcher(env: Env): Promise<void> {
+  const started = Date.now();
+  try {
+    const { resumed } = await resumeStalledBatches(env);
+    const { dispatched, failed } = await dispatchDueCampaigns(env);
+    await recordJobRun(env, 'dispatcher', {
+      lastRunAt: new Date().toISOString(),
+      ok: failed === 0,
+      summary: `resumedBatches=${resumed} campaignsSent=${dispatched} campaignsFailed=${failed}`,
+      durationMs: Date.now() - started,
+    });
+  } catch (err) {
+    console.error('[cron] dispatcher failed:', err);
+    await recordJobRun(env, 'dispatcher', { lastRunAt: new Date().toISOString(), ok: false, summary: String(err).slice(0, 300), durationMs: Date.now() - started });
+  }
 }
 
 async function runBalanceRefresh(env: Env): Promise<void> {

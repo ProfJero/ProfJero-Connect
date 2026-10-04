@@ -13,6 +13,10 @@
     "./sms-segments": {
       "types": "./src/lib/smsSegments.ts",
       "default": "./src/lib/smsSegments.ts"
+    },
+    "./template": {
+      "types": "./src/lib/template.ts",
+      "default": "./src/lib/template.ts"
     }
   },
   "scripts": {
