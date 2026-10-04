@@ -22,6 +22,75 @@ for the product roadmap._
 6. Webhooks (internal)
 7. Idempotency
 8. Segment counting
+## 5b. Balance, payments, personalised and scheduled sends (2026-10)
+
+The same reference, with copy-paste examples in cURL, JavaScript, PHP and
+Python, is published in the customer app at **`/developers`** (linked from
+the sign-in page, API & Integrations, and the sidebar).
+
+| Method | Path | Key | What it does |
+|---|---|---|---|
+| GET | `/v1/balance` | any | `{ availableUnits, lowBalance, updatedAt }` |
+| POST | `/v1/sms/estimate` | any | Units, sufficiency and up to 3 rendered samples — nothing is sent or charged |
+| POST | `/v1/sms/send` | any (secret for `scheduleAt`) | Now accepts personalised recipients and `scheduleAt` |
+| POST | `/v1/payments` | secret | Start a top-up; returns `checkoutUrl`. `Idempotency-Key` required |
+| GET | `/v1/payments` | secret | Recent top-ups + summary |
+| GET | `/v1/payments/:reference` | secret | One top-up, re-checked with the gateway if still pending |
+| GET | `/v1/campaigns` | secret | Scheduled sends |
+| GET | `/v1/campaigns/:id` | secret | One scheduled send |
+| POST | `/v1/campaigns/:id/cancel` | secret | Cancel before it runs |
+
+### Personalised messages
+
+Put fields in the message as `{field}` or `{field|fallback}`. Each recipient
+can be a plain phone string or `{ "phone": "...", "fields": { ... } }`.
+Fields saved on the matching contact (first_name, last_name, name,
+date_of_birth, email, and any custom field) are used too; fields in the
+request win.
+
+```json
+POST /v1/sms/send
+{
+  "senderId": "MYSHOP",
+  "message": "Hi {first_name|there}, your balance is {balance}.",
+  "recipients": [
+    { "phone": "0241234567", "fields": { "first_name": "Esi", "balance": "GH₵ 50" } },
+    "0209876543"
+  ]
+}
+```
+
+Each message is billed by its own length. If a field without a fallback is
+empty for any recipient, the request is refused with 400 and nothing is
+charged — no "Hi ," messages.
+
+### Sending is asynchronous
+
+`POST /v1/sms/send` now returns as soon as the units are reserved. The
+batch comes back with `status: "submitting"`; poll
+`GET /v1/sms/batches/:id` (or use delivery webhooks) for the final
+`submitted` / `partial` / `failed`. Units for messages the network rejects
+are returned automatically.
+
+### Scheduled sends
+
+Add `"scheduleAt": "2026-12-24T09:00:00Z"` (ISO 8601, secret key only). The
+response is `201 { "scheduled": true, "campaign": { ... } }`; units are
+reserved when it runs, not now. The same `Idempotency-Key` returns the same
+campaign.
+
+### Top-ups
+
+```json
+POST /v1/payments         (Idempotency-Key: <uuid>)
+{ "packageId": "basic" }            // or { "units": 5000 }
+→ 201 { "payment": { "reference": "...", "status": "pending", ... }, "checkoutUrl": "https://..." }
+```
+
+Optional: `email` (receipt; defaults to the project email), `callbackUrl`
+(https), `method` (`mobile_money` | `card`). Units are added only when the
+payment gateway confirms the payment — never by this call.
+
 9. Changelog
 
 ---
@@ -620,6 +689,7 @@ have 160 (single segment) or 153 per segment (split).
 
 9. Changelog
 Date	Change
+2026-10-04	GET /v1/balance, POST /v1/sms/estimate, /v1/payments (start, list, check), /v1/campaigns (list, get, cancel). /v1/sms/send: personalised recipients ({field} and {field|fallback}), scheduleAt, and asynchronous delivery (status "submitting" until done). Public docs page at /developers.
 2026-10-02	GET /v1/platform added. POST /v1/sms/send: reusing an Idempotency-Key with a different message, sender or recipients now returns 409 (previously the first batch was replayed); sends from suspended projects return 403.
 2026-10-02	Customers can create/revoke their own secret keys in the customer platform (API & Integrations). /v1 behaviour unchanged.
 2026-09-26	Initial public API reference.
