@@ -203,6 +203,7 @@ export function NotificationsSection(props: SectionProps<NotificationSettings>) 
           <Toggle id="n-cust" label="New customer signup" checked={v.emailOnNewCustomer} disabled={ro} onChange={(b) => draft.set('emailOnNewCustomer', b)} />
           <Toggle id="n-pay" label="Customer payment received" checked={v.emailOnPaymentReceived} disabled={ro} onChange={(b) => draft.set('emailOnPaymentReceived', b)} />
           <Toggle id="n-prov" label="Provider balance low" description="Checked every 15 minutes." checked={v.emailOnProviderLowBalance} disabled={ro} onChange={(b) => draft.set('emailOnProviderLowBalance', b)} />
+          <Toggle id="n-inc" label="Incidents" description="Server-error spikes, abuse spikes and app crashes (Monitoring). At most once an hour each." checked={v.emailOnIncidents} disabled={ro} onChange={(b) => draft.set('emailOnIncidents', b)} />
         </div>
         <Field label="Provider low-balance level (credits)" htmlFor="n-provlow" hint="Raises a bell alert (and email, if on) when provider credits drop below this. Empty = off.">
           <NumberInput id="n-provlow" nullable min={0} disabled={ro} value={v.providerLowBalanceCredits} onChange={(n) => draft.set('providerLowBalanceCredits', n)} placeholder="Off" />

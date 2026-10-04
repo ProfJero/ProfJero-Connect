@@ -1,6 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
 import {
-  MessageSquare,
   Send,
   Plus,
   CreditCard,
@@ -13,6 +12,7 @@ import { navItems } from '../../lib/nav';
 import { useAdminData } from '../../lib/adminData';
 import { useAuth } from '../../lib/auth';
 import { timeAgo } from '../../lib/datetime';
+import { BrandMark } from '../brand/BrandMark';
 
 function QuickAction({
   icon: Icon,
@@ -78,9 +78,7 @@ export function Sidebar({
       >
         <div className="p-5">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-              <MessageSquare className="w-5 h-5 fill-current" />
-            </div>
+            <BrandMark className="w-10 h-10" />
             <div className="flex-1 min-w-0">
               <div className="text-white font-bold text-[17px] leading-tight tracking-tight">
                 ProfJero Connect
@@ -99,7 +97,7 @@ export function Sidebar({
           </div>
 
           <nav aria-label="Sidebar Navigation" className="space-y-1">
-            {navItems.map(({ label, icon: Icon, path }) => (
+            {navItems.filter((n) => !n.roles || (user && n.roles.includes(user.role))).map(({ label, icon: Icon, path }) => (
               <NavLink
                 key={label}
                 to={path}

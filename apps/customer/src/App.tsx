@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { RouteTitle } from './components/RouteTitle';
 import { AuthProvider } from './lib/auth';
 import { ThemeProvider } from './lib/theme';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -33,6 +34,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <RouteTitle />
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />

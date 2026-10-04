@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { LoginHero } from '../../components/auth/LoginHero';
 import { SignupForm } from '../../components/auth/SignupForm';
+import { BrandMark } from '../../components/brand/BrandMark';
 
 export function SignupPage() {
   const { isAuthenticated, isReady } = useAuth();
@@ -26,9 +27,7 @@ export function SignupPage() {
             <div className="w-full max-w-md mx-auto">
               {/* Compact brand header for mobile */}
               <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-[#1a6cf0] flex items-center justify-center">
-                  <span className="text-white font-extrabold text-lg italic">P</span>
-                </div>
+                <BrandMark className="w-10 h-10" />
                 <div>
                   <h1 className="text-slate-900 dark:text-slate-100 font-bold text-base leading-tight">
                     ProfJero Connect

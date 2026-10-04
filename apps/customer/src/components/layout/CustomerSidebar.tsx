@@ -5,6 +5,7 @@ import { navItems, type NavItem } from '../../lib/nav';
 import { useAccount } from '../../lib/account';
 import { usePlatformConfig } from '../../lib/account';
 import { cn } from '../../lib/utils';
+import { BrandMark } from '../brand/BrandMark';
 
 export function CustomerSidebar({
   open = false,
@@ -35,9 +36,7 @@ export function CustomerSidebar({
       >
         <div>
           <div className="p-5 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
-              <span className="font-extrabold text-2xl tracking-tighter italic">P</span>
-            </div>
+            <BrandMark className="w-10 h-10" />
             <div className="flex-1 min-w-0">
               <div className="text-white font-bold text-base tracking-tight leading-tight">
                 ProfJero Connect
