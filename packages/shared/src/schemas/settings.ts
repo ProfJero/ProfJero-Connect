@@ -28,7 +28,7 @@ export const SmsSettingsSchema = z.object({
   /** Low-balance alert level given to new customer wallets. null = off. */
   defaultLowBalanceThreshold: z.number().int().min(1).max(10_000_000).nullable(),
   /** Hard cap on unique recipients per customer send. */
-  maxRecipientsPerSend: z.number().int().min(1).max(1000),
+  maxRecipientsPerSend: z.number().int().min(1).max(10000),
   /** Shown to customers when they request a Sender ID. */
   senderIdReviewSla: z.string().trim().min(1).max(80),
 });
@@ -49,6 +49,8 @@ export const NotificationSettingsSchema = z.object({
   emailOnNewCustomer: z.boolean(),
   emailOnPaymentReceived: z.boolean(),
   emailOnProviderLowBalance: z.boolean(),
+  /** Error spikes, abuse spikes, crashing screens (Monitoring). */
+  emailOnIncidents: z.boolean().default(true),
   /** Provider credit level that raises an alert. null = no balance alert. */
   providerLowBalanceCredits: z.number().int().min(0).max(100_000_000).nullable(),
 });
@@ -107,6 +109,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     emailOnNewCustomer: true,
     emailOnPaymentReceived: false,
     emailOnProviderLowBalance: true,
+    emailOnIncidents: true,
     providerLowBalanceCredits: null,
   },
   security: {
@@ -177,6 +180,9 @@ export const AdminAlertSchema = z.object({
     'stuck_messages',
     'new_customers',
     'cron_stale',
+    'error_spike',
+    'security_spike',
+    'client_errors',
   ]),
   severity: z.enum(['info', 'warning', 'error']),
   title: z.string(),

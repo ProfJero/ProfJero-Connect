@@ -11,7 +11,7 @@ export async function notifyAdmins(
   env: Env,
   event: keyof Pick<
     NotificationSettings,
-    'emailOnSenderIdRequest' | 'emailOnNewCustomer' | 'emailOnPaymentReceived' | 'emailOnProviderLowBalance'
+    'emailOnSenderIdRequest' | 'emailOnNewCustomer' | 'emailOnPaymentReceived' | 'emailOnProviderLowBalance' | 'emailOnIncidents'
   >,
   subject: string,
   text: string,

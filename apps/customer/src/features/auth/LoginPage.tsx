@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { LoginHero } from '../../components/auth/LoginHero';
 import { LoginForm } from '../../components/auth/LoginForm';
+import { BrandMark } from '../../components/brand/BrandMark';
 
 interface LocationState {
   from?: { pathname?: string };
@@ -43,9 +44,7 @@ export function LoginPage() {
           <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 sm:p-10 lg:p-12 flex flex-col justify-center">
             <div className="w-full max-w-md mx-auto">
               <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-[#1a6cf0] flex items-center justify-center">
-                  <span className="text-white font-extrabold text-lg italic">P</span>
-                </div>
+                <BrandMark className="w-10 h-10" />
                 <div>
                   <h1 className="text-slate-900 dark:text-slate-100 font-bold text-base leading-tight">
                     ProfJero Connect

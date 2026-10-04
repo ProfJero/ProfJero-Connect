@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Users, MessageSquare, Info, Clock } from 'lucide-react';
 import type { SegmentInfo } from '@profjero/shared/sms-segments';
@@ -7,8 +8,9 @@ import { cn } from '../../lib/utils';
 import type { RecipientDraft } from '../../lib/recipients';
 import type { ContactGroup, CustomerSenderId } from '../../lib/types';
 import { usePlatformConfig } from '../../lib/account';
+import { PersonalizeBar } from './PersonalizeBar';
 
-const MAX_MESSAGE_LENGTH = 1000;
+const MAX_MESSAGE_LENGTH = 1600;
 
 export function ComposeForm({
   senderIds,
@@ -34,6 +36,19 @@ export function ComposeForm({
   const { senderIdReviewSla } = usePlatformConfig();
   const approved = senderIds.filter((s) => s.status === 'approved');
   const pending = senderIds.filter((s) => s.status === 'pending');
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  /** Insert a {field} at the cursor (or the end), then put the cursor after it. */
+  const insertAtCursor = (token: string) => {
+    const el = textRef.current;
+    const start = el?.selectionStart ?? message.length;
+    const end = el?.selectionEnd ?? message.length;
+    const next = message.slice(0, start) + token + message.slice(end);
+    onMessageChange(next.slice(0, MAX_MESSAGE_LENGTH));
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start + token.length, start + token.length);
+    });
+  };
   const perSegment = segments.encoding === 'GSM-7' ? (segments.segmentCount > 1 ? 153 : 160) : segments.segmentCount > 1 ? 67 : 70;
 
   return (
@@ -108,8 +123,10 @@ export function ComposeForm({
               Message
             </label>
           </div>
+          <PersonalizeBar message={message} onInsert={insertAtCursor} onUseTemplate={onMessageChange} />
           <div className="border border-slate-300 dark:border-slate-700 rounded-lg p-3 bg-white dark:bg-slate-800 focus-within:ring-1 focus-within:ring-[#1a6cf0] focus-within:border-[#1a6cf0] shadow-xs">
             <textarea
+              ref={textRef}
               id="message"
               className="w-full border-none p-0 text-sm text-slate-700 dark:text-slate-200 bg-transparent focus:ring-0 focus:outline-none resize-none leading-relaxed"
               placeholder="Type your message here…"
@@ -142,7 +159,8 @@ export function ComposeForm({
               <Clock className="w-3.5 h-3.5" strokeWidth={2} />
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-400">
-              Each page costs 1 unit per recipient. Messages are sent immediately.
+              Each page costs 1 unit per recipient. Send now, or schedule it for later. Personalised messages are
+              priced per person, by their own length.
             </p>
           </div>
         </div>

@@ -94,19 +94,19 @@ export function SettingsPage() {
         ) : (
           <div className="max-w-3xl">
             {tab === 'general' && (
-              <GeneralSection key={s.meta.general.updatedAt} value={s.settings.general} canEdit={s.canEdit.general} saving={settings.saving === 'general'} updated={s.meta.general.updatedAt} onSave={(v) => settings.save('general', v)} />
+              <GeneralSection value={s.settings.general} canEdit={s.canEdit.general} saving={settings.saving === 'general'} updated={s.meta.general.updatedAt} onSave={(v) => settings.save('general', v)} />
             )}
             {tab === 'sms' && (
-              <SmsSection key={s.meta.sms.updatedAt} value={s.settings.sms} canEdit={s.canEdit.sms} saving={settings.saving === 'sms'} updated={s.meta.sms.updatedAt} onSave={(v) => settings.save('sms', v)} />
+              <SmsSection value={s.settings.sms} canEdit={s.canEdit.sms} saving={settings.saving === 'sms'} updated={s.meta.sms.updatedAt} onSave={(v) => settings.save('sms', v)} />
             )}
             {tab === 'payments' && (
-              <PaymentsSection key={s.meta.payments.updatedAt} value={s.settings.payments} canEdit={s.canEdit.payments} saving={settings.saving === 'payments'} updated={s.meta.payments.updatedAt} onSave={(v) => settings.save('payments', v)} />
+              <PaymentsSection value={s.settings.payments} canEdit={s.canEdit.payments} saving={settings.saving === 'payments'} updated={s.meta.payments.updatedAt} onSave={(v) => settings.save('payments', v)} />
             )}
             {tab === 'notifications' && (
-              <NotificationsSection key={s.meta.notifications.updatedAt} value={s.settings.notifications} canEdit={s.canEdit.notifications} saving={settings.saving === 'notifications'} updated={s.meta.notifications.updatedAt} onSave={(v) => settings.save('notifications', v)} />
+              <NotificationsSection value={s.settings.notifications} canEdit={s.canEdit.notifications} saving={settings.saving === 'notifications'} updated={s.meta.notifications.updatedAt} onSave={(v) => settings.save('notifications', v)} />
             )}
             {tab === 'security' && (
-              <SecuritySection key={s.meta.security.updatedAt} value={s.settings.security} canEdit={s.canEdit.security} saving={settings.saving === 'security'} updated={s.meta.security.updatedAt} onSave={(v) => settings.save('security', v)} />
+              <SecuritySection value={s.settings.security} canEdit={s.canEdit.security} saving={settings.saving === 'security'} updated={s.meta.security.updatedAt} onSave={(v) => settings.save('security', v)} />
             )}
           </div>
         ))}

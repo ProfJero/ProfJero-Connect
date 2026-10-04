@@ -94,3 +94,83 @@ export function csvToContacts(text: string): ParsedContactRow[] {
 export function readFileText(file: File): Promise<string> {
   return file.text();
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Column mapping for contact imports
+// ─────────────────────────────────────────────────────────────────────
+
+export type ColumnRole = 'phone' | 'name' | 'firstName' | 'lastName' | 'email' | 'dateOfBirth' | 'custom' | 'skip';
+
+export const COLUMN_ROLE_LABELS: Record<ColumnRole, string> = {
+  phone: 'Phone number',
+  name: 'Full name',
+  firstName: 'First name',
+  lastName: 'Last name',
+  email: 'Email',
+  dateOfBirth: 'Date of birth',
+  custom: 'Custom field',
+  skip: "Don't import",
+};
+
+const ROLE_HEADERS: Array<[ColumnRole, string[]]> = [
+  ['phone', PHONE_HEADERS],
+  ['firstName', ['first name', 'firstname', 'first', 'given name', 'forename']],
+  ['lastName', ['last name', 'lastname', 'last', 'surname', 'family name']],
+  ['name', NAME_HEADERS],
+  ['email', EMAIL_HEADERS],
+  ['dateOfBirth', ['dob', 'date of birth', 'birthday', 'birth date', 'birthdate', 'd.o.b']],
+];
+
+/** Best guess for a column from its header; unknown headers become custom fields. */
+export function guessRole(header: string): ColumnRole {
+  const h = header.trim().toLowerCase().replace(/[_-]+/g, ' ');
+  for (const [role, names] of ROLE_HEADERS) if (names.includes(h)) return role;
+  return h ? 'custom' : 'skip';
+}
+
+export interface ImportTable {
+  /** Header names (or "Column 1"…) */
+  headers: string[];
+  hasHeader: boolean;
+  rows: string[][];
+}
+
+/** Parse a CSV into headers + rows, detecting whether the first row is a header. */
+export function readImportTable(text: string): ImportTable {
+  const all = parseCsv(text);
+  if (all.length === 0) return { headers: [], hasHeader: false, rows: [] };
+  const first = all[0];
+  const looksLikeHeader = first.some((c) => guessRole(c) !== 'custom' && guessRole(c) !== 'skip') ||
+    !first.some((c) => /^\+?[\d\s\-()]{7,}$/.test(c.trim()));
+  const width = Math.max(...all.map((r) => r.length));
+  const headers = Array.from({ length: width }, (_, i) => (looksLikeHeader ? (first[i] ?? '').trim() : '') || `Column ${i + 1}`);
+  return { headers, hasHeader: looksLikeHeader, rows: looksLikeHeader ? all.slice(1) : all };
+}
+
+export interface ImportRow {
+  phone: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  dateOfBirth?: string;
+  customFields?: Record<string, string>;
+}
+
+/** Apply the chosen column roles to every row. */
+export function mapImportRows(table: ImportTable, roles: ColumnRole[]): ImportRow[] {
+  return table.rows
+    .map((r) => {
+      const out: ImportRow = { phone: '' };
+      const custom: Record<string, string> = {};
+      roles.forEach((role, i) => {
+        const v = (r[i] ?? '').trim();
+        if (!v || role === 'skip') return;
+        if (role === 'custom') custom[table.headers[i]] = v;
+        else out[role] = v;
+      });
+      if (Object.keys(custom).length) out.customFields = custom;
+      return out;
+    })
+    .filter((r) => r.phone !== '');
+}

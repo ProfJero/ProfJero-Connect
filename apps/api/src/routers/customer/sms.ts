@@ -1,20 +1,22 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { z } from 'zod';
 import {
   CustomerSendSmsRequestSchema,
+  getSegmentInfo,
   type SmsBatch,
   type SmsRecord,
 } from '@profjero/shared';
-import { normalizePhone, isValidNormalizedPhone } from '../../lib/phone';
 import { scrubProviderNames } from '../../lib/scrub';
 import { DomainError } from '../../lib/domainError';
 import {
   getBatch,
   listBatchesForProject,
   listRecordsForBatch,
+  listBatchesSince,
 } from '../../repositories/sms';
 import { sendSmsBatch } from '../../services/sms';
-import { resolveContactPhones } from '../../services/contacts';
+import { composeSend } from '../../services/compose';
 import {
   paginateByCreatedAt,
   parseBody,
@@ -110,40 +112,13 @@ router.post('/sms/send', async (c) => {
   const MAX_RECIPIENTS = settings.sms.maxRecipientsPerSend;
   await durableLimit(c.env, `send:${projectId}`, settings.security.customerSendsPerMinute, 60, 'sends');
 
-  const invalid: string[] = [];
-  const phones: string[] = [];
-  for (const raw of body.recipients ?? []) {
-    const p = normalizePhone(raw);
-    if (isValidNormalizedPhone(p)) phones.push(p);
-    else invalid.push(raw);
-  }
-  if (invalid.length > 0) {
-    const sample = invalid.slice(0, 3).map((v) => `"${v}"`).join(', ');
-    throw new HTTPException(400, {
-      message: `${invalid.length} invalid phone number${invalid.length === 1 ? '' : 's'}: ${sample}${invalid.length > 3 ? '…' : ''}. Use the format +233XXXXXXXXX or 0XXXXXXXXX.`,
-    });
-  }
-
-  phones.push(
-    ...(await resolveContactPhones(
-      c.env,
-      projectId,
-      body.contactIds ?? [],
-      body.groupIds ?? [],
-    )),
-  );
-  const recipients = [...new Set(phones)];
-
-  if (recipients.length === 0) {
-    throw new HTTPException(400, {
-      message: 'No recipients — the selected contacts or groups are empty.',
-    });
-  }
-  if (recipients.length > MAX_RECIPIENTS) {
-    throw new HTTPException(400, {
-      message: `Too many recipients (${recipients.length.toLocaleString('en-US')}). The maximum per send is ${MAX_RECIPIENTS.toLocaleString('en-US')}.`,
-    });
-  }
+  const composed = await composeSend(c.env, projectId, {
+    message: body.message,
+    recipients: body.recipients,
+    contactIds: body.contactIds,
+    groupIds: body.groupIds,
+    maxRecipients: MAX_RECIPIENTS,
+  });
 
   try {
     const result = await sendSmsBatch(c.env, {
@@ -151,10 +126,11 @@ router.post('/sms/send', async (c) => {
       apiKeyId: null,
       senderId: body.senderId,
       message: body.message,
-      recipients,
+      recipients: composed.recipients,
+      personalized: composed.personalized,
       idempotencyKey: batchId,
       actor: `customer:${customer.uid}`,
-    });
+    }, { background: (work) => c.executionCtx.waitUntil(work) });
     return c.json(
       {
         batch: toCustomerBatch(result.batch),
@@ -175,32 +151,76 @@ router.post('/sms/send', async (c) => {
 });
 
 /**
+ * POST /customer/sms/preview — what a send would do, without sending:
+ * recipient count, exact units (personalised messages differ per person),
+ * and a few rendered samples. Errors (missing variables, too many
+ * recipients) come back exactly as the send would return them.
+ */
+router.post('/sms/preview', async (c) => {
+  const projectId = c.get('projectId')!;
+  const body = await parseBody(c, CustomerSendSmsRequestSchema.innerType().extend({ senderId: z.string().max(11).optional() }));
+  const settings = await getSettings(c.env);
+  const composed = await composeSend(c.env, projectId, {
+    message: body.message,
+    recipients: body.recipients,
+    contactIds: body.contactIds,
+    groupIds: body.groupIds,
+    maxRecipients: settings.sms.maxRecipientsPerSend,
+  });
+  const texts = composed.recipients.map((r) => composed.personalized?.get(r) ?? body.message);
+  const units = texts.reduce((sum, t) => sum + getSegmentInfo(t).segmentCount, 0);
+  return c.json({
+    recipients: composed.recipients.length,
+    units,
+    personalized: !!composed.personalized,
+    variables: composed.variables,
+    samples: composed.recipients.slice(0, 3).map((phone, i) => ({ phone: `+${phone}`, message: texts[i], segments: getSegmentInfo(texts[i]).segmentCount })),
+  });
+});
+
+/**
  * GET /customer/sms/batches?limit=&before=&status=&senderId=&source=&q=
  * Send history, newest first.
  */
 router.get('/sms/batches', async (c) => {
   const projectId = c.get('projectId')!;
-  const limit = parseLimit(c.req.query('limit'));
-  const status = c.req.query('status');
-  const senderId = c.req.query('senderId');
-  const source = c.req.query('source');
-  const q = (c.req.query('q') ?? '').trim().toLowerCase();
+    const limit = parseLimit(c.req.query('limit'));
+    const before = c.req.query('before');
+    const status = c.req.query('status');
+    const senderId = c.req.query('senderId');
+    const source = c.req.query('source');
+    const q = (c.req.query('q') ?? '').trim().toLowerCase();
 
-  const batches = (await listBatchesForProject(c.env, projectId))
-    .filter(wasAttempted)
-    .map(toCustomerBatch)
-    .filter(
-      (b) =>
-        (!status || b.status === status) &&
-        (!senderId || b.senderId === senderId) &&
-        (!source || b.source === source) &&
-        (!q || b.message.toLowerCase().includes(q) || b.id.toLowerCase().includes(q)),
-    )
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    // Fetch limit × 3 so the client-side `source` and `q` filters have room
+    // to work without re-querying Firestore per page. `status` and `senderId`
+    // could be pushed server-side too, but keeping them here keeps the query
+    // on the single composite index (projectId, createdAt). The trade-off:
+    // a heavily-filtered page may return fewer than `limit` rows; the user
+    // can "Load more" for older matches.
+    const { batches: rawBatches, nextCursor: repoNextCursor } =
+      await listBatchesForProject(c.env, projectId, {
+        limit: Math.min(limit * 3, 200),
+        before,
+      });
 
-  const { page, nextCursor } = paginateByCreatedAt(batches, limit, c.req.query('before'));
-  return c.json({ batches: page, count: page.length, nextCursor });
-});
+    const filtered = rawBatches
+      .filter(wasAttempted)
+      .map(toCustomerBatch)
+      .filter(
+        (b) =>
+          (!status || b.status === status) &&
+          (!senderId || b.senderId === senderId) &&
+          (!source || b.source === source) &&
+          (!q || b.message.toLowerCase().includes(q) || b.id.toLowerCase().includes(q)),
+      );
+
+    const page = filtered.slice(0, limit);
+    // Repo returned a full over-fetch window → there may be more history.
+    // Otherwise we've exhausted the range.
+    const nextCursor = page.length === limit ? repoNextCursor : null;
+
+    return c.json({ batches: page, count: page.length, nextCursor });
+  });
 
 /** GET /customer/sms/batches/:id — batch + per-recipient status. */
 router.get('/sms/batches/:id', async (c) => {
@@ -231,9 +251,12 @@ router.get('/sms/stats', async (c) => {
   start.setUTCHours(0, 0, 0, 0);
   const prevStart = new Date(start.getTime() - days * 86400_000);
 
-  const batches = (await listBatchesForProject(c.env, projectId))
-    .filter(wasAttempted)
-    .map(toCustomerBatch);
+    // Stats needs the whole window, not a page. Query only batches created
+    // since `prevStart` (the earlier of the two comparison windows), so the
+    // read cost is bounded by the requested range instead of all-time history.
+    const batches = (await listBatchesSince(c.env, projectId, prevStart.toISOString()))
+      .filter(wasAttempted)
+      .map(toCustomerBatch);
 
   type Totals = {
     batches: number;

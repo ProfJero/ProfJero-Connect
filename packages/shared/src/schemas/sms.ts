@@ -63,6 +63,10 @@ export const SmsBatchSchema = z.object({
    *  `delivered`. Never decremented. */
   deliveredCount: z.number().int().nonnegative(),
   idempotencyKey: z.string().nullable(),
+  /** True when `message` is a template rendered per recipient. */
+  personalized: z.boolean().optional(),
+  /** Set when the batch was sent by a scheduled campaign. */
+  campaignId: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   completedAt: z.string().datetime().nullable(),

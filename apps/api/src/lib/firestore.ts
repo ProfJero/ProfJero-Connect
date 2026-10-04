@@ -594,3 +594,62 @@ export async function firestoreBatchWrite(
     }
   }
 }
+
+// ---------- Counters + batch reads (monitoring) ----------
+
+/**
+ * Atomically add to numeric fields of one or more documents (created if
+ * missing) in a single commit. Server-side increments: concurrent writers
+ * never lose counts and no transaction is needed.
+ */
+export async function firestoreIncrement(
+  env: Env,
+  docs: Array<{ path: string; increments: Record<string, number>; set?: Record<string, unknown> }>,
+): Promise<void> {
+  const writes = docs
+    .filter((d) => Object.keys(d.increments).length > 0)
+    .map((d) => {
+      const name = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${d.path}`;
+      return {
+        update: { name, fields: encodeFields(d.set ?? {}) },
+        updateMask: { fieldPaths: Object.keys(d.set ?? {}) },
+        updateTransforms: Object.entries(d.increments).map(([fieldPath, n]) => ({
+          fieldPath,
+          increment: Number.isInteger(n) ? { integerValue: String(n) } : { doubleValue: n },
+        })),
+      };
+    });
+  if (writes.length === 0) return;
+  const token = await getFirestoreAccessToken(env);
+  const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:commit`;
+  for (let i = 0; i < writes.length; i += 500) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ writes: writes.slice(i, i + 500) }),
+    });
+    if (!res.ok) throw new Error(`firestoreIncrement failed (${res.status}): ${await res.text()}`);
+  }
+}
+
+/** Read many documents of one collection in one request. Missing → absent. */
+export async function firestoreBatchGet(env: Env, collection: string, ids: string[]): Promise<FirestoreDoc[]> {
+  if (ids.length === 0) return [];
+  const token = await getFirestoreAccessToken(env);
+  const prefix = `projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${collection}/`;
+  const out: FirestoreDoc[] = [];
+  for (let i = 0; i < ids.length; i += 300) {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:batchGet`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documents: ids.slice(i, i + 300).filter(isValidDocId).map((id) => prefix + id) }),
+      },
+    );
+    if (!res.ok) throw new Error(`firestoreBatchGet failed (${res.status}): ${await res.text()}`);
+    const rows = (await res.json()) as Array<{ found?: FsDocument }>;
+    for (const r of rows) if (r.found) out.push(docFromFs(r.found));
+  }
+  return out;
+}

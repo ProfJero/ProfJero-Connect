@@ -88,7 +88,10 @@ text
 | **Alert bell + live provider balance** | ✅ Done (§15) |
 | **Rate limiting + security hardening** | ✅ Done (§15) |
 | **Firestore security rules** | ✅ Deny-all + emulator tests (§15) — deploy them |
-| **Test suites** (API, security, load, rules, browser, a11y, mobile) | ✅ All passing — see `docs/testing.md` |
+| **Background sending + personalised SMS + campaigns** | ✅ Done (§16) |
+| **Monitoring** (health, traffic, latency, errors, abuse) | ✅ Done (§16) — admin → Monitoring |
+| **Logo, SEO, share previews, public API docs** | ✅ Done (§16) |
+| **Test suites** (API, security, features, load, rules, browser, a11y, mobile) | ✅ All passing — see `docs/testing.md` |
 
 ---
 
@@ -318,7 +321,7 @@ Route	Page	Status
 /messaging/sms	Send SMS — compose + summary	✅
 /messaging/sender-ids	Sender IDs list	✅
 /messaging/sender-ids/request	Request Sender ID form	✅
-/messaging/campaigns	Campaigns — placeholder	✅ (stub)
+/messaging/campaigns	Campaigns — one-time, recurring, birthday + templates (§16)	✅
 /messaging/history	Message History — filters, load more	✅
 /messaging/history/:batchId	Message detail — per-recipient status, CSV export	✅
 /contacts	Contacts list	✅
@@ -333,12 +336,12 @@ Route	Page	Status
 /transactions	Transactions — metrics, filter bar, table	✅
 /api	API & Integrations — status, key, usage, integrations	✅
 /notifications	Notifications — filters, list, summary	✅
-/settings	Settings hub — 6 cards + sub-nav	✅
-/settings/organisation	Organisation Profile	✅
+/settings	Settings — one tab at a time (?tab=profile|organisation|security|notifications|billing|api)	✅
+/settings/organisation	Redirects to /settings?tab=organisation	✅
+/developers	Public API documentation	✅
 Bulk SMS: intentionally dropped. Send SMS already handles bulk via its
-Bulk Upload / Import from File recipient tabs. Deeper bulk features
-(personalisation, scheduling, CSV mapping) are Campaigns territory — deferred
-until Campaigns is scoped. See §10.5.
+Bulk Upload / Import from File recipient tabs. Personalisation, scheduling and CSV column
+mapping shipped in phase 3 (§16).
 
 Backend (apps/api)
 Public Project API (/v1/*, API-key auth):
@@ -565,7 +568,7 @@ Customer platform — still to do
 - Deploy: API (wrangler deploy) + customer app (Pages). Checklist in §14.
 - Admin UI: show a Sender ID request's purpose/description (now stored on
   the assignment) in the admin approval queue.
-- Campaigns / scheduled sends (deferred, customer-platform.md §9).
+- ~~Campaigns / scheduled sends~~ — done (§16).
 - Data and Airtime (coming-soon pages are live).
 - Large sends: services/sms.ts writes records one by one; sends of many
   hundreds of recipients can hit Worker subrequest limits. Batch the
@@ -587,7 +590,7 @@ Customer platform base font is default (16px), not 13px like admin.
 This was a deliberate decision — customer UI needs more breathing room.
 
 Bulk SMS dropped. Send SMS already handles bulk via recipient tabs.
-Deeper bulk features = Campaigns territory, deferred.
+Personalisation, scheduling and CSV mapping: done (§16).
 
 Mock unit calculation on Send SMS — HTML showed "97 chars, 2 units"
 but real GSM-7 calc is 1 unit. Mock preserves HTML values for parity; real
@@ -892,6 +895,100 @@ merged over defaults (`packages/shared/src/schemas/settings.ts`) and cached
 ### Testing
 
 See **docs/testing.md** for how to run everything and the full results:
-API customer journey (27), security & reliability (61), load test, Firestore
-rules (6), and Playwright browser tests (17: UI, accessibility, mobile).
+API customer journey (27), security & reliability (61), features (32), load
+test, Firestore rules (6), and Playwright browser tests (25: UI,
+accessibility, mobile).
+
+---
+
+## 16. Phase 3 — fast sending, personalisation, campaigns, monitoring, branding
+
+### Fast bulk sending
+
+`POST /customer/sms/send` and `/v1/sms/send` now return as soon as the
+batch and its records exist and the units are reserved (one transaction
+that also sets the batch to `submitting` with a 90-second lease). Delivery
+runs after the response (`ctx.waitUntil`) in chunks of 200: mark the chunk
+in flight → one provider call per distinct text → settle the chunk (records
++ confirm/release ledger entries) in one transaction. The request itself
+costs ≤ 20 database round-trips at any size.
+
+If a worker dies mid-send, the **per-minute cron** (`* * * * *`,
+`runDispatcher`) picks up batches whose lease expired. Records that were
+in flight become "unknown" with units held (never sent twice); queued ones
+continue. The Send page shows live progress; nothing waits on the page.
+
+### Personalised SMS
+
+Templates use `{field}` and `{field|fallback}`
+(`packages/shared/src/lib/template.ts`, used by API and both apps). Built-in
+fields: first_name, last_name, name, phone, email, date_of_birth; any
+contact custom field works too. Each recipient is billed by their own
+text. A field that is empty for some recipients and has no fallback is
+refused before anything is charged. `POST /customer/sms/preview` returns
+units and rendered samples (the Send page shows them live).
+
+Contacts gained first name, last name, date of birth and custom fields.
+CSV import lets the user map each column (phone, names, email, date of
+birth, custom field, skip), with headers guessed automatically; up to 5,000
+rows; optional "update existing contacts".
+
+### Campaigns (`services/campaigns.ts`)
+
+One-time, recurring (daily / weekly / monthly) and birthday campaigns,
+time-zone aware. Every minute the dispatcher claims due campaigns in a
+transaction (so each run happens once), resolves the audience (numbers,
+contacts, groups), sends a batch and computes the next run. Failures (e.g.
+not enough units) are recorded on the campaign and notified. Saved message
+templates live in `messageTemplates`. API scheduled sends (`scheduleAt`)
+are one-time campaigns.
+
+### Monitoring (admin → Monitoring, super admin + admin)
+
+- `lib/monitor.ts` counts every request (by route group, status class,
+  latency bucket), provider calls, SMS outcomes and security events in
+  memory and flushes them as Firestore increments into
+  `metricsMinute/{yyyyMMddHHmm}` and `metricsHour/{yyyyMMddHH}`.
+- Sampled detail (5xx errors with request ID, security events with IP,
+  browser crash reports from both apps via `POST /monitor/client-error`)
+  goes to `monitorEvents`.
+- The page polls every 10 s: health of every component, traffic, error
+  rate, p95 latency, blocked requests, busiest/slowest routes, top IPs,
+  latency histogram, recent errors and security events.
+- Incidents (error spike, abuse spike, many client errors) raise a bell
+  alert and email the alert list at most hourly (Settings → Notifications
+  → Incidents). A dispatcher that stops running raises a stale-job alert.
+
+### Branding, SEO and share previews
+
+- Logos come from `branding/source/` (`icon.png`, `logo-text.png`);
+  favicons, app icons, `logo-tile.webp` and the 1200×630 `og-image.jpg` are
+  generated into each app's `public/`. To use a different logo, replace
+  the two source files and regenerate the public assets.
+- Customer app: title/description, canonical URL, Open Graph + Twitter
+  card, JSON-LD, `robots.txt`, `sitemap.xml`, web manifest, per-page
+  titles. Admin app: `noindex` and `Disallow: /`.
+- Share tags need absolute URLs: set **`VITE_SITE_URL`** (e.g.
+  `https://connect.profjero.com`) when building; the default is
+  `https://profjeroconnect.pages.dev`.
+
+### Public API docs
+
+`/developers` in the customer app (public, no login) documents every
+`/v1` endpoint with cURL, JavaScript, PHP and Python examples. Linked from
+sign-in, sign-up, API & Integrations, the API settings tab and the sidebar.
+
+### Deploy checklist (phase 3)
+
+1. Deploy the API — `wrangler.toml` adds the `* * * * *` cron trigger
+   (sending recovery + campaigns). Check it shows under the Worker's
+   Triggers in the Cloudflare dashboard.
+2. Firestore TTL policies on field `expiresAt` for collection groups
+   `metricsMinute`, `metricsHour` and `monitorEvents` (Firestore →
+   Time-to-live), so monitoring data cleans itself up.
+3. Build the customer app with `VITE_SITE_URL` set to its real domain;
+   check a link at https://www.opengraph.xyz/ after deploy.
+4. If not done in phase 2: `ARKESEL_WEBHOOK_SECRET`.
+5. Open admin → Monitoring and confirm the dispatcher shows as healthy
+   within two minutes.
 

@@ -1,4 +1,6 @@
+import { MonitoringPage } from './features/monitoring/MonitoringPage';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { RouteTitle } from './components/RouteTitle';
 import { AuthProvider } from './lib/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
@@ -23,6 +25,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <RouteTitle />
         <Routes>
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
@@ -51,6 +54,7 @@ export default function App() {
               />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/monitoring" element={<MonitoringPage />} />
               <Route path="/send-sms" element={<SendSmsPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
