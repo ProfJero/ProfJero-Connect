@@ -23,7 +23,6 @@ import { AddFundsPage } from './features/wallet/AddFundsPage';
 import { ApiPage } from './features/api/ApiPage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
-import { OrganisationProfilePage } from './features/settings/OrganisationProfilePage';
 import { CompleteSetupPage } from './features/auth/CompleteSetupPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { AddFundsCompletePage } from './features/wallet/AddFundsCompletePage';
@@ -81,7 +80,7 @@ export default function App() {
                 <Route path="/api" element={<ApiPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/settings/organisation" element={<OrganisationProfilePage />} />
+                <Route path="/settings/organisation" element={<Navigate to="/settings?tab=organisation" replace />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Route>
             </Route>
