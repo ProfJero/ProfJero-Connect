@@ -2,6 +2,7 @@ import {
   firestoreCreateDoc,
   firestoreGetDoc,
   runTransaction,
+  type FirestoreWrite,
 } from '../lib/firestore';
 import type { Env } from '../types/env';
 import type {
@@ -107,6 +108,45 @@ async function applyLedgerEntry(
   env: Env,
   params: ApplyLedgerParams,
 ): Promise<{ wallet: WalletData; transaction: WalletTransaction }> {
+  const { wallet, transactions } = await applyLedgerEntries(env, {
+    projectId: params.projectId,
+    requireAvailableAtLeast: params.requireAvailableAtLeast,
+    entries: [params],
+  });
+  return { wallet, transaction: transactions[0] };
+}
+
+export interface LedgerEntryInput {
+  txnId: string;
+  type: WalletTransactionType;
+  availableDelta: number;
+  reservedDelta: number;
+  batchId?: string | null;
+  recordId?: string | null;
+  description?: string | null;
+  createdBy: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+/**
+ * Apply several ledger entries to one wallet — plus any extra document
+ * writes — in a single Firestore transaction. Either everything commits or
+ * nothing does: the wallet balance, every ledger entry (deterministic IDs,
+ * created with exists:false so a replay aborts) and the extra writes (e.g.
+ * the SMS records a settlement covers).
+ *
+ * Used for bulk SMS: one transaction settles a whole chunk of recipients
+ * instead of one transaction per recipient.
+ */
+export async function applyLedgerEntries(
+  env: Env,
+  params: {
+    projectId: string;
+    entries: LedgerEntryInput[];
+    requireAvailableAtLeast?: number;
+    extraWrites?: FirestoreWrite[];
+  },
+): Promise<{ wallet: WalletData; transactions: WalletTransaction[] }> {
   return runTransaction(env, async (txn) => {
     const walletDoc = await txn.get(WALLETS, params.projectId);
     if (!walletDoc) {
@@ -127,82 +167,53 @@ async function applyLedgerEntry(
       );
     }
 
-    const newAvailable = wallet.availableUnits + params.availableDelta;
-    const newReserved = wallet.reservedUnits + params.reservedDelta;
-
-    if (newAvailable < 0) {
-      throw new Error('availableUnits would become negative');
-    }
-    if (newReserved < 0) {
-      throw new Error('reservedUnits would become negative');
-    }
-
     const now = new Date().toISOString();
+    let available = wallet.availableUnits;
+    let reserved = wallet.reservedUnits;
+    const transactions: WalletTransaction[] = [];
+
+    for (const e of params.entries) {
+      available += e.availableDelta;
+      reserved += e.reservedDelta;
+      if (available < 0) throw new Error('availableUnits would become negative');
+      if (reserved < 0) throw new Error('reservedUnits would become negative');
+      const t: WalletTransaction = {
+        id: e.txnId,
+        projectId: params.projectId,
+        type: e.type,
+        availableDelta: e.availableDelta,
+        reservedDelta: e.reservedDelta,
+        availableAfter: available,
+        reservedAfter: reserved,
+        batchId: e.batchId ?? null,
+        recordId: e.recordId ?? null,
+        amountGhs: null,
+        description: e.description ?? null,
+        createdBy: e.createdBy,
+        createdAt: now,
+        reversesTransactionId: null,
+        metadata: e.metadata ?? null,
+      };
+      transactions.push(t);
+      // Ledger entry — immutable, atomic create. If this doc ID already
+      // exists, the transaction aborts, which is what idempotency requires.
+      txn.write({ path: `${TXNS}/${e.txnId}`, fields: { ...t }, precondition: { exists: false } });
+    }
 
     // Wallet update — partial update with optimistic-concurrency precondition.
     txn.write({
       path: `${WALLETS}/${params.projectId}`,
-      fields: {
-        availableUnits: newAvailable,
-        reservedUnits: newReserved,
-        updatedAt: now,
-      },
+      fields: { availableUnits: available, reservedUnits: reserved, updatedAt: now },
       updateFieldPaths: ['availableUnits', 'reservedUnits', 'updatedAt'],
-            precondition: walletDoc.updateTime
-        ? { updateTime: walletDoc.updateTime }
-        : { exists: true },
+      precondition: walletDoc.updateTime ? { updateTime: walletDoc.updateTime } : { exists: true },
     });
 
-    // Ledger entry — immutable, atomic create. If this doc ID already exists,
-    // the transaction aborts, which is what idempotency requires.
-    txn.write({
-      path: `${TXNS}/${params.txnId}`,
-      fields: {
-        id: params.txnId,
-        projectId: params.projectId,
-        type: params.type,
-        availableDelta: params.availableDelta,
-        reservedDelta: params.reservedDelta,
-        availableAfter: newAvailable,
-        reservedAfter: newReserved,
-        batchId: params.batchId ?? null,
-        recordId: params.recordId ?? null,
-        amountGhs: null,
-        description: params.description ?? null,
-        createdBy: params.createdBy,
-        createdAt: now,
-        reversesTransactionId: null,
-        metadata: params.metadata ?? null,
-      },
-      precondition: { exists: false },
-    });
+    for (const w of params.extraWrites ?? []) txn.write(w);
 
-    const updatedWallet: WalletData = {
-      ...wallet,
-      availableUnits: newAvailable,
-      reservedUnits: newReserved,
-      updatedAt: now,
+    return {
+      wallet: { ...wallet, availableUnits: available, reservedUnits: reserved, updatedAt: now },
+      transactions,
     };
-
-    const transaction: WalletTransaction = {
-      id: params.txnId,
-      projectId: params.projectId,
-      type: params.type,
-      availableDelta: params.availableDelta,
-      reservedDelta: params.reservedDelta,
-      availableAfter: newAvailable,
-      reservedAfter: newReserved,
-      batchId: params.batchId ?? null,
-      recordId: params.recordId ?? null,
-      amountGhs: null,
-      description: params.description ?? null,
-      createdBy: params.createdBy,
-      createdAt: now,
-      reversesTransactionId: null,
-      metadata: params.metadata ?? null,
-    };
-
-    return { wallet: updatedWallet, transaction };
   });
 }
 

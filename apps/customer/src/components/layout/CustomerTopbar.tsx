@@ -83,7 +83,7 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
         </Link>
 
         <Link
-          to="/settings/organisation"
+          to="/settings?tab=organisation"
           className="hidden lg:flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors max-w-[200px]"
         >
           <Building2 className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={2} />

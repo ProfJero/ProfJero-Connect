@@ -7,7 +7,7 @@ import type { Env } from '../types/env';
  * and an alert fires when it stops. Stored in systemStatus/cron.
  */
 
-export type JobName = 'reconciliation' | 'providerCleanup' | 'balanceRefresh';
+export type JobName = 'reconciliation' | 'providerCleanup' | 'balanceRefresh' | 'dispatcher';
 
 export interface JobRun {
   lastRunAt: string;

@@ -1,6 +1,6 @@
 # ProfJero Connect — Testing & Security Report
 
-_Last run: 2026-10-02, branch `claude/nifty-babbage-1reeo5`._
+_Last run: 2026-10-04, branch `claude/nifty-babbage-1reeo5`._
 
 This covers both platforms (admin `apps/web`, customer `apps/customer`) and
 the shared API (`apps/api`). Every suite runs locally without any Firebase,
@@ -17,10 +17,11 @@ Windows CMD and macOS/Linux use the same commands, from the repo root.
 | Lint | `npm run lint --workspace=web` and `--workspace=customer` | — |
 | API: customer journey (27 checks) | `npm run test:customer --workspace=@profjero/api` | `openssl` on PATH (Git for Windows has one) |
 | API: security & reliability (61 checks) | `npm run test:security --workspace=@profjero/api` | `openssl` |
-| API: both of the above | `npm test --workspace=@profjero/api` | `openssl` |
+| API: new features (32 checks) | `npm run test:features --workspace=@profjero/api` | `openssl` |
+| API: all three suites | `npm test --workspace=@profjero/api` | `openssl` |
 | Load test | `npm run test:load --workspace=@profjero/api` (options: `-- --customers=50 --rounds=40`) | `openssl` |
 | Firestore rules (6 tests) | `cd firebase`, `npm install`, `npm test` | Java 11+ (for the emulator) |
-| Browser: UI, accessibility, mobile (17 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
+| Browser: UI, accessibility, mobile (25 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
 | Local API for manual testing | `npm run dev:fake --workspace=@profjero/api` | `openssl` |
 
 `npm run test:e2e` starts the fake-cloud API on :8787, the admin app on
@@ -48,10 +49,42 @@ any password works because Firebase Auth is answered inside the browser.
 | 14 | Dependencies | 🟠 | `npm audit` | ✅ 0 vulnerabilities (was 13) |
 | 15 | Load testing | 🟠 | `test/load.ts` | ✅ 3,000 requests, 0 errors |
 | 16 | Regression | 🟠 | all of the above + typecheck/lint/build | ✅ |
-| 17 | UI testing | 🟡 | `e2e/admin.spec.ts`, `e2e/customer.spec.ts` | ✅ 13/13 |
-| 18 | Accessibility | 🟡 | `e2e/accessibility.spec.ts` (axe, WCAG 2.1 A/AA) | ✅ 33 screens, 0 serious/critical |
-| 19 | Mobile | 🟠 | `e2e/mobile.spec.ts` (Pixel 7) | ✅ 2/2 |
+| 17 | UI testing | 🟡 | `e2e/admin.spec.ts`, `e2e/customer.spec.ts` | ✅ 21/21 |
+| 18 | Accessibility | 🟡 | `e2e/accessibility.spec.ts` (axe, WCAG 2.1 A/AA) | ✅ 40 screens, 0 serious/critical |
+| 19 | Mobile | 🟠 | `e2e/mobile.spec.ts` (Pixel 7) | ✅ 2/2 (now incl. Monitoring, Campaigns, API docs) |
 | 20 | Monitoring & recovery | 🔴 | security suite §Monitoring & recovery | ✅ 7/7 |
+
+## Phase 3 features (2026-10-04)
+
+`apps/api/test/features.e2e.ts` — 32 checks, all passing:
+
+- **Fast sending:** a 1,200-recipient send answers in ≤ 20 database
+  round-trips; delivery finishes in the background; a batch whose worker
+  died is resumed by the per-minute job without sending anything twice;
+  in-flight messages from a crash become "unknown" with units held.
+- **Personalisation:** `{field}` / `{field|fallback}`, per-recipient
+  billing (preview units = units charged), refusal when a field is empty
+  and has no fallback, built-in and custom contact fields.
+- **Contacts:** import with first/last name, date of birth (DD/MM/YYYY,
+  YYYY-MM-DD, month names) and custom columns; update existing contacts.
+- **Campaigns:** one-time, daily/weekly/monthly, birthday (time-zone aware,
+  incl. 29 Feb); the dispatcher claims each run once; cancel; send now;
+  templates.
+- **API:** balance, estimate, payments (start/list/check, idempotent),
+  personalised and scheduled `/v1/sms/send`, campaigns.
+- **Monitoring:** request/latency/error counters, security events with IP,
+  client error reports, incident alerts (error spike, abuse spike).
+
+Browser tests added: settings tabs and sign-up organisation, mapped CSV
+import → personalised send with live preview → scheduling, campaigns
+(birthday + cancel), public API docs, share/SEO tags and logo, Monitoring
+page and its role gating.
+
+Found and fixed while testing: in development the share-image URL got a
+stray leading "/" (production builds were fine); the Settings section
+heading was shown twice; the sidebar "API Documentation" link opened the
+API keys page instead of the docs; the admin "Saved" confirmation vanished
+right after saving.
 
 ## What each area checks
 

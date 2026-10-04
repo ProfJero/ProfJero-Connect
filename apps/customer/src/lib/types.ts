@@ -135,8 +135,14 @@ export type GroupColor = 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'tea
 export interface Contact {
   id: string;
   name: string;
+  firstName: string | null;
+  lastName: string | null;
   phone: string;
   email: string | null;
+  /** YYYY-MM-DD */
+  dateOfBirth: string | null;
+  /** Personalisation fields, e.g. { balance: "GH₵ 50" } */
+  customFields: Record<string, string>;
   groupIds: string[];
   createdAt: string;
   updatedAt: string;

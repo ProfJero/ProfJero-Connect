@@ -254,7 +254,7 @@ adminProjectsRouter.post(
         recipients: parsed.data.recipients,
         idempotencyKey,
         actor: `admin:${admin.uid}`,
-      });
+      }, { background: (work) => c.executionCtx.waitUntil(work) });
 
       return c.json(
         SendSmsResponseSchema.parse({

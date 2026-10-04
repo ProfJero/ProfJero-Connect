@@ -7,6 +7,7 @@ import {
   ImportContactsSchema,
   UpdateContactGroupSchema,
   UpdateContactSchema,
+  BUILTIN_TEMPLATE_FIELDS,
 } from '@profjero/shared';
 import {
   createContact,
@@ -15,6 +16,7 @@ import {
   deleteGroup,
   importContacts,
   listContacts,
+  listCustomFieldKeys,
   listGroups,
   setGroupMembership,
   updateContact,
@@ -49,6 +51,7 @@ router.get('/contacts', async (c) => {
     if (!q) return true;
     return (
       ct.name.toLowerCase().includes(q) ||
+      Object.values(ct.customFields).some((v) => v.toLowerCase().includes(q)) ||
       (ct.email ?? '').toLowerCase().includes(q) ||
       (qDigits.length > 0 && ct.phone.includes(qDigits))
     );
@@ -64,9 +67,19 @@ router.get('/contacts', async (c) => {
       total: all.length,
       inGroups: all.filter((ct) => ct.groupIds.length > 0).length,
       withEmail: all.filter((ct) => !!ct.email).length,
+      withBirthday: all.filter((ct) => !!ct.dateOfBirth).length,
       addedLast30Days: all.filter((ct) => ct.createdAt >= monthAgo).length,
     },
   });
+});
+
+/**
+ * GET /customer/contacts/fields — placeholders available for personalised
+ * messages: the built-ins plus every custom field used in this address book.
+ */
+router.get('/contacts/fields', async (c) => {
+  const custom = await listCustomFieldKeys(c.env, c.get('projectId')!);
+  return c.json({ builtin: [...BUILTIN_TEMPLATE_FIELDS], custom });
 });
 
 router.post('/contacts', async (c) => {
