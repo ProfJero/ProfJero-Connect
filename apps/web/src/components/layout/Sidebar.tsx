@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Send,
   Plus,
@@ -54,6 +54,20 @@ export function Sidebar({
   onClose?: () => void;
 }) {
   const { user } = useAuth();
+  const location = useLocation();
+
+  // A nav item is "active" only if its path is the LONGEST prefix of the
+  // current path. Without this, /providers/data/bundles also matches
+  // /providers (prefix), so both highlight. The longest match wins.
+  const visibleNavItems = navItems.filter(
+    (n) => !n.roles || (user && n.roles.includes(user.role)),
+  );
+  const bestMatch = visibleNavItems.reduce<string>((best, item) => {
+    const matches =
+      location.pathname === item.path ||
+      location.pathname.startsWith(item.path + '/');
+    return matches && item.path.length > best.length ? item.path : best;
+  }, '');
   const canManage = user?.role === 'super_admin' || user?.role === 'admin';
   const canBill = canManage || user?.role === 'finance';
   return (
@@ -97,18 +111,17 @@ export function Sidebar({
           </div>
 
           <nav aria-label="Sidebar Navigation" className="space-y-1">
-            {navItems.filter((n) => !n.roles || (user && n.roles.includes(user.role))).map(({ label, icon: Icon, path }) => (
+            {visibleNavItems.map(({ label, icon: Icon, path }) => (
               <NavLink
                 key={label}
                 to={path}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3.5 py-2.5 rounded-lg font-medium text-[13.5px] transition-colors',
-                    isActive
-                      ? 'bg-[#1976d2] text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
-                  )
-                }
+                onClick={onClose}
+                className={cn(
+                  'flex items-center gap-3 px-3.5 py-2.5 rounded-lg font-medium text-[13.5px] transition-colors',
+                  bestMatch === path
+                    ? 'bg-[#1976d2] text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
+                )}
               >
                 <Icon className="w-4 h-4" />
                 <span>{label}</span>

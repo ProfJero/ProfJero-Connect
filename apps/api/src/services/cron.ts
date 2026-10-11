@@ -42,6 +42,11 @@ export async function handleScheduled(
     return;
   }
 
+  if (cron === '0 */6 * * *') {
+    await runDataBundleSync(env);
+    return;
+  }
+
   console.warn(`[cron] no handler for expression: ${cron}`);
 }
 
@@ -191,5 +196,41 @@ async function runMonitorEventCleanup(env: Env): Promise<void> {
     console.log(`[cron] monitor event cleanup: deleted=${deleted}`);
   } catch (err) {
     console.error('[cron] monitor event cleanup failed:', err);
+  }
+}
+
+/**
+ * Every 6 hours: pull the current bundle catalog from EliteData.
+ *
+ * Idempotent. New bundles default to hidden (admin curates);
+ * existing bundles keep their `availableToCustomers` flag; bundles
+ * EliteData no longer offers are marked inactive.
+ *
+ * Read cost: one provider HTTP call + a `dataBundles` query. The
+ * collection is small (dozens of docs), so the Firestore reads are
+ * negligible against the free-tier budget.
+ */
+async function runDataBundleSync(env: Env): Promise<void> {
+  const started = Date.now();
+  try {
+    const { syncBundlesFromProvider } = await import('./dataService');
+    const summary = await syncBundlesFromProvider(env);
+    console.log(
+      `[cron] data bundle sync: total=${summary.total} created=${summary.created} updated=${summary.updated} deactivated=${summary.deactivated}`,
+    );
+    await recordJobRun(env, 'dataBundleSync', {
+      lastRunAt: new Date().toISOString(),
+      ok: true,
+      summary: `total=${summary.total} created=${summary.created} updated=${summary.updated}`,
+      durationMs: Date.now() - started,
+    });
+  } catch (err) {
+    console.error('[cron] data bundle sync failed:', err);
+    await recordJobRun(env, 'dataBundleSync', {
+      lastRunAt: new Date().toISOString(),
+      ok: false,
+      summary: String(err).slice(0, 300),
+      durationMs: Date.now() - started,
+    });
   }
 }

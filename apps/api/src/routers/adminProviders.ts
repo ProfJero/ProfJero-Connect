@@ -6,6 +6,8 @@ import {
   ProviderRequestListResponseSchema,
   ProviderResponseSchema,
   UpdateProviderInputSchema,
+  SetBundleAvailabilityInputSchema,
+  SetBundlePriceInputSchema,
 } from '@profjero/shared';
 import { requireRole } from '../middleware/roles';
 import {
@@ -17,6 +19,14 @@ import {
 } from '../repositories/providers';
 import { listRecentProviderRequests } from '../repositories/providerRequests';
 import { fetchBalance } from '../providers/arkeselClient';
+import { elitedata, EliteDataError } from '../providers/elitedataClient';
+import { syncBundlesFromProvider } from '../services/dataService';
+import {
+  getBundle,
+  listAllBundles,
+  setBundleAvailability,
+  setBundleSellPrice,
+} from '../repositories/dataBundles';
 import type { AuthVariables, Env } from '../types/env';
 
 export const adminProvidersRouter = new Hono<{
@@ -31,6 +41,28 @@ function parseId(raw: string): string {
   }
   return parsed.data;
 }
+
+/**
+ * Wrap provider errors in a 502 so the admin UI can show a consistent
+ * "provider unreachable" message. EliteData-specific errors carry the
+ * upstream status and message.
+ */
+function providerErrorResponse(err: unknown): never {
+  if (err instanceof EliteDataError) {
+    console.error(`[admin/data] EliteData ${err.status}: ${err.providerMessage}`);
+    throw new HTTPException(502, {
+      message: `EliteData rejected the request: ${err.providerMessage}`,
+    });
+  }
+  console.error('[admin/data] unexpected error:', err);
+  throw new HTTPException(500, {
+    message: err instanceof Error ? err.message : 'Unexpected error.',
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Standard provider routes (admin CRUD + Arkesel balance + request log)
+// ─────────────────────────────────────────────────────────────────────
 
 // --- GET /admin/providers ---
 adminProvidersRouter.get('/', async (c) => {
@@ -77,6 +109,125 @@ adminProvidersRouter.post(
     );
   },
 );
+
+// ─────────────────────────────────────────────────────────────────────
+// Data bundle admin routes (EliteData driver)
+//
+// These live under /data/* so they don't collide with the wildcard
+// /:providerId routes below. Hono matches in registration order, and
+// "/data/balance" would otherwise be interpreted as providerId="data"
+// with an unmatched sub-path.
+// ─────────────────────────────────────────────────────────────────────
+
+// --- GET /admin/providers/data/balance ---
+// Fetches the current EliteData wallet balance. Doesn't require a
+// providers/data_gw_01 record — the driver talks directly to EliteData.
+adminProvidersRouter.get(
+  '/data/balance',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    if (!c.env.ELITEDATA_API_KEY) {
+      throw new HTTPException(500, {
+        message: 'ELITEDATA_API_KEY is not configured.',
+      });
+    }
+    try {
+      const balance = await elitedata.getBalance(c.env);
+      return c.json({ ok: true, balance });
+    } catch (err) {
+      providerErrorResponse(err);
+    }
+  },
+);
+
+// --- POST /admin/providers/data/sync ---
+// Pulls the current bundle catalog from EliteData and upserts into
+// Firestore. Existing bundles keep their admin curation flag. New
+// bundles default to hidden.
+adminProvidersRouter.post(
+  '/data/sync',
+  requireRole('super_admin', 'admin'),
+  async (c) => {
+    if (!c.env.ELITEDATA_API_KEY) {
+      throw new HTTPException(500, {
+        message: 'ELITEDATA_API_KEY is not configured.',
+      });
+    }
+    try {
+      const summary = await syncBundlesFromProvider(c.env);
+      return c.json({ ok: true, summary });
+    } catch (err) {
+      providerErrorResponse(err);
+    }
+  },
+);
+
+// --- GET /admin/providers/data/bundles ---
+// Returns the local synced catalog, including admin-only fields
+// (providerCostGhs, markupPercent, availableToCustomers, active).
+adminProvidersRouter.get(
+  '/data/bundles',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const bundles = await listAllBundles(c.env);
+    return c.json({ ok: true, bundles, count: bundles.length });
+  },
+);
+
+// --- PUT /admin/providers/data/bundles/:bundleId/availability ---
+// Toggle whether a bundle is shown to customers. Body: { available: boolean }.
+adminProvidersRouter.put(
+  '/data/bundles/:bundleId/availability',
+  requireRole('super_admin', 'admin'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const body = await c.req.json().catch(() => null);
+    const parsed = SetBundleAvailabilityInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) {
+      throw new HTTPException(404, { message: 'Bundle not found.' });
+    }
+    await setBundleAvailability(c.env, bundleId, parsed.data.available);
+    return c.json({ ok: true, bundleId, available: parsed.data.available });
+  },
+);
+
+// --- PUT /admin/providers/data/bundles/:bundleId/price ---
+// Override the auto-computed sell price. Body: { sellPriceGhs: number }.
+adminProvidersRouter.put(
+  '/data/bundles/:bundleId/price',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const body = await c.req.json().catch(() => null);
+    const parsed = SetBundlePriceInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) {
+      throw new HTTPException(404, { message: 'Bundle not found.' });
+    }
+    await setBundleSellPrice(c.env, bundleId, parsed.data.sellPriceGhs);
+    return c.json({
+      ok: true,
+      bundleId,
+      sellPriceGhs: parsed.data.sellPriceGhs,
+    });
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// Wildcard provider routes — MUST come after the /data/* block above
+// so that literal paths win over /:providerId.
+// ─────────────────────────────────────────────────────────────────────
 
 // --- GET /admin/providers/:providerId ---
 adminProvidersRouter.get('/:providerId', async (c) => {
@@ -125,10 +276,13 @@ adminProvidersRouter.post(
     const record = await getProviderRecord(c.env, id);
     if (!record) throw new HTTPException(404, { message: 'Provider not found.' });
 
-    // Only Arkesel driver is implemented today.
+    // Only the Arkesel driver is wired through this endpoint today.
+    // EliteData has its own /data/balance route above because its balance
+    // shape (wallet GHS) doesn't map to the smsCredits field on the
+    // provider record.
     if (record.driver !== 'arkesel') {
       throw new HTTPException(400, {
-        message: 'Balance refresh is not supported for this provider yet.',
+        message: 'Use /admin/providers/data/balance for data providers.',
       });
     }
     if (!c.env.ARKESEL_API_KEY) {

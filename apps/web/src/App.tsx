@@ -20,6 +20,8 @@ import { ProviderDetailPage } from './features/providers/ProviderDetailPage';
 import { ReportsPage } from './features/reports/ReportsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { SendSmsPage } from './features/send-sms/SendSmsPage';
+import { DataBundlesPage } from './features/providers/DataBundlesPage';
+import { DataOrdersPage } from './features/providers/DataOrdersPage';
 
 export default function App() {
   return (
@@ -48,10 +50,18 @@ export default function App() {
               <Route path="/wallets" element={<WalletsPage />} />
               <Route path="/payments" element={<PaymentsPage />} />
               <Route path="/providers" element={<ProvidersListPage />} />
-              <Route
-                path="/providers/:providerId"
-                element={<ProviderDetailPage />}
-              />
+                <Route
+                  path="/providers/data/bundles"
+                  element={<DataBundlesPage />}
+                />
+                <Route
+                  path="/providers/data/orders"
+                  element={<DataOrdersPage />}
+                />
+                <Route
+                  path="/providers/:providerId"
+                  element={<ProviderDetailPage />}
+                />
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/monitoring" element={<MonitoringPage />} />
