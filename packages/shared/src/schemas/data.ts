@@ -175,3 +175,21 @@ export const SetBundlePriceInputSchema = z.object({
   sellPriceGhs: z.number().positive().max(10_000),
 });
 export type SetBundlePriceInput = z.infer<typeof SetBundlePriceInputSchema>;
+
+export const UpdateBundleInputSchema = z
+  .object({
+    label: z.string().trim().min(1).max(120).optional(),
+    sellPriceGhs: z.number().positive().max(10_000).optional(),
+    displayOrder: z.number().int().min(0).max(99_999).optional(),
+    availableToCustomers: z.boolean().optional(),
+    active: z.boolean().optional(),
+  })
+  .refine((d) => Object.keys(d).length > 0, {
+    message: 'At least one field must be provided.',
+  });
+export type UpdateBundleInput = z.infer<typeof UpdateBundleInputSchema>;
+
+export const SetGlobalMarkupInputSchema = z.object({
+  markupPercent: z.number().min(0).max(200),
+});
+export type SetGlobalMarkupInput = z.infer<typeof SetGlobalMarkupInputSchema>;

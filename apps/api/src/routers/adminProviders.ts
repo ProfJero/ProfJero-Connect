@@ -8,6 +8,8 @@ import {
   UpdateProviderInputSchema,
   SetBundleAvailabilityInputSchema,
   SetBundlePriceInputSchema,
+  UpdateBundleInputSchema,
+  SetGlobalMarkupInputSchema,
 } from '@profjero/shared';
 import { requireRole } from '../middleware/roles';
 import {
@@ -26,6 +28,9 @@ import {
   listAllBundles,
   setBundleAvailability,
   setBundleSellPrice,
+  updateBundleFields,
+  deleteBundle,
+  applyGlobalMarkup,
 } from '../repositories/dataBundles';
 import type { AuthVariables, Env } from '../types/env';
 
@@ -335,3 +340,64 @@ adminProvidersRouter.get('/:providerId/requests', async (c) => {
     }),
   );
 });
+
+// --- PATCH /admin/providers/data/bundles/:bundleId ---
+// Full partial update: any of label, sellPriceGhs, displayOrder,
+// availableToCustomers, active.
+adminProvidersRouter.patch(
+  '/data/bundles/:bundleId',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const body = await c.req.json().catch(() => null);
+    const parsed = UpdateBundleInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) throw new HTTPException(404, { message: 'Bundle not found.' });
+    await updateBundleFields(c.env, bundleId, parsed.data);
+    return c.json({ ok: true, bundleId });
+  },
+);
+
+// --- DELETE /admin/providers/data/bundles/:bundleId ---
+// Removes the bundle from our local catalog. If EliteData still offers it,
+// the next sync re-adds it (as hidden, since new bundles default to hidden).
+adminProvidersRouter.delete(
+  '/data/bundles/:bundleId',
+  requireRole('super_admin', 'admin'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) throw new HTTPException(404, { message: 'Bundle not found.' });
+    await deleteBundle(c.env, bundleId);
+    return c.json({ ok: true, bundleId });
+  },
+);
+
+// --- PUT /admin/providers/data/markup ---
+// Set a global markup percent and recompute every active bundle's sell
+// price from providerCostGhs. Manually-overridden prices are overwritten
+// — this is the "reset to standard pricing" action.
+adminProvidersRouter.put(
+  '/data/markup',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const parsed = SetGlobalMarkupInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const result = await applyGlobalMarkup(c.env, parsed.data.markupPercent);
+    return c.json({
+      ok: true,
+      markupPercent: parsed.data.markupPercent,
+      updated: result.updated,
+    });
+  },
+);

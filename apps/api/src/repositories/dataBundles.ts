@@ -1,5 +1,6 @@
 import {
   firestoreCreateDoc,
+  firestoreDeleteDoc,
   firestoreGetDoc,
   firestoreQuery,
   firestoreUpdateDoc,
@@ -129,4 +130,55 @@ export async function setBundleSellPrice(
     sellPriceGhs,
     updatedAt: new Date().toISOString(),
   });
+}
+
+export async function updateBundleFields(
+  env: Env,
+  id: string,
+  fields: Partial<{
+    label: string;
+    sellPriceGhs: number;
+    displayOrder: number;
+    availableToCustomers: boolean;
+    active: boolean;
+  }>,
+): Promise<void> {
+  await firestoreUpdateDoc(env, COLLECTION, id, {
+    ...fields,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export async function deleteBundle(env: Env, id: string): Promise<void> {
+  await firestoreDeleteDoc(env, COLLECTION, id);
+}
+
+/**
+ * Recompute every bundle's sellPriceGhs from its providerCostGhs × the
+ * given markup. Used by the admin "set global markup" action. Skips
+ * inactive bundles (they're not for sale anyway).
+ *
+ * Firestore REST has no batch update beyond firestoreBatchWrite, but our
+ * collection is small (dozens), so a sequential loop is fine.
+ */
+export async function applyGlobalMarkup(
+  env: Env,
+  markupPercent: number,
+): Promise<{ updated: number }> {
+  const all = await listAllBundles(env);
+  let updated = 0;
+  for (const b of all) {
+    if (!b.active) continue;
+    const raw = b.providerCostGhs * (1 + markupPercent / 100);
+    const pesewas = Math.ceil((raw * 100) / 10) * 10;
+    const sellPriceGhs = pesewas / 100;
+    if (sellPriceGhs === b.sellPriceGhs && markupPercent === b.markupPercent) continue;
+    await firestoreUpdateDoc(env, COLLECTION, b.id, {
+      sellPriceGhs,
+      markupPercent,
+      updatedAt: new Date().toISOString(),
+    });
+    updated += 1;
+  }
+  return { updated };
 }
