@@ -18,7 +18,7 @@ import type { Env } from '../types/env';
  */
 export async function computeAlerts(env: Env, seenAt: string | null): Promise<AdminAlert[]> {
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [settings, pendingAssign, pendingValues, wallets, projects, providers, failedPayments, unknownRecords, newCustomers, jobs] =
+  const [settings, pendingAssign, pendingValues, wallets, projects, providers, failedPayments, unknownRecords, newCustomers, jobs, reviewOrders] =
     await Promise.all([
       getSettings(env),
       listPendingAssignments(env),
@@ -30,6 +30,7 @@ export async function computeAlerts(env: Env, seenAt: string | null): Promise<Ad
       firestoreQuery(env, 'smsRecords', [{ field: 'status', op: 'EQUAL', value: 'unknown' }]),
       firestoreQuery(env, 'customers', [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: weekAgo }]),
       getJobRuns(env),
+      firestoreQuery(env, 'dataOrders', [{ field: 'needsReview', op: 'EQUAL', value: true }], { limit: 50 }),
     ]);
 
   const names = new Map(projects.map((p) => [p.id, p.name]));
@@ -117,6 +118,19 @@ export async function computeAlerts(env: Env, seenAt: string | null): Promise<Ad
   }
 
   const stuckCutoff = new Date(Date.now() - 60 * 60_000).toISOString();
+  if (reviewOrders.length > 0) {
+    alerts.push({
+      id: 'data_orders_review',
+      type: 'data_orders_review',
+      severity: 'error',
+      title: `${plural(reviewOrders.length, 'paid data order')} need${reviewOrders.length === 1 ? 's' : ''} attention`,
+      body: 'The customer paid but delivery or the refund is unconfirmed. Check the provider, then retry, mark delivered or refund.',
+      link: '/providers/data/orders?review=1',
+      count: reviewOrders.length,
+      latestAt: newest(reviewOrders.map((d) => String(d.data.updatedAt))),
+    });
+  }
+
   const stuck = unknownRecords.filter((d) => String(d.data.updatedAt) < stuckCutoff);
   if (stuck.length > 0) {
     alerts.push({

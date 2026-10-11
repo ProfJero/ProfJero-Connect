@@ -30,6 +30,7 @@ export async function handleScheduled(
 
   if (cron === '*/15 * * * *') {
     await runReconciliation(env);
+    await runDataOrderReconciliation(env);
     await runBalanceRefresh(env);
     await checkIncidents(env);
     await flushMetrics(env);
@@ -232,5 +233,25 @@ async function runDataBundleSync(env: Env): Promise<void> {
       summary: String(err).slice(0, 300),
       durationMs: Date.now() - started,
     });
+  }
+}
+/**
+ * Every 15 minutes: ask the data provider about orders still processing.
+ * Reads: one indexed query (0 docs when nothing is pending).
+ */
+async function runDataOrderReconciliation(env: Env): Promise<void> {
+  const started = Date.now();
+  try {
+    const { reconcileDataOrders } = await import('./dataOrders');
+    const r = await reconcileDataOrders(env);
+    await recordJobRun(env, 'dataOrders', {
+      lastRunAt: new Date().toISOString(),
+      ok: true,
+      summary: `checked=${r.checked} delivered=${r.delivered} failed=${r.failed}`,
+      durationMs: Date.now() - started,
+    });
+  } catch (err) {
+    console.error('[cron] data order reconciliation failed:', err);
+    await recordJobRun(env, 'dataOrders', { lastRunAt: new Date().toISOString(), ok: false, summary: String(err).slice(0, 300), durationMs: Date.now() - started });
   }
 }

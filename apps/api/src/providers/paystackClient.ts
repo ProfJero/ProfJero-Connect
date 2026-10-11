@@ -174,3 +174,34 @@ export async function verifyTransaction(
     paidAt: body.data.paid_at ?? null,
   };
 }
+// ---------- Refund ----------
+
+export interface RefundResult {
+  ok: boolean;
+  /** Gateway refund status ("pending", "processed", …) or the error. */
+  status: string;
+}
+
+/**
+ * Refund a successful transaction in full. Paystack processes refunds
+ * asynchronously; "pending"/"processing"/"processed" all mean accepted.
+ * A transaction already refunded is reported as ok.
+ */
+export async function refundTransaction(env: Env, reference: string): Promise<RefundResult> {
+  if (!env.PAYSTACK_SECRET_KEY) throw new Error('PAYSTACK_SECRET_KEY is not configured.');
+  let res: Response;
+  try {
+    res = await fetch(`${PAYSTACK_BASE}/refund`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transaction: reference }),
+    });
+  } catch (err) {
+    return { ok: false, status: err instanceof Error ? err.message : 'Network error' };
+  }
+  const body = (await res.json().catch(() => null)) as { status?: boolean; message?: string; data?: { status?: string } } | null;
+  if (res.ok && body?.status) return { ok: true, status: String(body.data?.status ?? 'pending') };
+  const message = body?.message ?? `HTTP ${res.status}`;
+  if (/fully reversed|already been refunded|already refunded/i.test(message)) return { ok: true, status: 'processed' };
+  return { ok: false, status: message };
+}

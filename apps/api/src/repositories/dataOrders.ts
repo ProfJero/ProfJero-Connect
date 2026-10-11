@@ -37,6 +37,12 @@ function parse(id: string, d: Record<string, unknown>): DataOrder {
     paymentConfirmedAt: (d.paymentConfirmedAt as string | null) ?? null,
     providerSubmittedAt: (d.providerSubmittedAt as string | null) ?? null,
     completedAt: (d.completedAt as string | null) ?? null,
+    amountPesewas: d.amountPesewas !== undefined ? Number(d.amountPesewas) : Math.round(Number(d.sellPriceGhs ?? 0) * 100),
+    checkoutUrl: (d.checkoutUrl as string | null) ?? null,
+    customerEmail: (d.customerEmail as string | null) ?? null,
+    needsReview: d.needsReview === true,
+    refundedAt: (d.refundedAt as string | null) ?? null,
+    refundError: (d.refundError as string | null) ?? null,
     createdAt: String(d.createdAt ?? ''),
     updatedAt: String(d.updatedAt ?? ''),
   };
@@ -137,4 +143,28 @@ export async function listOrdersPendingReconciliation(
     },
   );
   return docs.map((d) => parse(d.id, d.data));
+}
+/**
+ * Every project's orders, newest first (admin). Optional status filter.
+ * Requires composite index: dataOrders(orderStatus ASC, createdAt DESC).
+ */
+export async function listAllOrders(
+  env: Env,
+  opts: { status?: DataOrderStatus; needsReview?: boolean; limit?: number; before?: string } = {},
+): Promise<{ orders: DataOrder[]; nextCursor: string | null }> {
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
+  const filters: QueryFilter[] = [];
+  if (opts.status) filters.push({ field: 'orderStatus', op: 'EQUAL', value: opts.status });
+  if (opts.needsReview) filters.push({ field: 'needsReview', op: 'EQUAL', value: true });
+  if (opts.before) filters.push({ field: 'createdAt', op: 'LESS_THAN', value: opts.before });
+  const docs = await firestoreQuery(env, COLLECTION, filters, {
+    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+    limit: limit + 1,
+  });
+  const hasMore = docs.length > limit;
+  const page = hasMore ? docs.slice(0, limit) : docs;
+  return {
+    orders: page.map((d) => parse(d.id, d.data)),
+    nextCursor: hasMore && page.length > 0 ? String(page[page.length - 1].data.createdAt ?? '') || null : null,
+  };
 }

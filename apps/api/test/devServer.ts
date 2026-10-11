@@ -44,6 +44,7 @@ const env: Env = {
   FIREBASE_CLIENT_EMAIL: 'svc@test.iam.gserviceaccount.com',
   FIREBASE_PRIVATE_KEY: keyPem,
   PAYSTACK_SECRET_KEY: 'sk_test_fake',
+  ELITEDATA_API_KEY: 'ed_test',
   RESEND_API_KEY: 're_test',
   EMAIL_FROM: 'ProfJero Connect <test@example.com>',
   CUSTOMER_APP_URL: 'http://localhost:5174',
@@ -112,6 +113,12 @@ for (const [uid, role] of [['root', 'super_admin'], ['viewer', 'viewer']] as con
 }
 const rootToken = await mint('root', 'root@ops.example');
 await call('POST', '/admin/providers/bootstrap', rootToken, {});
+// Data bundles: pull the (fake) provider catalogue and put it on sale.
+cloud.dataProvider.mode = 'delivered';
+await call('POST', '/admin/providers/data/sync', rootToken, {});
+for (const b of cloud.dataProvider.bundles) {
+  await call('PUT', `/admin/providers/data/bundles/${b.bundleId}/availability`, rootToken, { available: true });
+}
 
 // A customer with a pending Sender ID request → the admin bell has an alert.
 const seedTok = await mint('seedcust', 'kofi@example.com');

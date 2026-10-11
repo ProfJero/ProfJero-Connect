@@ -183,6 +183,7 @@ export const AdminAlertSchema = z.object({
     'error_spike',
     'security_spike',
     'client_errors',
+    'data_orders_review',
   ]),
   severity: z.enum(['info', 'warning', 'error']),
   title: z.string(),

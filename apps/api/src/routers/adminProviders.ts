@@ -33,6 +33,18 @@ import {
   applyGlobalMarkup,
 } from '../repositories/dataBundles';
 import type { AuthVariables, Env } from '../types/env';
+import type { Context } from 'hono';
+import type { DataOrder, DataOrderStatus } from '@profjero/shared';
+import { listAllOrders } from '../repositories/dataOrders';
+import {
+  DATA_ORDER_STATUSES,
+  markDataOrderDelivered,
+  refreshDataOrder,
+  refundDataOrderByAdmin,
+  retryDataOrder,
+} from '../services/dataOrders';
+import { firestoreBatchGet } from '../lib/firestore';
+import { DomainError } from '../lib/domainError';
 
 export const adminProvidersRouter = new Hono<{
   Bindings: Env;
@@ -227,6 +239,78 @@ adminProvidersRouter.put(
       sellPriceGhs: parsed.data.sellPriceGhs,
     });
   },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// Data orders (customer purchases)
+// ─────────────────────────────────────────────────────────────────────
+
+const ORDER_ID_RE = /^pjd_[a-f0-9]{24}$/;
+function orderIdParam(raw: string): string {
+  if (!ORDER_ID_RE.test(raw)) throw new HTTPException(404, { message: 'Order not found.' });
+  return raw;
+}
+function toAdminOrder(o: DataOrder, names: Map<string, string>) {
+  const amountGhs = (o.amountPesewas ?? Math.round(o.sellPriceGhs * 100)) / 100;
+  return {
+    ...o,
+    projectName: names.get(o.projectId) ?? null,
+    amountGhs,
+    marginGhs: Math.round((amountGhs - o.providerCostGhs) * 100) / 100,
+    checkoutUrl: undefined,
+  };
+}
+async function projectNames(env: Env, ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return new Map();
+  const docs = await firestoreBatchGet(env, 'projects', unique);
+  return new Map(docs.map((d) => [d.id, String(d.data.name ?? '')]));
+}
+
+// --- GET /admin/providers/data/orders?status=&review=1&limit=&before= ---
+adminProvidersRouter.get('/data/orders', requireRole('super_admin', 'admin', 'finance', 'support', 'viewer'), async (c) => {
+  const status = c.req.query('status');
+  if (status && !DATA_ORDER_STATUSES.includes(status as DataOrderStatus)) {
+    throw new HTTPException(400, { message: 'Unknown status.' });
+  }
+  const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 50) || 50, 1), 200);
+  const { orders, nextCursor } = await listAllOrders(c.env, {
+    status: (status as DataOrderStatus) || undefined,
+    needsReview: c.req.query('review') === '1',
+    limit,
+    before: c.req.query('before') || undefined,
+  });
+  const names = await projectNames(c.env, orders.map((o) => o.projectId));
+  return c.json({ orders: orders.map((o) => toAdminOrder(o, names)), nextCursor });
+});
+
+async function orderAction(c: Context<{ Bindings: Env; Variables: AuthVariables }>, action: (env: Env, id: string) => Promise<DataOrder>) {
+  const id = orderIdParam(c.req.param('orderId') ?? '');
+  try {
+    const order = await action(c.env, id);
+    const names = await projectNames(c.env, [order.projectId]);
+    return c.json({ order: toAdminOrder(order, names) });
+  } catch (err) {
+    if (err instanceof DomainError) throw new HTTPException(err.status as 400, { message: err.message });
+    throw err;
+  }
+}
+
+// Check the gateway / provider for the latest status.
+adminProvidersRouter.post('/data/orders/:orderId/refresh', requireRole('super_admin', 'admin', 'finance', 'support'), (c) =>
+  orderAction(c, refreshDataOrder),
+);
+// Re-submit after an unknown outcome (operator confirmed it wasn't delivered).
+adminProvidersRouter.post('/data/orders/:orderId/retry', requireRole('super_admin', 'admin'), (c) =>
+  orderAction(c, retryDataOrder),
+);
+// Refund the customer in full.
+adminProvidersRouter.post('/data/orders/:orderId/refund', requireRole('super_admin', 'admin', 'finance'), (c) =>
+  orderAction(c, refundDataOrderByAdmin),
+);
+// Operator confirmed with the provider that it was delivered.
+adminProvidersRouter.post('/data/orders/:orderId/mark-delivered', requireRole('super_admin', 'admin'), (c) =>
+  orderAction(c, markDataOrderDelivered),
 );
 
 // ─────────────────────────────────────────────────────────────────────

@@ -61,10 +61,46 @@ export const DataOrderSchema = z.object({
   paymentConfirmedAt: z.string().nullable(),
   providerSubmittedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
+  /** Amount charged at checkout, in pesewas (sellPriceGhs × 100). */
+  amountPesewas: z.number().int().nonnegative().optional(),
+  /** Hosted checkout link, kept so a retried request reopens the same checkout. */
+  checkoutUrl: z.string().nullable().optional(),
+  customerEmail: z.string().nullable().optional(),
+  /** Set when the outcome is unclear and an operator has to look. */
+  needsReview: z.boolean().optional(),
+  refundedAt: z.string().nullable().optional(),
+  refundError: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type DataOrder = z.infer<typeof DataOrderSchema>;
+
+/** What a customer sees about their order (no costs or provider details). */
+export const CustomerDataOrderSchema = z.object({
+  id: z.string(),
+  bundleId: z.string(),
+  bundleLabel: z.string(),
+  network: z.string(),
+  size: z.string(),
+  recipientNumber: z.string(),
+  amountGhs: z.number().nonnegative(),
+  paymentStatus: DataPaymentStatusSchema,
+  orderStatus: DataOrderStatusSchema,
+  /** Customer-safe explanation for failed / refunded orders. */
+  message: z.string().nullable(),
+  refundedAt: z.string().nullable(),
+  paidAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type CustomerDataOrder = z.infer<typeof CustomerDataOrderSchema>;
+
+export const CreateDataOrderInputSchema = z.object({
+  bundleId: z.string().min(1).max(100),
+  recipientNumber: z.string().min(9).max(20),
+  method: z.enum(['mobile_money', 'card']).optional(),
+});
+export type CreateDataOrderInput = z.infer<typeof CreateDataOrderInputSchema>;
 
 // ─────────────────────────────────────────────────────────────────────
 // EliteData API response shapes (what the provider sends back)

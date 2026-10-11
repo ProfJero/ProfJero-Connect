@@ -34,6 +34,20 @@ export interface FakeCloud {
    * ok | http400 | http503 | network. reports: providerMessageId → status.
    */
   provider: { mode: 'ok' | 'http400' | 'http503' | 'network'; reports: Map<string, string>; balance: number; sent: number; calls: number; delayMs: number };
+  /**
+   * Data bundle provider. mode: what POST /purchase does — accept as
+   * "processing", deliver immediately, reject (400), or fail with 503 /
+   * a network error (outcome unknown). orders: provider order id → status.
+   */
+  dataProvider: {
+    mode: 'processing' | 'delivered' | 'reject' | 'http503' | 'network';
+    bundles: Array<{ bundleId: string; network: string; size: string; price: number; label: string }>;
+    orders: Map<string, { status: string; clientReference: string }>;
+    purchases: Array<{ bundleId: string; recipientNumber: string; clientReference: string }>;
+  };
+  /** Gateway refunds requested (transaction references). refundMode 'error' makes them fail. */
+  refunds: string[];
+  refundMode: 'ok' | 'error';
   /** Simulate a database outage: every Firestore call returns 503. */
   firestoreDown: boolean;
   /** Count of Firestore HTTP calls (for load/efficiency checks). */
@@ -97,6 +111,19 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
   const gatewayStatus = new Map<string, string>();
   const gatewayAmounts = new Map<string, number>();
   const authUsers = new Map<string, { uid: string; disabled: boolean }>();
+  const dataProvider: FakeCloud['dataProvider'] = {
+    mode: 'processing',
+    bundles: [
+      { bundleId: 'mtn_1gb', network: 'MTN', size: '1GB', price: 4.0, label: 'MTN 1GB Data' },
+      { bundleId: 'mtn_5gb', network: 'MTN', size: '5GB', price: 18.5, label: 'MTN 5GB Data' },
+      { bundleId: 'tel_2gb', network: 'Telecel', size: '2GB', price: 8.0, label: 'Telecel 2GB Data' },
+      { bundleId: 'at_3gb', network: 'AirtelTigo', size: '3GB', price: 9.0, label: 'AirtelTigo 3GB Data' },
+    ],
+    orders: new Map(),
+    purchases: [],
+  };
+  const refunds: string[] = [];
+  const refundState = { mode: 'ok' as 'ok' | 'error' };
   const provider: FakeCloud['provider'] = { mode: 'ok', reports: new Map(), balance: 50_000, sent: 0, calls: 0, delayMs: 0 };
   const state = { firestoreDown: false, firestoreCalls: 0 };
   let clock = 0;
@@ -344,6 +371,34 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
         return json({ status: 'success', data: { sms_balance: provider.balance, main_balance: 12.5 } });
       }
     }
+    if (url.hostname === 'elitedatagh.com') {
+      if (url.pathname === '/api/v1/bundles') return json({ success: true, bundles: dataProvider.bundles });
+      if (url.pathname === '/api/v1/balance') return json({ success: true, data: { username: 'pj', balance: 500, currency: 'GHS', status: 'active' } });
+      if (url.pathname === '/api/v1/purchase' && method === 'POST') {
+        const body = JSON.parse(String(init.body));
+        if (dataProvider.mode === 'network') throw new TypeError('fetch failed: ECONNRESET');
+        if (dataProvider.mode === 'http503') return json({ success: false, message: 'Service Unavailable' }, 503);
+        if (dataProvider.mode === 'reject') return json({ success: false, message: 'Insufficient wallet balance' }, 400);
+        dataProvider.purchases.push(body);
+        const id = `ed_${++autoId}`;
+        const status = dataProvider.mode === 'delivered' ? 'delivered' : 'processing';
+        dataProvider.orders.set(id, { status, clientReference: body.clientReference });
+        const b = dataProvider.bundles.find((x) => x.bundleId === body.bundleId);
+        return json({ success: true, order: { id, clientReference: body.clientReference, bundleSize: b?.size ?? '?', pricePaid: b?.price ?? 0, recipientNumber: body.recipientNumber, status, createdAt: new Date().toISOString() } });
+      }
+      if (url.pathname === '/api/v1/orders') {
+        const id = url.searchParams.get('id') ?? '';
+        const o = dataProvider.orders.get(id);
+        if (!o) return json({ success: false, message: 'Order not found' }, 404);
+        return json({ success: true, order: { id, clientReference: o.clientReference, bundleSize: '1GB', pricePaid: 4, recipientNumber: '0240000000', status: o.status, createdAt: new Date().toISOString() } });
+      }
+    }
+    if (url.href === 'https://api.paystack.co/refund' && method === 'POST') {
+      const body = JSON.parse(String(init.body));
+      if (refundState.mode === 'error') return json({ status: false, message: 'Refund could not be processed' }, 400);
+      refunds.push(body.transaction);
+      return json({ status: true, message: 'Refund has been queued for processing', data: { status: 'pending' } });
+    }
     if (url.href === 'https://api.paystack.co/transaction/initialize') {
       const body = JSON.parse(String(init.body));
       gatewayStatus.set(body.reference, 'abandoned');
@@ -377,6 +432,14 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
     gatewayStatus,
     authUsers,
     provider,
+    dataProvider,
+    refunds,
+    get refundMode() {
+      return refundState.mode;
+    },
+    set refundMode(v: 'ok' | 'error') {
+      refundState.mode = v;
+    },
     get firestoreDown() {
       return state.firestoreDown;
     },

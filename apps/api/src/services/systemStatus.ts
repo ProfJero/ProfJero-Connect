@@ -12,7 +12,8 @@ export type JobName =
   | 'providerCleanup'
   | 'balanceRefresh'
   | 'dispatcher'
-  | 'dataBundleSync';
+  | 'dataBundleSync'
+  | 'dataOrders';
 
 export interface JobRun {
   lastRunAt: string;

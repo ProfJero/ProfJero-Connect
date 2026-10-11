@@ -16,4 +16,4 @@ export * from './schemas/customer';
 export * from './schemas/customerPlatform';
 export * from './schemas/settings';
 export * from './schemas/campaigns';
-export * from './schemas/data';
+export * from './schemas/data';export * from './lib/networks';

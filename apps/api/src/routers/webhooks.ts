@@ -11,6 +11,7 @@ import { verifyPaystackSignature } from '../providers/paystackClient';
 import { getPaymentByReference } from '../repositories/payments';
 import { notifyProject } from '../services/notifications';
 import { timingSafeEqual } from '../services/apiKeys';
+import { confirmDataPayment, isDataOrderReference, markDataPaymentUnsuccessful } from '../services/dataOrders';
 import type { Env } from '../types/env';
 
 export const webhooksRouter = new Hono<{ Bindings: Env }>();
@@ -143,6 +144,22 @@ webhooksRouter.post('/paystack', async (c) => {
   console.log(`[paystack webhook] event=${event} reference=${reference}`);
 
   try {
+    // Data bundle orders carry their own reference prefix.
+    if (isDataOrderReference(reference)) {
+      if (event === 'charge.success') {
+        const order = await confirmDataPayment(c.env, reference, {
+          amountPesewas: Number(data.amount),
+          currency: String(data.currency ?? 'GHS'),
+        });
+        return c.json({ ok: true, reference, orderStatus: order.orderStatus });
+      }
+      if (event === 'charge.failed') {
+        await markDataPaymentUnsuccessful(c.env, reference, 'failed');
+        return c.json({ ok: true, reference, status: 'failed' });
+      }
+      return c.json({ ok: true, reference, ignored: event });
+    }
+
     if (event === 'charge.success') {
       // The signature proves the gateway sent this, but we still check it
       // is the charge we asked for: same amount and currency. A mismatch is

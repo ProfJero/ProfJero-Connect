@@ -99,6 +99,7 @@ export async function createHarness(envOverrides: Partial<Env> = {}): Promise<Ha
     FIREBASE_CLIENT_EMAIL: 'svc@test.iam.gserviceaccount.com',
     FIREBASE_PRIVATE_KEY: keyPem,
     PAYSTACK_SECRET_KEY: PAYSTACK_SECRET,
+    ELITEDATA_API_KEY: 'ed_test',
     RESEND_API_KEY: 're_test',
     EMAIL_FROM: 'ProfJero Connect <test@example.com>',
     CUSTOMER_APP_URL: 'https://app.example',
