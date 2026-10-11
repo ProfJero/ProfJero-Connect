@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { LoginBrandPanel } from '../../components/auth/LoginBrandPanel';
 import { LoginForm } from '../../components/auth/LoginForm';
+import { BrandMark } from '../../components/brand/BrandMark';
 
 export function LoginPage() {
   const { isAuthenticated, isReady } = useAuth();
@@ -27,9 +28,7 @@ export function LoginPage() {
         <div className="w-full max-w-[420px]">
           {/* Compact brand header for mobile/tablet */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1976d2] to-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <span className="text-white font-bold text-sm">P</span>
-            </div>
+            <BrandMark className="w-10 h-10" />
             <div>
               <h1 className="text-slate-900 font-bold text-base leading-tight">
                 ProfJero Connect

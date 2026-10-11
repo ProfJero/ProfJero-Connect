@@ -62,6 +62,8 @@ export interface CallOpts {
   raw?: string;
   headers?: Record<string, string>;
   env?: Partial<Env>;
+  /** Return as soon as the response is ready, without waiting for background work. */
+  noWait?: boolean;
 }
 
 export interface Res<T = any> {
@@ -71,7 +73,19 @@ export interface Res<T = any> {
   ms: number;
 }
 
-const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as ExecutionContext;
+/** Background work (ctx.waitUntil) started by requests. */
+const pendingWork: Promise<unknown>[] = [];
+const ctx = {
+  waitUntil(p: Promise<unknown>) {
+    pendingWork.push(p);
+  },
+  passThroughOnException() {},
+} as unknown as ExecutionContext;
+
+/** Let background work (e.g. SMS delivery) finish. */
+export async function drainBackground(): Promise<void> {
+  while (pendingWork.length > 0) await Promise.allSettled(pendingWork.splice(0));
+}
 
 export async function createHarness(envOverrides: Partial<Env> = {}): Promise<Harness> {
   const { keyPem, certPem } = makeKeys();
@@ -115,6 +129,8 @@ export async function createHarness(envOverrides: Partial<Env> = {}): Promise<Ha
     });
     const started = performance.now();
     const res = await worker.fetch(req as never, { ...env, ...(opts.env ?? {}) } as Env, ctx);
+    const ms = performance.now() - started;
+    if (!opts.noWait) await drainBackground();
     const text = await res.text();
     let body: unknown = null;
     try {
@@ -122,7 +138,7 @@ export async function createHarness(envOverrides: Partial<Env> = {}): Promise<Ha
     } catch {
       body = text;
     }
-    return { status: res.status, body: body as never, headers: res.headers, ms: performance.now() - started };
+    return { status: res.status, body: body as never, headers: res.headers, ms };
   };
 
   const seedAdmin: Harness['seedAdmin'] = async (uid, role, status = 'active') => {
@@ -222,19 +238,36 @@ export function seedApprovedSenderId(cloud: FakeCloud, projectId: string, value:
   });
 }
 
-/** Set a wallet's balance directly, with a matching ledger entry. */
+/**
+ * Set a wallet's available balance directly, with a matching ledger entry.
+ * Units still held by unresolved messages stay reserved, so the integrity
+ * invariant keeps holding mid-run.
+ */
 export function seedWallet(cloud: FakeCloud, projectId: string, units: number): void {
   const now = new Date().toISOString();
-  cloud.put(`wallets/${projectId}`, { projectId, availableUnits: units, reservedUnits: 0, lowBalanceThreshold: null, updatedAt: now, createdAt: now });
+  const held = heldUnits(cloud, projectId);
+  cloud.put(`wallets/${projectId}`, { projectId, availableUnits: units, reservedUnits: held, lowBalanceThreshold: null, updatedAt: now, createdAt: now });
   // Replace the ledger so the invariant (ledger sum == wallet) holds.
   for (const t of cloud.list('walletTransactions')) {
     if (t.data.projectId === projectId) cloud.docs.delete(`walletTransactions/${t.id}`);
   }
   cloud.put(`walletTransactions/seed__${projectId}`, {
-    id: `seed__${projectId}`, projectId, type: 'manual_credit', availableDelta: units, reservedDelta: 0,
-    availableAfter: units, reservedAfter: 0, batchId: null, recordId: null, amountGhs: null,
+    id: `seed__${projectId}`, projectId, type: 'manual_credit', availableDelta: units, reservedDelta: held,
+    availableAfter: units, reservedAfter: held, batchId: null, recordId: null, amountGhs: null,
     description: 'seed', createdBy: 'seed', createdAt: '2000-01-01T00:00:00.000Z', reversesTransactionId: null, metadata: null,
   });
+}
+
+/** Units reserved by a project's unresolved messages (batches past "queued"). */
+function heldUnits(cloud: FakeCloud, projectId: string): number {
+  return cloud
+    .list('smsRecords')
+    .filter((r) => r.data.projectId === projectId && ['unknown', 'queued', 'submitting'].includes(String(r.data.status)))
+    .filter((r) => {
+      const b = cloud.get(`smsBatches/${r.data.batchId}`);
+      return b && b.status !== 'queued'; // queued batches never reserved
+    })
+    .reduce((s, r) => s + Number(r.data.unitsReserved) - Number(r.data.unitsCharged) - Number(r.data.unitsReleased), 0);
 }
 
 /**
@@ -254,14 +287,7 @@ export function checkWalletIntegrity(cloud: FakeCloud): string[] {
     if (wa !== avail) problems.push(`${pid}: available ${wa} != ledger ${avail}`);
     if (wr !== res) problems.push(`${pid}: reserved ${wr} != ledger ${res}`);
     if (wa < 0 || wr < 0) problems.push(`${pid}: negative balance (${wa}/${wr})`);
-    const held = cloud
-      .list('smsRecords')
-      .filter((r) => r.data.projectId === pid && ['unknown', 'queued', 'submitting'].includes(String(r.data.status)))
-      .filter((r) => {
-        const b = cloud.get(`smsBatches/${r.data.batchId}`);
-        return b && b.status !== 'queued'; // queued batches never reserved
-      })
-      .reduce((s, r) => s + Number(r.data.unitsReserved) - Number(r.data.unitsCharged) - Number(r.data.unitsReleased), 0);
+    const held = heldUnits(cloud, pid);
     if (held !== wr) problems.push(`${pid}: reserved ${wr} != units held by unresolved records ${held}`);
   }
   return problems;

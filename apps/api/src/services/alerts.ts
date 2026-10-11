@@ -1,3 +1,4 @@
+import { detectIncidents } from './monitoring';
 import type { AdminAlert } from '@profjero/shared';
 import { firestoreQuery } from '../lib/firestore';
 import { listPendingAssignments, listSenderIds } from '../repositories/senderIds';
@@ -158,6 +159,36 @@ export async function computeAlerts(env: Env, seenAt: string | null): Promise<Ad
         latestAt: last ?? new Date().toISOString(),
       });
     }
+    // The per-minute dispatcher sends scheduled campaigns and resumes deliveries.
+    const lastDispatch = jobs.dispatcher?.lastRunAt ?? null;
+    if (!lastDispatch || Date.now() - new Date(lastDispatch).getTime() > 5 * 60_000) {
+      alerts.push({
+        id: 'cron_stale_dispatcher',
+        type: 'cron_stale',
+        severity: 'error',
+        title: 'Scheduled sending has stopped',
+        body: lastDispatch
+          ? `The per-minute dispatcher last ran ${lastDispatch}. Scheduled campaigns and large sends are waiting. Check the Worker's "* * * * *" cron trigger.`
+          : 'The per-minute dispatcher has not run yet. Add the "* * * * *" cron trigger and redeploy.',
+        link: '/monitoring',
+        count: 1,
+        latestAt: lastDispatch ?? new Date().toISOString(),
+      });
+    }
+  }
+
+  // Live incidents from Monitoring (last 15 minutes).
+  for (const i of await detectIncidents(env).catch(() => [])) {
+    alerts.push({
+      id: i.type,
+      type: i.type,
+      severity: i.severity,
+      title: i.title,
+      body: i.body,
+      link: '/monitoring',
+      count: 1,
+      latestAt: i.latestAt,
+    });
   }
 
   const rank = { error: 0, warning: 1, info: 2 } as const;

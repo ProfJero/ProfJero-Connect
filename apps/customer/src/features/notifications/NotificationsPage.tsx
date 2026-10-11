@@ -120,7 +120,7 @@ export function NotificationsPage() {
       <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
         <Mail className="w-3.5 h-3.5" strokeWidth={2} />
         Important updates are also emailed to you.{' '}
-        <Link to="/settings#notifications" className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline">
+        <Link to="/settings?tab=notifications" className="text-[#1764e0] dark:text-blue-400 font-semibold hover:underline">
           Email settings
         </Link>
       </p>

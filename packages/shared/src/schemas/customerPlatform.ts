@@ -41,9 +41,9 @@ export type CustomerInitiatePaymentRequest = z.infer<
 export const CustomerSendSmsRequestSchema = z
   .object({
     senderId: z.string().min(1).max(11),
-    message: z.string().min(1).max(1000),
-    recipients: z.array(z.string().min(1).max(30)).max(1000).optional(),
-    contactIds: z.array(z.string().min(1)).max(1000).optional(),
+    message: z.string().min(1).max(1600),
+    recipients: z.array(z.string().min(1).max(30)).max(10000).optional(),
+    contactIds: z.array(z.string().min(1)).max(10000).optional(),
     groupIds: z.array(z.string().min(1)).max(50).optional(),
   })
   .refine(
@@ -83,18 +83,40 @@ export type CustomerRequestSenderId = z.infer<
 // Contacts + groups
 // ─────────────────────────────────────────────────────────────────────
 
-export const ContactInputSchema = z.object({
-  name: z.string().trim().min(1).max(100),
+/** Custom contact fields for personalised SMS, e.g. { "balance": "120" }. */
+export const CustomFieldsSchema = z
+  .record(z.string().trim().min(1).max(40), z.string().max(200))
+  .refine((r) => Object.keys(r).length <= 20, { message: 'At most 20 custom fields per contact.' });
+
+/** YYYY-MM-DD (date of birth), or null to clear. */
+export const DateOfBirthSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD.')
+  .nullable();
+
+const contactFields = {
+  name: z.string().trim().max(100).optional(),
+  firstName: z.string().trim().max(60).nullable().optional(),
+  lastName: z.string().trim().max(60).nullable().optional(),
   phone: z.string().trim().min(7).max(30),
   email: z.string().trim().email().max(200).nullable().optional(),
+  dateOfBirth: DateOfBirthSchema.optional(),
+  customFields: CustomFieldsSchema.optional(),
   groupIds: z.array(z.string().min(1)).max(50).optional(),
-});
+};
+
+export const ContactInputSchema = z
+  .object(contactFields)
+  .refine((d) => !!(d.name?.trim() || d.firstName?.trim() || d.lastName?.trim()), {
+    message: 'Enter a name (or a first name).',
+    path: ['name'],
+  });
 export type ContactInput = z.infer<typeof ContactInputSchema>;
 
-export const UpdateContactSchema = ContactInputSchema.partial().refine(
-  (d) => Object.keys(d).length > 0,
-  { message: 'At least one field must be provided.' },
-);
+export const UpdateContactSchema = z
+  .object(contactFields)
+  .partial()
+  .refine((d) => Object.keys(d).length > 0, { message: 'At least one field must be provided.' });
 export type UpdateContact = z.infer<typeof UpdateContactSchema>;
 
 export const ImportContactsSchema = z.object({
@@ -102,14 +124,21 @@ export const ImportContactsSchema = z.object({
     .array(
       z.object({
         name: z.string().trim().max(100).optional(),
+        firstName: z.string().trim().max(60).optional(),
+        lastName: z.string().trim().max(60).optional(),
         phone: z.string().trim().min(1).max(30),
         email: z.string().trim().max(200).nullable().optional(),
+        /** Any common date format; stored as YYYY-MM-DD when it parses. */
+        dateOfBirth: z.string().trim().max(30).optional(),
+        customFields: z.record(z.string().trim().min(1).max(40), z.string().max(200)).optional(),
       }),
     )
     .min(1)
-    .max(2000),
+    .max(5000),
   /** Optional group every imported contact is added to. */
   groupId: z.string().min(1).optional(),
+  /** Existing contacts: overwrite their details with the file's (default: only fill blanks). */
+  updateExisting: z.boolean().optional(),
 });
 export type ImportContacts = z.infer<typeof ImportContactsSchema>;
 

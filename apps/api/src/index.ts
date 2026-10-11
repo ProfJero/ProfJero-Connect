@@ -9,6 +9,8 @@ import { webhooksRouter } from './routers/webhooks';
 import { handleScheduled } from './services/cron';
 import { customerRouter } from './routers/customer';
 import { isAllowedOrigin } from './lib/origins';
+import { recordRequest } from './lib/monitor';
+import { monitorPublicRouter } from './routers/monitorPublic';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -35,6 +37,14 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+// ---- Monitoring: every request's route, status and latency ----
+app.use('*', async (c, next) => {
+  if (c.req.method === 'OPTIONS') return next();
+  const started = Date.now();
+  await next();
+  recordRequest(c, Date.now() - started);
+});
+
 app.onError(errorHandler);
 
 // Public v1 routes first (they skip requireApiKey).
@@ -43,6 +53,7 @@ app.route('/v1', v1Router);
 app.route('/admin', adminRouter);
 app.route('/customer', customerRouter);
 app.route('/webhooks', webhooksRouter);
+app.route('/monitor', monitorPublicRouter);
 app.route('/', healthRouter);
 
 // ---- Default export ----

@@ -1,4 +1,5 @@
-import { Code2, MessageSquare, Package, AlertTriangle, Link2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Code2, MessageSquare, Package, AlertTriangle, Link2, BookOpen } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ApiKeysCard } from '../../components/api/ApiKeysCard';
 import { QuickStart } from '../../components/api/QuickStart';
@@ -15,11 +16,16 @@ export function ApiPage() {
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 max-w-[1400px] w-full mx-auto">
-      <PageHeader
-        icon={Code2}
-        title="API & Integrations"
-        subtitle="Send SMS from your own website, app or system using the ProfJero Connect API."
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageHeader
+          icon={Code2}
+          title="API & Integrations"
+          subtitle="Send SMS, check your balance and top up from your own website, app or system."
+        />
+        <Link to="/developers" target="_blank" rel="noopener" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#1764e0] hover:bg-[#155cd0] text-white text-xs font-semibold shadow-xs shrink-0">
+          <BookOpen className="w-4 h-4" /> Read the API docs
+        </Link>
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">API usage — last 30 days</h2>

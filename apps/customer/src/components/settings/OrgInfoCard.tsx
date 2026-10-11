@@ -15,48 +15,25 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
   const { data, loading, error, saving, update } = useProfile();
   const { refresh: refreshAuth } = useAuth();
 
-  // Local form state mirrors the customer doc when editing begins.
-  const [displayName, setDisplayName] = useState('');
-  const [organisationName, setOrganisationName] = useState('');
-  const [phone, setPhone] = useState('');
+  // What's saved (from sign-up or the last edit). View mode always shows
+  // this; the form below starts from it each time editing begins.
+  const saved = {
+    displayName: data?.customer.displayName ?? '',
+    organisationName: data?.customer.organisationName ?? data?.project.name ?? '',
+    phone: data?.customer.phone ?? '',
+  };
+  const [draft, setDraft] = useState<typeof saved | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  // A fresh draft per edit session: derived, no effect needed.
+  const form = editing ? (draft ?? saved) : saved;
+  const setField = (k: keyof typeof saved) => (v: string) => setDraft({ ...form, [k]: v });
+  const { displayName, organisationName, phone } = form;
 
-  // Reset local state every time we enter edit mode, so abandoned
-  // edits don't leak into a fresh edit session.
-  // (Keyed on `editing`; runs on every entry.)
-  useState(() => {
-    if (data && editing) {
-      setDisplayName(data.customer.displayName);
-      setOrganisationName(data.customer.organisationName ?? data.project.name);
-      setPhone(data.customer.phone ?? '');
-    }
-  });
-
-  // Re-sync the form each time editing flips from false to true.
-  // Using a ref-based tracking would be cleaner, but for a three-field
-  // form the "sync on entry" pattern is fine.
-  if (editing && data) {
-    const anyInputBlank =
-      !displayName && !organisationName && !phone;
-    if (anyInputBlank) {
-      // First render in edit mode — seed from server data.
-      // This runs once per edit session.
-      if (displayName !== data.customer.displayName) {
-        setDisplayName(data.customer.displayName);
-      }
-      if (
-        organisationName !==
-        (data.customer.organisationName ?? data.project.name)
-      ) {
-        setOrganisationName(
-          data.customer.organisationName ?? data.project.name,
-        );
-      }
-      if (phone !== (data.customer.phone ?? '')) {
-        setPhone(data.customer.phone ?? '');
-      }
-    }
-  }
+  const finish = () => {
+    setDraft(null);
+    setFormError(null);
+    onDone?.();
+  };
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,7 +56,7 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
       });
       // Topbar and greeting read the name from the auth context.
       await refreshAuth();
-      onDone?.();
+      finish();
     } catch (err) {
       setFormError(
         err instanceof Error ? err.message : 'Could not save changes.',
@@ -87,10 +64,7 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
     }
   };
 
-  const handleCancel = () => {
-    setFormError(null);
-    onDone?.();
-  };
+  const handleCancel = finish;
 
   return (
     <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xs">
@@ -124,7 +98,7 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
             icon={Building2}
             editing={editing}
             value={organisationName}
-            onChange={setOrganisationName}
+            onChange={setField('organisationName')}
             placeholder="e.g. SunnyTech Ltd"
           />
 
@@ -133,7 +107,7 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
             icon={User}
             editing={editing}
             value={displayName}
-            onChange={setDisplayName}
+            onChange={setField('displayName')}
             placeholder="e.g. Jane Doe"
           />
 
@@ -142,7 +116,7 @@ export function OrgInfoCard({ editing = false, onDone }: OrgInfoCardProps) {
             icon={Phone}
             editing={editing}
             value={phone}
-            onChange={setPhone}
+            onChange={setField('phone')}
             placeholder="e.g. +233 24 123 4567"
           />
 

@@ -10,6 +10,7 @@ import {
 } from '../lib/firestore';
 import { isValidNormalizedPhone, normalizePhone } from '../lib/phone';
 import { DomainError } from '../lib/domainError';
+import { BUILTIN_TEMPLATE_FIELDS, normalizeFieldKey } from '@profjero/shared';
 import type { Env } from '../types/env';
 import type {
   ContactGroupColor,
@@ -40,8 +41,12 @@ export interface Contact {
   id: string;
   projectId: string;
   name: string;
+  firstName: string | null;
+  lastName: string | null;
   phone: string;
   email: string | null;
+  dateOfBirth: string | null;
+  customFields: Record<string, string>;
   groupIds: string[];
   createdAt: string;
   updatedAt: string;
@@ -68,8 +73,12 @@ function parseContact(doc: FirestoreDoc): Contact {
     id: doc.id,
     projectId: String(d.projectId),
     name: String(d.name ?? ''),
+    firstName: (d.firstName as string | null) ?? null,
+    lastName: (d.lastName as string | null) ?? null,
     phone: String(d.phone),
     email: (d.email as string | null) ?? null,
+    dateOfBirth: (d.dateOfBirth as string | null) ?? null,
+    customFields: d.customFields && typeof d.customFields === 'object' ? (d.customFields as Record<string, string>) : {},
     groupIds: Array.isArray(d.groupIds) ? (d.groupIds as string[]) : [],
     createdAt: String(d.createdAt),
     updatedAt: String(d.updatedAt),
@@ -88,6 +97,51 @@ function parseGroup(doc: FirestoreDoc, contactCount: number): ContactGroup {
     createdAt: String(d.createdAt),
     updatedAt: String(d.updatedAt),
   };
+}
+
+/** Custom field keys are stored normalized ("Loyalty Points" → loyalty_points). */
+export function cleanCustomFields(raw: Record<string, string> | undefined | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    const key = normalizeFieldKey(k);
+    if (!key || (BUILTIN_TEMPLATE_FIELDS as readonly string[]).includes(key)) continue;
+    const value = String(v ?? '').trim();
+    if (value) out[key] = value.slice(0, 200);
+  }
+  if (Object.keys(out).length > 20) throw new DomainError('At most 20 custom fields per contact.', 400);
+  return out;
+}
+
+const MONTHS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+
+/**
+ * Parse a date of birth from a spreadsheet: 1990-05-12, 12/05/1990,
+ * 12-05-1990 (day first, as in Ghana), 12 May 1990, May 12 1990.
+ * Returns YYYY-MM-DD or null when it can't be read unambiguously.
+ */
+export function parseDateOfBirth(raw: string | null | undefined): string | null {
+  const v = (raw ?? '').trim();
+  if (!v) return null;
+  const ok = (y: number, m: number, d: number) => {
+    if (y < 1900 || y > new Date().getFullYear() || m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    if (dt.getUTCMonth() !== m - 1) return null;
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  };
+  let m = v.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (m) return ok(+m[1], +m[2], +m[3]);
+  m = v.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (m) return ok(+m[3], +m[2], +m[1]);
+  m = v.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3})[a-z]*,?\s+(\d{4})$/);
+  if (m && MONTHS[m[2].toLowerCase()]) return ok(+m[3], MONTHS[m[2].toLowerCase()], +m[1]);
+  m = v.match(/^([A-Za-z]{3})[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})$/);
+  if (m && MONTHS[m[1].toLowerCase()]) return ok(+m[3], MONTHS[m[1].toLowerCase()], +m[2]);
+  return null;
+}
+
+/** Display name: explicit name, else first + last. */
+function displayName(name?: string | null, first?: string | null, last?: string | null): string {
+  return name?.trim() || [first?.trim(), last?.trim()].filter(Boolean).join(' ');
 }
 
 /** Normalize + validate, or throw a 400 naming the bad number. */
@@ -175,9 +229,13 @@ export async function createContact(
       CONTACTS,
       {
         projectId,
-        name: input.name,
+        name: displayName(input.name, input.firstName, input.lastName),
+        firstName: input.firstName?.trim() || null,
+        lastName: input.lastName?.trim() || null,
         phone,
         email: input.email ?? null,
+        dateOfBirth: input.dateOfBirth ?? null,
+        customFields: cleanCustomFields(input.customFields),
         groupIds,
         createdAt: now,
         updatedAt: now,
@@ -205,18 +263,32 @@ export async function updateContact(
 
   const next: Contact = {
     ...existing,
-    name: input.name ?? existing.name,
+    firstName: input.firstName !== undefined ? input.firstName?.trim() || null : existing.firstName,
+    lastName: input.lastName !== undefined ? input.lastName?.trim() || null : existing.lastName,
+    name: '',
     email: input.email !== undefined ? input.email ?? null : existing.email,
+    dateOfBirth: input.dateOfBirth !== undefined ? input.dateOfBirth : existing.dateOfBirth,
+    customFields: input.customFields !== undefined ? cleanCustomFields(input.customFields) : existing.customFields,
     groupIds: input.groupIds ? [...new Set(input.groupIds)] : existing.groupIds,
     phone: input.phone ? normalizeOrThrow(input.phone) : existing.phone,
     updatedAt: new Date().toISOString(),
   };
+  // Name follows first/last when those change and no explicit name is given.
+  next.name =
+    input.name?.trim() ||
+    (input.firstName !== undefined || input.lastName !== undefined
+      ? displayName(null, next.firstName, next.lastName) || existing.name
+      : existing.name);
 
   const fields = {
     projectId,
     name: next.name,
+    firstName: next.firstName,
+    lastName: next.lastName,
     phone: next.phone,
     email: next.email,
+    dateOfBirth: next.dateOfBirth,
+    customFields: next.customFields,
     groupIds: next.groupIds,
     createdAt: next.createdAt,
     updatedAt: next.updatedAt,
@@ -300,8 +372,18 @@ export async function importContacts(
       continue;
     }
     seen.add(phone);
-    const name = row.name?.trim() ?? '';
+    const firstName = row.firstName?.trim() || null;
+    const lastName = row.lastName?.trim() || null;
+    const name = displayName(row.name, firstName, lastName);
     const email = row.email?.trim() && row.email.includes('@') ? row.email.trim() : null;
+    const dateOfBirth = parseDateOfBirth(row.dateOfBirth);
+    let customFields: Record<string, string>;
+    try {
+      customFields = cleanCustomFields(row.customFields);
+    } catch {
+      result.skipped.push({ phone: row.phone, reason: 'More than 20 custom fields' });
+      continue;
+    }
 
     const current = existing.get(phone);
     if (current) {
@@ -309,15 +391,37 @@ export async function importContacts(
         input.groupId && !current.groupIds.includes(input.groupId)
           ? [...current.groupIds, input.groupId]
           : current.groupIds;
-      const fillName = !current.name && name;
-      if (groupIds === current.groupIds && !fillName) {
+      // Default: only fill what's blank. updateExisting: the file wins.
+      const pick = <T,>(fromFile: T | null, cur: T | null): T | null =>
+        input.updateExisting ? (fromFile ?? cur) : (cur || fromFile);
+      const placeholderName = !current.name || current.name === `+${phone}`;
+      const fields = {
+        groupIds,
+        name: input.updateExisting ? name || current.name : placeholderName && name ? name : current.name,
+        firstName: pick(firstName, current.firstName),
+        lastName: pick(lastName, current.lastName),
+        email: pick(email, current.email),
+        dateOfBirth: pick(dateOfBirth, current.dateOfBirth),
+        customFields: input.updateExisting
+          ? { ...current.customFields, ...customFields }
+          : { ...customFields, ...current.customFields },
+      };
+      const changed =
+        fields.groupIds !== current.groupIds ||
+        fields.name !== current.name ||
+        fields.firstName !== current.firstName ||
+        fields.lastName !== current.lastName ||
+        fields.email !== current.email ||
+        fields.dateOfBirth !== current.dateOfBirth ||
+        JSON.stringify(fields.customFields) !== JSON.stringify(current.customFields);
+      if (!changed) {
         result.skipped.push({ phone: row.phone, reason: 'Already in contacts' });
         continue;
       }
       writes.push({
         path: `${CONTACTS}/${current.id}`,
-        fields: { groupIds, name: fillName ? name : current.name, updatedAt: now },
-        updateFieldPaths: ['groupIds', 'name', 'updatedAt'],
+        fields: { ...fields, updatedAt: now },
+        updateFieldPaths: [...Object.keys(fields), 'updatedAt'],
       });
       result.updated += 1;
     } else {
@@ -326,8 +430,12 @@ export async function importContacts(
         fields: {
           projectId,
           name: name || `+${phone}`,
+          firstName,
+          lastName,
           phone,
           email,
+          dateOfBirth,
+          customFields,
           groupIds: input.groupId ? [input.groupId] : [],
           createdAt: now,
           updatedAt: now,
@@ -447,6 +555,31 @@ export async function setGroupMembership(
 // ─────────────────────────────────────────────────────────────────────
 // Send-time expansion
 // ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Full contacts for the given contact and group IDs, scoped to this tenant
+ * (used to personalise messages). Unknown IDs are ignored.
+ */
+export async function resolveContacts(
+  env: Env,
+  projectId: string,
+  contactIds: string[],
+  groupIds: string[],
+): Promise<Contact[]> {
+  if (contactIds.length === 0 && groupIds.length === 0) return [];
+  const wantedContacts = new Set(contactIds);
+  const wantedGroups = new Set(groupIds);
+  return (await listContacts(env, projectId)).filter(
+    (c) => wantedContacts.has(c.id) || c.groupIds.some((g) => wantedGroups.has(g)),
+  );
+}
+
+/** Every custom field key used across this tenant's contacts (for the "Insert field" menu). */
+export async function listCustomFieldKeys(env: Env, projectId: string): Promise<string[]> {
+  const keys = new Set<string>();
+  for (const c of await listContacts(env, projectId)) for (const k of Object.keys(c.customFields)) keys.add(k);
+  return [...keys].sort();
+}
 
 /**
  * Phones for the given contacts and groups, scoped to this tenant.

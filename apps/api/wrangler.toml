@@ -23,6 +23,8 @@ ENVIRONMENT = "production"
 
 [env.production.triggers]
 crons = [
+  "* * * * *",
   "*/15 * * * *",
   "0 4 * * *",
+  "0 */6 * * *",
 ]

@@ -77,6 +77,10 @@ export function SignupForm() {
         >
           Sign in
         </Link>
+        <span className="mx-2 text-slate-300 dark:text-slate-600" aria-hidden="true">·</span>
+        <Link to="/developers" className="text-slate-600 dark:text-slate-300 font-semibold hover:underline">
+          API docs
+        </Link>
       </div>
 
       {/* Headings */}

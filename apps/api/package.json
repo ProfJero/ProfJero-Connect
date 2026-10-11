@@ -10,9 +10,10 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test:customer": "esbuild test/customer.e2e.ts --bundle --platform=node --format=esm --target=node20 --outfile=.test-build/customer.e2e.mjs --log-level=warning && node .test-build/customer.e2e.mjs",
     "test:security": "esbuild test/security.e2e.ts --bundle --platform=node --format=esm --target=node20 --outfile=.test-build/security.e2e.mjs --log-level=warning && node .test-build/security.e2e.mjs",
-    "test": "npm run test:customer && npm run test:security",
+    "test": "npm run test:customer && npm run test:security && npm run test:features",
     "test:load": "esbuild test/load.ts --bundle --platform=node --format=esm --target=node20 --outfile=.test-build/load.mjs --log-level=warning && node .test-build/load.mjs",
-    "dev:fake": "esbuild test/devServer.ts --bundle --platform=node --format=esm --target=node20 --outfile=.test-build/devServer.mjs --log-level=warning && node .test-build/devServer.mjs"
+    "dev:fake": "esbuild test/devServer.ts --bundle --platform=node --format=esm --target=node20 --outfile=.test-build/devServer.mjs --log-level=warning && node .test-build/devServer.mjs",
+    "test:features": "esbuild test/features.e2e.ts --bundle --platform=node --format=esm --target=node20 --outfile=.test-build/features.e2e.mjs --log-level=warning && node .test-build/features.e2e.mjs"
   },
   "dependencies": {
     "@profjero/shared": "*",

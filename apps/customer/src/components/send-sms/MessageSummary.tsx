@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Users, AlignJustify, Package, Wallet, Check, Send, AlertTriangle } from 'lucide-react';
 import { Notice, Spinner } from '../ui/States';
@@ -14,6 +15,9 @@ export function MessageSummary({
   sending,
   error,
   onSend,
+  unitsExact = null,
+  actionLabel,
+  children,
 }: {
   senderId: string | null;
   recipientCount: number;
@@ -25,8 +29,14 @@ export function MessageSummary({
   sending: boolean;
   error: string | null;
   onSend: () => void;
+  /** Exact units from the server preview (personalised messages). */
+  unitsExact?: number | null;
+  /** Overrides the button text (e.g. "Schedule"). */
+  actionLabel?: string;
+  /** Extra content above the button (schedule picker, samples…). */
+  children?: ReactNode;
 }) {
-  const units = recipientCount * segments;
+  const units = unitsExact ?? recipientCount * segments;
   const sufficient = balance !== null && units <= balance;
   const prefix = isUpperBound ? 'up to ' : '';
 
@@ -41,7 +51,7 @@ export function MessageSummary({
         <div className="space-y-3">
           <Row icon={Package} label="Sender ID" value={senderId ?? '—'} />
           <Row icon={Users} label="Recipients" value={`${prefix}${recipientCount.toLocaleString()}`} />
-          <Row icon={AlignJustify} label="Pages per message" value={segments.toString()} />
+          <Row icon={AlignJustify} label="Pages per message" value={unitsExact !== null && recipientCount > 0 && unitsExact !== recipientCount * segments ? 'varies' : segments.toString()} />
           <Row icon={Package} label="Units needed" value={`${prefix}${units.toLocaleString()}`} strong />
         </div>
 
@@ -92,6 +102,8 @@ export function MessageSummary({
           </div>
         )}
 
+        {children}
+
         {blockers.length > 0 && (
           <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 list-disc pl-4">
             {blockers.map((b) => (
@@ -111,7 +123,9 @@ export function MessageSummary({
           {sending ? <Spinner /> : <Send className="w-4 h-4 -rotate-45" strokeWidth={2} />}
           <span>
             {sending
-              ? 'Sending…'
+              ? 'Working…'
+              : actionLabel
+                ? actionLabel
               : recipientCount > 0
                 ? `Send to ${prefix}${recipientCount.toLocaleString()} recipient${recipientCount === 1 ? '' : 's'}`
                 : 'Send Message'}

@@ -146,15 +146,16 @@ export function ProfileCard() {
 /* ---------- Organisation ---------- */
 
 export function OrganisationCard() {
-  const { user } = useAuth();
+  const { data, loading } = useProfile();
+  const orgName = data?.customer.organisationName ?? data?.project.name ?? null;
   return (
     <CardShell id="organisation" icon={Building2} title="Organisation" subtitle="The business you send messages for.">
       <div className="space-y-3">
         <div className="text-xs">
           <div className="text-[11px] text-slate-500 dark:text-slate-400">Organisation name</div>
-          <div className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">{user?.companyName ?? '—'}</div>
+          <div className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">{loading ? '…' : orgName ?? '—'}</div>
         </div>
-        <LinkRow to="/settings/organisation" icon={Building2} label="Organisation profile" description="Name, contact person and account ID" />
+        <LinkRow to="/settings?tab=organisation" icon={Building2} label="Organisation profile" description="Name, contact person and account ID" />
         <LinkRow to="/messaging/sender-ids" icon={Mail} label="Sender IDs" description="Names your recipients see" />
       </div>
     </CardShell>

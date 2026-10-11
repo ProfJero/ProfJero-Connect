@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Terminal, Copy, Check } from 'lucide-react';
 import { PUBLIC_API_URL } from '../../lib/config';
@@ -81,6 +82,10 @@ export function QuickStart({ senderId }: { senderId: string | null }) {
           <Terminal className="w-4 h-4 text-[#1764e0] dark:text-blue-400" strokeWidth={2} />
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">Quick start — send an SMS</h2>
         </div>
+        <p className="text-[11px] text-slate-600 dark:text-slate-300">
+          Personalised messages, scheduling, balance checks and payments are covered in the{' '}
+          <Link to="/developers" target="_blank" rel="noopener" className="font-semibold text-[#1764e0] dark:text-blue-400 hover:underline">full API documentation</Link>.
+        </p>
         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
           Base URL <code className="font-mono">{PUBLIC_API_URL || '—'}</code>. Other endpoints:{' '}
           <code className="font-mono">GET /v1/wallet</code>, <code className="font-mono">GET /v1/sms/batches/:id</code>,{' '}

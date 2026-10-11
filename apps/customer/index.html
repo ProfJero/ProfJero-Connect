@@ -3,8 +3,55 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#1976d2" />
-    <title>ProfJero Connect</title>
+    <title>ProfJero Connect — Bulk SMS, Campaigns & SMS API for Ghana</title>
+    <meta
+      name="description"
+      content="Send bulk and personalised SMS from your own Sender ID, schedule campaigns and birthday messages, and integrate with a simple SMS API. Pay with mobile money or card. Built for businesses in Ghana."
+    />
+    <meta name="keywords" content="bulk SMS Ghana, SMS API, Sender ID, personalised SMS, SMS campaigns, birthday SMS, mobile money, ProfJero" />
+    <meta name="theme-color" content="#1764e0" />
+    <meta name="application-name" content="ProfJero Connect" />
+    <link rel="canonical" href="__SITE_URL__/" />
+
+    <!-- Icons -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ProfJero Connect" />
+    <meta property="og:locale" content="en_GH" />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:title" content="ProfJero Connect — Bulk SMS, Campaigns & SMS API" />
+    <meta property="og:description" content="Bulk and personalised SMS, scheduled campaigns and a developer API. Pay with mobile money or card. Start sending in minutes." />
+    <meta property="og:image" content="__SITE_URL__/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ProfJero Connect — Bulk SMS, personalised campaigns and a developer API, built for Ghana." />
+
+    <!-- X / Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ProfJero Connect — Bulk SMS, Campaigns & SMS API" />
+    <meta name="twitter:description" content="Bulk and personalised SMS, scheduled campaigns and a developer API. Start sending in minutes." />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.jpg" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "ProfJero Connect",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "url": "__SITE_URL__/",
+        "image": "__SITE_URL__/og-image.jpg",
+        "description": "Bulk and personalised SMS, scheduled campaigns and an SMS API for businesses in Ghana.",
+        "offers": { "@type": "Offer", "priceCurrency": "GHS", "availability": "https://schema.org/InStock" },
+        "publisher": { "@type": "Organization", "name": "ProfJero", "logo": "__SITE_URL__/icon-512.png" }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,6 +60,7 @@
     />
   </head>
   <body>
+    <noscript>ProfJero Connect needs JavaScript. Please enable it to send SMS, manage contacts and top up your wallet.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

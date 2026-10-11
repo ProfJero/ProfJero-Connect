@@ -57,6 +57,13 @@ const send = (token: string, sender: string, recipients: string[], message = 'He
 const sign = (raw: string) => createHmac('sha512', PAYSTACK_SECRET).update(raw).digest('hex');
 const webhook = (raw: string, sig = sign(raw)) => call('POST', '/webhooks/paystack', { raw, headers: { 'x-paystack-signature': sig } });
 
+/** The batch + records after background delivery finished. */
+async function delivered(token: string, batchId: string) {
+  const r = await call('GET', `/customer/sms/batches/${encodeURIComponent(batchId)}`, { token });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  return r.body as { batch: Record<string, any>; records: Array<Record<string, any>> };
+}
+
 function assertIntegrity() {
   const problems = checkWalletIntegrity(cloud);
   assert.deepEqual(problems, [], problems.join('\n'));
@@ -538,7 +545,7 @@ await step('Unicode (UCS-2) messages bill by the 70/67-char segment rules', asyn
   assert.equal(r.status, 201, JSON.stringify(r.body));
   const units = before - walletOf(alice.pid);
   assert.ok(units >= 2, `charged ${units}`);
-  assert.equal(r.body.batch.totalUnitsCharged ?? units, units);
+  assert.equal((await delivered(alice.token, r.body.batch.id)).batch.totalUnitsCharged, units);
 });
 
 await step('settings: welcome credit 0 → new signups get no free units', async () => {
@@ -621,7 +628,7 @@ await step('provider rejects (4xx): records fail and units are released', async 
   const before = walletOf(alice.pid);
   const r = await send(alice.token, 'ALICEBAKE', ['+233241000700'], 'reject me', ikey(), LIVE);
   assert.ok(r.status < 500, `${r.status}`);
-  assert.equal(r.body.records[0].status, 'failed');
+  assert.equal((await delivered(alice.token, r.body.batch.id)).records[0].status, 'failed');
   assert.equal(walletOf(alice.pid), before);
   assertIntegrity();
 });
@@ -632,7 +639,7 @@ await step('provider 5xx / network error: units stay held as "unknown", never re
     const before = walletOf(alice.pid);
     const r = await send(alice.token, 'ALICEBAKE', ['+233241000701'], `outage ${mode}`, ikey(), LIVE);
     assert.ok(r.status < 500, `${mode}: ${r.status} ${JSON.stringify(r.body)}`);
-    assert.equal(r.body.records[0].status, 'unknown', mode);
+    assert.equal((await delivered(alice.token, r.body.batch.id)).records[0].status, 'unknown', mode);
     assert.equal(walletOf(alice.pid), before - 1, mode);
     assertIntegrity();
   }

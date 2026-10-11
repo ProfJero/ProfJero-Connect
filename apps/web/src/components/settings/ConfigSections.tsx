@@ -130,8 +130,8 @@ export function SmsSection(props: SectionProps<SmsSettings>) {
         <Field label="Default low-balance alert (units)" htmlFor="s-thresh" hint="Given to new customer wallets. Leave empty for no default alert.">
           <NumberInput id="s-thresh" nullable min={1} disabled={ro} value={v.defaultLowBalanceThreshold} onChange={(n) => draft.set('defaultLowBalanceThreshold', n)} placeholder="Off" />
         </Field>
-        <Field label="Max recipients per customer send" htmlFor="s-max" hint="Between 1 and 1,000. Larger lists are rejected before any units are reserved.">
-          <NumberInput id="s-max" min={1} max={1000} disabled={ro} value={v.maxRecipientsPerSend} onChange={(n) => draft.set('maxRecipientsPerSend', n ?? 1)} />
+        <Field label="Max recipients per customer send" htmlFor="s-max" hint="Between 1 and 10,000. Larger lists are rejected before any units are reserved. Big sends are delivered in the background.">
+          <NumberInput id="s-max" min={1} max={10000} disabled={ro} value={v.maxRecipientsPerSend} onChange={(n) => draft.set('maxRecipientsPerSend', n ?? 1)} />
         </Field>
         <Field label="Sender ID review time (shown to customers)" htmlFor="s-sla" hint={<>Completes the sentence “usually takes <em>…</em>”.</>}>
           <input id="s-sla" required maxLength={80} disabled={ro} value={v.senderIdReviewSla} onChange={(e) => draft.set('senderIdReviewSla', e.target.value)} className={inputCls} />
@@ -203,6 +203,7 @@ export function NotificationsSection(props: SectionProps<NotificationSettings>) 
           <Toggle id="n-cust" label="New customer signup" checked={v.emailOnNewCustomer} disabled={ro} onChange={(b) => draft.set('emailOnNewCustomer', b)} />
           <Toggle id="n-pay" label="Customer payment received" checked={v.emailOnPaymentReceived} disabled={ro} onChange={(b) => draft.set('emailOnPaymentReceived', b)} />
           <Toggle id="n-prov" label="Provider balance low" description="Checked every 15 minutes." checked={v.emailOnProviderLowBalance} disabled={ro} onChange={(b) => draft.set('emailOnProviderLowBalance', b)} />
+          <Toggle id="n-inc" label="Incidents" description="Server-error spikes, abuse spikes and app crashes (Monitoring). At most once an hour each." checked={v.emailOnIncidents} disabled={ro} onChange={(b) => draft.set('emailOnIncidents', b)} />
         </div>
         <Field label="Provider low-balance level (credits)" htmlFor="n-provlow" hint="Raises a bell alert (and email, if on) when provider credits drop below this. Empty = off.">
           <NumberInput id="n-provlow" nullable min={0} disabled={ro} value={v.providerLowBalanceCredits} onChange={(n) => draft.set('providerLowBalanceCredits', n)} placeholder="Off" />

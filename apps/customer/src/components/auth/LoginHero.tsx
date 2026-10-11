@@ -1,4 +1,5 @@
 import { MessageSquare, Database, Phone, Code2, ShieldCheck } from 'lucide-react';
+import { BrandMark } from '../brand/BrandMark';
 
 const FEATURES = [
   { icon: MessageSquare, title: 'Bulk SMS', description: 'Reach your audience instantly' },
@@ -35,10 +36,7 @@ export function LoginHero() {
 
       {/* Top: logo */}
       <div className="relative flex items-center gap-3.5">
-        {/* LOGO — swap for <img src="/logo.svg" /> when ready */}
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-[#1a6cf0] flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
-          <span className="font-extrabold text-2xl tracking-tighter italic">P</span>
-        </div>
+        <BrandMark className="w-12 h-12" />
         <div>
           <div className="text-2xl font-extrabold tracking-tight leading-none">
             ProfJero

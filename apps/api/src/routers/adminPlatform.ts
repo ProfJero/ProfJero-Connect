@@ -29,6 +29,7 @@ import { getSettings, getSettingsWithMeta, writeSettingsSection } from '../servi
 import { listAuditLogs } from '../services/audit';
 import { computeAlerts } from '../services/alerts';
 import { getJobRuns } from '../services/systemStatus';
+import { getMonitoringReport } from '../services/monitoring';
 import { parseBody, parseLimit } from './customer/helpers';
 import type { AuthVariables, Env } from '../types/env';
 
@@ -330,4 +331,15 @@ adminPlatformRouter.get('/system', async (c) => {
       pendingPayments: pendingPayments.length,
     },
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Monitoring
+// ─────────────────────────────────────────────────────────────────────
+
+/** GET /admin/monitoring?range=1h|24h|7d — live health, performance, errors, security. */
+adminPlatformRouter.get('/monitoring', requireRole('super_admin', 'admin'), async (c) => {
+  const raw = c.req.query('range') ?? '1h';
+  const range = (['1h', '24h', '7d'] as const).find((r) => r === raw) ?? '1h';
+  return c.json(await getMonitoringReport(c.env, range));
 });

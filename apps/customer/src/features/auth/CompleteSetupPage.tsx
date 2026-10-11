@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { firebaseAuth } from '../../lib/firebase';
+import { BrandMark } from '../../components/brand/BrandMark';
 
 export function CompleteSetupPage() {
   const { isAuthenticated, isReady, completeSetup } = useAuth();
@@ -45,9 +46,7 @@ export function CompleteSetupPage() {
     <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-950 flex items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-[#1a6cf0] flex items-center justify-center">
-            <span className="text-white font-extrabold text-lg italic">P</span>
-          </div>
+          <BrandMark className="w-10 h-10" />
           <div>
             <h1 className="text-slate-900 dark:text-slate-100 font-bold text-base leading-tight">
               Finish setting up

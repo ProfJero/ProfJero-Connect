@@ -1,18 +1,26 @@
-import { Link, NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
-  MessageSquare,
   Send,
   Plus,
   CreditCard,
   Database,
   X,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { navItems } from '../../lib/nav';
+import {
+  navEntries,
+  isGroup,
+  flattenLeaves,
+  type NavLeaf,
+  type NavGroup,
+} from '../../lib/nav';
 import { useAdminData } from '../../lib/adminData';
 import { useAuth } from '../../lib/auth';
 import { timeAgo } from '../../lib/datetime';
+import { BrandMark } from '../brand/BrandMark';
 
 function QuickAction({
   icon: Icon,
@@ -32,16 +40,10 @@ function QuickAction({
       : 'bg-[#142646] hover:bg-[#1a315a] text-slate-200 border border-slate-700/60',
   );
 
-  const content = (
-    <>
-      <Icon className="w-4 h-4" />
-      <span>{label}</span>
-    </>
-  );
-
   return (
     <Link to={to} className={className}>
-      {content}
+      <Icon className="w-4 h-4" />
+      <span>{label}</span>
     </Link>
   );
 }
@@ -54,8 +56,130 @@ export function Sidebar({
   onClose?: () => void;
 }) {
   const { user } = useAuth();
+  const location = useLocation();
   const canManage = user?.role === 'super_admin' || user?.role === 'admin';
   const canBill = canManage || user?.role === 'finance';
+
+  const roleAllows = (entry: { roles?: string[] }) =>
+    !entry.roles || (user ? entry.roles.includes(user.role) : false);
+
+  // Longest-prefix match across every leaf item, ignoring groups.
+  const allLeaves = flattenLeaves();
+  const bestMatch = allLeaves
+    .filter(roleAllows)
+    .reduce<string>((best, item) => {
+      const matches =
+        location.pathname === item.path ||
+        location.pathname.startsWith(item.path + '/');
+      return matches && item.path.length > best.length ? item.path : best;
+    }, '');
+
+  // Which groups are open. Initialised to whatever contains the current
+  // route; auto-opens when navigating into a group.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const entry of navEntries) {
+      if (isGroup(entry) && entry.items.some((item) => item.path === bestMatch)) {
+        initial.add(entry.label);
+      }
+    }
+    return initial;
+  });
+
+  useEffect(() => {
+    // When the URL changes into a group, ensure that group is open.
+    for (const entry of navEntries) {
+      if (
+        isGroup(entry) &&
+        entry.items.some(
+          (item) =>
+            location.pathname === item.path ||
+            location.pathname.startsWith(item.path + '/'),
+        )
+      ) {
+        setOpenGroups((prev) => {
+          if (prev.has(entry.label)) return prev;
+          const next = new Set(prev);
+          next.add(entry.label);
+          return next;
+        });
+      }
+    }
+    // bestMatch intentionally omitted — we only want to react to URL changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
+
+  const renderLeaf = (item: NavLeaf, nested: boolean) => {
+    if (!roleAllows(item)) return null;
+    const Icon = item.icon;
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        onClick={onClose}
+        className={cn(
+          'flex items-center gap-2.5 rounded-lg font-medium transition-colors',
+          nested ? 'px-3 py-2 text-[13px]' : 'px-3.5 py-2.5 text-[13.5px]',
+          bestMatch === item.path
+            ? 'bg-[#1976d2] text-white shadow-sm'
+            : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
+        )}
+      >
+        <Icon className={nested ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        <span>{item.label}</span>
+      </NavLink>
+    );
+  };
+
+  const renderGroup = (group: NavGroup) => {
+    const visibleItems = group.items.filter(roleAllows);
+    if (visibleItems.length === 0) return null;
+    if (!roleAllows(group)) return null;
+
+    const isOpen = openGroups.has(group.label);
+    const hasActiveChild = visibleItems.some((item) => bestMatch === item.path);
+    const Icon = group.icon;
+
+    return (
+      <div key={group.label}>
+        <button
+          type="button"
+          onClick={() => toggleGroup(group.label)}
+          aria-expanded={isOpen}
+          className={cn(
+            'w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg font-medium text-[13.5px] transition-colors',
+            hasActiveChild
+              ? 'text-white'
+              : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
+          )}
+        >
+          <Icon className="w-4 h-4" />
+          <span className="flex-1 text-left">{group.label}</span>
+          <ChevronDown
+            className={cn(
+              'w-3.5 h-3.5 transition-transform duration-200',
+              isOpen && 'rotate-180',
+            )}
+          />
+        </button>
+        {isOpen && (
+          <div className="mt-1 ml-3 pl-3 border-l border-slate-700/50 space-y-0.5">
+            {visibleItems.map((item) => renderLeaf(item, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div
@@ -78,9 +202,7 @@ export function Sidebar({
       >
         <div className="p-5">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-              <MessageSquare className="w-5 h-5 fill-current" />
-            </div>
+            <BrandMark className="w-10 h-10" />
             <div className="flex-1 min-w-0">
               <div className="text-white font-bold text-[17px] leading-tight tracking-tight">
                 ProfJero Connect
@@ -99,23 +221,9 @@ export function Sidebar({
           </div>
 
           <nav aria-label="Sidebar Navigation" className="space-y-1">
-            {navItems.map(({ label, icon: Icon, path }) => (
-              <NavLink
-                key={label}
-                to={path}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3.5 py-2.5 rounded-lg font-medium text-[13.5px] transition-colors',
-                    isActive
-                      ? 'bg-[#1976d2] text-white shadow-sm'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50',
-                  )
-                }
-              >
-                <Icon className="w-4 h-4" />
-                <span>{label}</span>
-              </NavLink>
-            ))}
+            {navEntries.map((entry) =>
+              isGroup(entry) ? renderGroup(entry) : renderLeaf(entry, false),
+            )}
           </nav>
 
           <div className="mt-8 pt-6 border-t border-slate-700/50">
@@ -141,18 +249,17 @@ export function Sidebar({
     </>
   );
 }
-/**
- * Live SMS provider balance (credits on the upstream account), refreshed
- * by the 15-minute cron and on demand from the provider page. The status
- * dot reflects the provider record, not a hardcoded "Connected".
- */
+
 function ProviderBalance({ onNavigate }: { onNavigate?: () => void }) {
   const { smsProvider: p, providersLoading } = useAdminData();
   const status =
-    !p ? { label: providersLoading ? 'Loading…' : 'Not set up', dot: 'bg-slate-500', text: 'text-slate-400' }
-    : p.status === 'active' ? { label: 'Active', dot: 'bg-emerald-500', text: 'text-emerald-400' }
-    : p.status === 'error' ? { label: 'Error', dot: 'bg-rose-500', text: 'text-rose-400' }
-    : { label: 'Inactive', dot: 'bg-amber-500', text: 'text-amber-400' };
+    !p
+      ? { label: providersLoading ? 'Loading…' : 'Not set up', dot: 'bg-slate-500', text: 'text-slate-400' }
+      : p.status === 'active'
+        ? { label: 'Active', dot: 'bg-emerald-500', text: 'text-emerald-400' }
+        : p.status === 'error'
+          ? { label: 'Error', dot: 'bg-rose-500', text: 'text-rose-400' }
+          : { label: 'Inactive', dot: 'bg-amber-500', text: 'text-amber-400' };
 
   return (
     <Link
@@ -173,7 +280,11 @@ function ProviderBalance({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className={cn('w-2 h-2 rounded-full', status.dot)} />
           <span className={cn('text-[10px] font-medium', status.text)}>{status.label}</span>
-          {p?.balanceCheckedAt && <span className="text-[10px] text-slate-500 truncate">· {timeAgo(p.balanceCheckedAt)}</span>}
+          {p?.balanceCheckedAt && (
+            <span className="text-[10px] text-slate-500 truncate">
+              · {timeAgo(p.balanceCheckedAt)}
+            </span>
+          )}
         </div>
       </div>
     </Link>

@@ -49,7 +49,13 @@ const env: Env = {
   CUSTOMER_APP_URL: 'http://localhost:5174',
 };
 const key = await importPKCS8(keyPem, 'RS256');
-const ctx = { waitUntil() {}, passThroughOnException() {} } as unknown as ExecutionContext;
+// Background work runs after the response, like Workers' waitUntil.
+const ctx = {
+  waitUntil(p: Promise<unknown>) {
+    p.catch((err) => console.error('[background]', err));
+  },
+  passThroughOnException() {},
+} as unknown as ExecutionContext;
 
 /** Firebase-style ID token, carrying any custom claims the fake has set. */
 async function mint(uid: string, email: string): Promise<string> {
@@ -115,6 +121,7 @@ await call('POST', '/customer/sender-ids', await mint('seedcust', 'kofi@example.
 });
 
 // ---------- HTTP ----------
+let signupIp = 0;
 createServer(async (req, res) => {
   const url = new URL(req.url!, `http://localhost:${PORT}`);
   const cors = { 'access-control-allow-origin': '*' };
@@ -138,6 +145,11 @@ createServer(async (req, res) => {
     for await (const c of req) chunks.push(c as Buffer);
     const headers = new Headers();
     for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v);
+    // Every browser test signs up from localhost; give each sign-up its own
+    // address so the per-network sign-up limit (10/hour) doesn't trip.
+    if (url.pathname === '/customer/register' && !headers.has('cf-connecting-ip')) {
+      headers.set('cf-connecting-ip', `10.0.${Math.floor(++signupIp / 250)}.${signupIp % 250}`);
+    }
     const r = await worker.fetch(
       new Request(url, {
         method: req.method,

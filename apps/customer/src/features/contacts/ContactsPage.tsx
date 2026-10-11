@@ -244,7 +244,26 @@ export function ContactsPage() {
                           }}
                         />
                       </td>
-                      <td className="py-3 px-3 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{c.name}</td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{c.name}</div>
+                        {(c.dateOfBirth || Object.keys(c.customFields ?? {}).length > 0) && (
+                          <div className="mt-0.5 flex flex-wrap gap-1 max-w-xs">
+                            {c.dateOfBirth && (
+                              <span className="px-1.5 py-0.5 rounded bg-pink-50 dark:bg-pink-500/10 text-[10px] text-pink-800 dark:text-pink-300">
+                                Birthday {new Date(`${c.dateOfBirth}T00:00:00`).toLocaleDateString([], { day: 'numeric', month: 'short' })}
+                              </span>
+                            )}
+                            {Object.entries(c.customFields ?? {}).slice(0, 3).map(([k, v]) => (
+                              <span key={k} className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-700 dark:text-slate-300">
+                                {k.replace(/_/g, ' ')}: {v}
+                              </span>
+                            ))}
+                            {Object.keys(c.customFields ?? {}).length > 3 && (
+                              <span className="text-[10px] text-slate-500">+{Object.keys(c.customFields).length - 3} more</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-3 whitespace-nowrap">{formatPhone(c.phone)}</td>
                       <td className="py-3 px-3 whitespace-nowrap">{c.email ?? '—'}</td>
                       <td className="py-3 px-3">
