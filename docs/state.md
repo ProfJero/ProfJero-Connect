@@ -91,6 +91,8 @@ text
 | **Background sending + personalised SMS + campaigns** | ✅ Done (§16) |
 | **Monitoring** (health, traffic, latency, errors, abuse) | ✅ Done (§16) — admin → Monitoring |
 | **Logo, SEO, share previews, public API docs** | ✅ Done (§16) |
+| **Data bundles** (catalogue, checkout, delivery, refunds, admin orders) | ✅ Done (§17) — needs the Firestore indexes |
+| **Services-first customer UI** (catalogue-driven nav, Buy menu, launcher) | ✅ Done (§17) |
 | **Test suites** (API, security, features, load, rules, browser, a11y, mobile) | ✅ All passing — see `docs/testing.md` |
 
 ---
@@ -895,9 +897,9 @@ merged over defaults (`packages/shared/src/schemas/settings.ts`) and cached
 ### Testing
 
 See **docs/testing.md** for how to run everything and the full results:
-API customer journey (27), security & reliability (61), features (32), load
-test, Firestore rules (6), and Playwright browser tests (25: UI,
-accessibility, mobile).
+API customer journey (27), security & reliability (61), features (32), data
+bundles (15), load test, Firestore rules (6), and Playwright browser tests
+(28: UI, accessibility, mobile).
 
 ---
 
@@ -991,4 +993,65 @@ sign-in, sign-up, API & Integrations, the API settings tab and the sidebar.
 4. If not done in phase 2: `ARKESEL_WEBHOOK_SECRET`.
 5. Open admin → Monitoring and confirm the dispatcher shows as healthy
    within two minutes.
+
+---
+
+## 17. Data bundles (DB3) and the services-first customer app
+
+### How a data purchase works
+
+1. Customer picks a number and a bundle on **/services/data** and pays at
+   checkout (mobile money or card). Nothing comes out of the SMS wallet:
+   the customer pays exactly the bundle price.
+2. `POST /customer/data/orders` (Idempotency-Key) creates `dataOrders/pjd_…`
+   and the checkout. The order ID is also the payment reference and the
+   provider's `clientReference`, so a retry never charges or buys twice.
+3. The payment webhook (references starting `pjd_`) or the return page
+   (`POST /customer/data/orders/:id/refresh`) confirms the **exact amount**,
+   then submits to the data provider once (claimed in a transaction).
+4. Outcomes:
+   - delivered → in-app notification;
+   - provider refuses (4xx) → **automatic full refund** through the
+     payment gateway, customer notified;
+   - provider answer lost (timeout/5xx) or wrong amount paid → order
+     flagged `needsReview` (bell alert); never refunded or re-bought
+     blindly. An operator checks the provider dashboard, then uses
+     **Resend**, **Delivered** or **Refund** on admin → Data Orders.
+5. Orders still "sending" are re-checked every 15 minutes
+   (`runDataOrderReconciliation`, shown on admin → Settings → System).
+
+Network detection (`packages/shared/src/lib/networks.ts`) maps Ghana
+prefixes to MTN / Telecel / AirtelTigo. Numbers can be ported, so a
+mismatch is a warning the buyer must confirm, not a block.
+
+Bundles must be synced and switched **on** in admin → Data Bundles before
+customers see them; with none on sale the shop shows "being stocked".
+Checkout follows the same pause switch as SMS top-ups
+(Settings → Payments).
+
+### Customer app structure
+
+`apps/customer/src/lib/services.ts` is the service catalogue. The sidebar
+(Services / Workspace groups), the topbar **Buy** menu, the dashboard
+"What would you like to do today?" launcher and the Services page are all
+generated from it. To add a service: add an entry (`status: 'soon'` until
+it can be bought, then `'live'`) and its pages; nothing else needs to
+change. Billing (SMS wallet, Buy SMS units, Purchase history with SMS and
+Data tabs) and Developers (API keys, API docs) are grouped under Workspace.
+
+### Deploy checklist (data bundles)
+
+1. Deploy the API (the 15-minute cron now also checks data orders).
+2. Secrets: `ELITEDATA_API_KEY` (and `ELITEDATA_BASE_URL` only if told
+   to use another host).
+3. Firestore indexes — `cd firebase` then
+   `npx firebase deploy --only firestore:indexes --project profjero-sms-gateway`
+   (definitions in `firebase/firestore.indexes.json`; includes the
+   dataOrders indexes for customer lists, the admin filters and the
+   reconciliation job).
+4. In the payment gateway dashboard, make sure refunds are enabled for
+   the account (automatic refunds use its refund API).
+5. Admin → Data Bundles → Sync, set prices, switch bundles on.
+6. Make a small real purchase to your own number and watch it go
+   Payment → Sending → Delivered.
 

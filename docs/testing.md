@@ -1,6 +1,6 @@
 # ProfJero Connect — Testing & Security Report
 
-_Last run: 2026-10-04, branch `claude/nifty-babbage-1reeo5`._
+_Last run: 2026-10-11, branch `claude/nifty-babbage-1reeo5`._
 
 This covers both platforms (admin `apps/web`, customer `apps/customer`) and
 the shared API (`apps/api`). Every suite runs locally without any Firebase,
@@ -18,10 +18,11 @@ Windows CMD and macOS/Linux use the same commands, from the repo root.
 | API: customer journey (27 checks) | `npm run test:customer --workspace=@profjero/api` | `openssl` on PATH (Git for Windows has one) |
 | API: security & reliability (61 checks) | `npm run test:security --workspace=@profjero/api` | `openssl` |
 | API: new features (32 checks) | `npm run test:features --workspace=@profjero/api` | `openssl` |
-| API: all three suites | `npm test --workspace=@profjero/api` | `openssl` |
+| API: data bundles (15 checks) | `npm run test:data --workspace=@profjero/api` | `openssl` |
+| API: all four suites | `npm test --workspace=@profjero/api` | `openssl` |
 | Load test | `npm run test:load --workspace=@profjero/api` (options: `-- --customers=50 --rounds=40`) | `openssl` |
 | Firestore rules (6 tests) | `cd firebase`, `npm install`, `npm test` | Java 11+ (for the emulator) |
-| Browser: UI, accessibility, mobile (25 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
+| Browser: UI, accessibility, mobile (28 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
 | Local API for manual testing | `npm run dev:fake --workspace=@profjero/api` | `openssl` |
 
 `npm run test:e2e` starts the fake-cloud API on :8787, the admin app on
@@ -49,10 +50,42 @@ any password works because Firebase Auth is answered inside the browser.
 | 14 | Dependencies | 🟠 | `npm audit` | ✅ 0 vulnerabilities (was 13) |
 | 15 | Load testing | 🟠 | `test/load.ts` | ✅ 3,000 requests, 0 errors |
 | 16 | Regression | 🟠 | all of the above + typecheck/lint/build | ✅ |
-| 17 | UI testing | 🟡 | `e2e/admin.spec.ts`, `e2e/customer.spec.ts` | ✅ 21/21 |
-| 18 | Accessibility | 🟡 | `e2e/accessibility.spec.ts` (axe, WCAG 2.1 A/AA) | ✅ 40 screens, 0 serious/critical |
+| 17 | UI testing | 🟡 | `e2e/admin.spec.ts`, `e2e/customer.spec.ts` | ✅ 24/24 |
+| 18 | Accessibility | 🟡 | `e2e/accessibility.spec.ts` (axe, WCAG 2.1 A/AA) | ✅ 46 screens, 0 serious/critical |
 | 19 | Mobile | 🟠 | `e2e/mobile.spec.ts` (Pixel 7) | ✅ 2/2 (now incl. Monitoring, Campaigns, API docs) |
 | 20 | Monitoring & recovery | 🔴 | security suite §Monitoring & recovery | ✅ 7/7 |
+
+## Data bundles and services-first UI (2026-10-11)
+
+`apps/api/test/data.e2e.ts` — 15 checks, all passing, against a fake data
+provider and gateway refunds:
+
+- network detection (all prefixes and formats; ported/unknown → none);
+- catalogue: synced bundles start hidden; customers see only bundles on
+  sale, with no cost, markup or provider name;
+- checkout for exactly the bundle price; same key reuses the checkout,
+  same key + different purchase → 409; hidden bundle / foreign number /
+  missing key refused; nothing is bought before payment;
+- payment webhook delivers exactly once even when repeated; the return
+  page confirms a late webhook; the 15-minute job finishes orders the
+  provider completes later;
+- wrong amount → held, not delivered; failed charge → clear message;
+- provider rejects → full automatic refund, provider wording hidden;
+- provider timeout/5xx → held for review, never refunded or re-bought;
+- refund refused by the gateway → stays visible; admin can retry,
+  mark delivered or refund; viewers can look but not act;
+- tenant isolation, paused checkout.
+
+Browser tests added: dashboard launcher, Buy menu and grouped sidebar;
+full data purchase (Telecel number detected, MTN bundle warning, pay,
+delivered, My orders, Purchase history, dashboard); admin Data Orders
+with cost and margin. Accessibility now also scans Services, Buy data,
+My orders, Airtime and Purchase history.
+
+Found and fixed while testing: low contrast on the new sidebar section
+headings, white-on-green buttons and the active "New/Soon" tags; the
+admin sidebar set state inside an effect (lint error); the old Airtime
+page promised it would use the SMS wallet.
 
 ## Phase 3 features (2026-10-04)
 
