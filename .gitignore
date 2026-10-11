@@ -64,3 +64,6 @@ apps/*/.vite/
 # ── Browser tests ───────────────────────────────────────────
 test-results/
 playwright-report/
+
+# Local test/helper scripts (may contain a Firebase Web API key for convenience)
+scripts/

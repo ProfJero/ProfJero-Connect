@@ -66,6 +66,41 @@ export interface Env {
    * and for links in notification emails.
    */
   CUSTOMER_APP_URL?: string;
+
+  // ─────────────────────────────────────────────────────────────────
+  // Data bundles (EliteData)
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * EliteData API token. Sent as `Authorization: Bearer <token>` on
+   * every request. Required for any data-bundle operation (balance,
+   * bundle list, purchase, verify number, order status).
+   */
+  ELITEDATA_API_KEY?: string;
+
+  /**
+   * EliteData base URL. Defaults to https://elitedatagh.com when unset.
+   * Only override this if they issue you a different host (staging,
+   * alternate region) or you're pointing at a mock during development.
+   */
+  ELITEDATA_BASE_URL?: string;
+
+  /**
+   * Shared secret appended to the EliteData webhook URL as ?token=...
+   * so we can reject forged webhook requests. EliteData does not sign
+   * payloads (same gap as Arkesel). Without this, anyone who knows the
+   * webhook path can POST a fake "DELIVERED" event.
+   *
+   * Not used in DB1 (no webhook handler yet). Set it now so the secret
+   * is in place when DB3 wires the endpoint.
+   */
+  ELITEDATA_WEBHOOK_SECRET?: string;
+
+  /**
+   * Provider record ID for logging data bundle calls. Defaults to
+   * data_gw_01. Internal — never exposed in customer API responses.
+   */
+  DEFAULT_DATA_PROVIDER_ID?: string;
 }
 
 /**
@@ -83,8 +118,6 @@ export interface Env {
  *
  * `customer` and `projectId` are optional from the other side, for the
  * same reason.
- *
- * ── NEW: customer + projectId added ──
  */
 export interface AuthVariables {
   requestId: string;

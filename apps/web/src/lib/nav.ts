@@ -10,6 +10,8 @@ import {
   BadgeCheck,
   Tag,
   Activity,
+  Package,
+  ShoppingBag,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -30,6 +32,8 @@ export const navItems: NavItem[] = [
   { label: 'Wallets & Units', icon: Wallet, path: '/wallets' },
   { label: 'Payments', icon: CreditCard, path: '/payments' },
   { label: 'Providers', icon: Server, path: '/providers' },
+  { label: 'Data Bundles', icon: Package, path: '/providers/data/bundles', roles: ['super_admin', 'admin', 'finance'] },
+  { label: 'Data Orders', icon: ShoppingBag, path: '/providers/data/orders', roles: ['super_admin', 'admin', 'finance'] },
   { label: 'Reports', icon: FileBarChart2, path: '/reports' },
   { label: 'Monitoring', icon: Activity, path: '/monitoring', roles: ['super_admin', 'admin'] },
   { label: 'Settings', icon: Settings, path: '/settings' },
