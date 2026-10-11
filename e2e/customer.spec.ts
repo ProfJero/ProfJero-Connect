@@ -1,19 +1,23 @@
-import { test, expect, customerSignup, adminApi, API, CUSTOMER_URL } from './fixtures';
+import { test, expect, customerSignup, adminApi, adminLogin, API, ADMIN_URL, CUSTOMER_URL } from './fixtures';
 
 const PAGES = [
   '/dashboard', '/messaging', '/messaging/sms', '/messaging/history', '/messaging/sender-ids', '/messaging/sender-ids/request',
   '/contacts', '/contacts/groups', '/services', '/wallet', '/wallet/add-funds', '/transactions', '/api', '/notifications',
   '/settings', '/settings?tab=organisation', '/messaging/campaigns', '/developers',
+  '/services/data', '/services/data/orders', '/services/airtime', '/transactions?tab=data',
 ];
 
 test.describe('customer app', () => {
   test('every page loads without errors and has one page title', async ({ page }) => {
+    test.setTimeout(150_000);
     await customerSignup(page, 'Smoke Test Ltd');
     const wrongTitles: string[] = [];
     for (const path of PAGES) {
       await page.goto(`${CUSTOMER_URL}${path}`);
       await page.waitForLoadState('networkidle');
       await expect(page, path).toHaveURL(new RegExp(path.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')));
+      // Sign-in is restored after the network goes quiet; wait for the page itself.
+      await page.getByRole('heading', { level: 1 }).first().waitFor({ timeout: 10_000 }).catch(() => {});
       const h1s = await page.getByRole('heading', { level: 1 }).count();
       if (h1s !== 1) wrongTitles.push(`${path}: ${h1s} h1`);
     }
@@ -211,5 +215,80 @@ test.describe('customer app', () => {
     expect(robots).toContain('Sitemap:');
     await expect(page.locator('img[src="/logo-tile.webp"]').first()).toBeVisible();
   });
-});
 
+  test('services are front and centre: dashboard launcher, Buy menu, grouped sidebar', async ({ page }) => {
+    await customerSignup(page, 'Launch Pad Ltd');
+    await expect(page.getByRole('heading', { name: 'What would you like to do today?' })).toBeVisible();
+    for (const name of ['Bulk SMS', 'Data Bundles', 'Airtime']) {
+      await expect(page.getByRole('heading', { level: 3, name, exact: true })).toBeVisible();
+    }
+    const nav = page.getByRole('navigation', { name: 'Main Sidebar Navigation' });
+    await expect(nav.getByText('Services', { exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: /^Data Bundles/ })).toBeVisible();
+    await expect(nav.getByRole('link', { name: /^Airtime\s*Soon/ })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Buy' }).click();
+    const menu = page.getByRole('menu', { name: 'Buy' });
+    await expect(menu.getByRole('menuitem', { name: /SMS units/ })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: /Airtime\s*Soon/ })).toHaveAttribute('aria-disabled', 'true');
+    await menu.getByRole('menuitem', { name: /Data bundle/ }).click();
+    await expect(page).toHaveURL(/\/services\/data$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Buy data' })).toBeVisible();
+
+    await page.goto(`${CUSTOMER_URL}/services/airtime`);
+    await expect(page.getByText('Coming soon').first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Buy data/ }).last()).toBeVisible();
+  });
+
+  test('buy a data bundle: number → network detected → bundle → pay → delivered', async ({ page }) => {
+    await customerSignup(page, 'Data Buyers Ltd');
+    await page.goto(`${CUSTOMER_URL}/services/data`);
+    await page.getByLabel('Phone number').fill('020 123 4567');
+    await expect(page.getByText(/Telecel\s*number — showing Telecel bundles/)).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Telecel/ })).toHaveAttribute('aria-selected', 'true');
+    // Pick an MTN bundle for a Telecel number → warning, pay blocked until confirmed.
+    await page.getByRole('tab', { name: /^MTN/ }).click();
+    await page.getByRole('radio', { name: /^1GB for GH₵5\.00/ }).click();
+    await expect(page.getByText(/looks like a Telecel number/)).toBeVisible();
+    const pay = page.getByRole('button', { name: 'Pay GH₵5.00' });
+    await expect(pay).toBeDisabled();
+    // Switch to the right number instead.
+    await page.getByLabel('Phone number').fill('0241234567');
+    await expect(page.getByText(/looks like a/)).toHaveCount(0);
+    await expect(pay).toBeEnabled();
+
+    const [checkout] = await Promise.all([
+      page.waitForRequest((r) => r.url().includes('checkout.example')),
+      pay.click(),
+    ]);
+    const reference = checkout.url().split('/').pop()!;
+    expect(reference).toMatch(/^pjd_/);
+    await page.waitForURL(/checkout\.example/);
+    await fetch(`${API}/__test/paid`);
+    await page.goto(`${CUSTOMER_URL}/services/data/complete?reference=${reference}`);
+    await expect(page.getByRole('heading', { name: 'Data delivered' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('+233 24 123 4567').first()).toBeVisible();
+
+    await page.getByRole('link', { name: 'All orders' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'My data orders' })).toBeVisible();
+    await expect(page.getByText('Delivered').first()).toBeVisible();
+    await page.goto(`${CUSTOMER_URL}/transactions?tab=data`);
+    await expect(page.getByRole('region', { name: 'Data orders' }).getByText('1GB')).toBeVisible();
+    await page.goto(`${CUSTOMER_URL}/dashboard`);
+    await expect(page.getByRole('heading', { name: 'Data purchases' })).toBeVisible();
+    await expect(page.getByText('MTN 1GB Data').first()).toBeVisible();
+  });
+
+  test('data orders: operators see customer purchases with cost and margin', async ({ page }) => {
+    // Runs after the purchase above (same backend).
+    await adminLogin(page);
+    await page.goto(`${ADMIN_URL}/providers/data/orders`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Data Orders' })).toBeVisible();
+    await page.getByRole('tab', { name: 'All' }).click();
+    await expect(page.getByText('MTN 1GB Data').first()).toBeVisible();
+    await expect(page.getByText('Delivered').first()).toBeVisible();
+    await expect(page.getByText(/cost GH₵4\.00/).first()).toBeVisible();
+    await page.getByRole('tab', { name: 'Needs attention' }).click();
+    await expect(page.getByText('Nothing needs attention')).toBeVisible();
+  });
+});

@@ -209,3 +209,42 @@ export interface NotificationsResponse {
   unreadCount: number;
   counts: Partial<Record<NotificationType, number>>;
 }
+
+// ── Data bundles ────────────────────────────────────────────────────
+
+export interface DataBundle {
+  id: string;
+  network: string;
+  /** Canonical network (MTN | Telecel | AirtelTigo) for grouping. */
+  networkKey: string;
+  size: string;
+  label: string;
+  sellPriceGhs: number;
+  displayOrder: number;
+}
+
+export interface DataCatalog {
+  bundles: DataBundle[];
+  networks: string[];
+  checkoutEnabled: boolean;
+  checkoutMessage: string | null;
+}
+
+export type DataOrderStatus = 'pending_payment' | 'payment_confirmed' | 'processing' | 'delivered' | 'failed' | 'refunded';
+
+export interface DataOrder {
+  id: string;
+  bundleId: string;
+  bundleLabel: string;
+  network: string;
+  size: string;
+  recipientNumber: string;
+  amountGhs: number;
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'abandoned';
+  orderStatus: DataOrderStatus;
+  message: string | null;
+  refundedAt: string | null;
+  paidAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}

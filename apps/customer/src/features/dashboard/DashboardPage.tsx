@@ -5,12 +5,13 @@ import { QuickActionsCard } from '../../components/dashboard/QuickActionsCard';
 import { MetricCard, type MetricCardData } from '../../components/dashboard/MetricCard';
 import { SmsUsageChart } from '../../components/dashboard/SmsUsageChart';
 import { RecentTransactions } from '../../components/dashboard/RecentTransactions';
-import { ServiceOverview } from '../../components/dashboard/ServiceOverview';
+import { ServiceLauncher } from '../../components/dashboard/ServiceLauncher';
+import { RecentDataOrders } from '../../components/dashboard/RecentDataOrders';
 import { RecentNotifications } from '../../components/dashboard/RecentNotifications';
 import { ApiBanner } from '../../components/dashboard/ApiBanner';
 import { useApi } from '../../lib/useApi';
 import { deltaLabel, formatGhs } from '../../lib/format';
-import type { CustomerApiKey, CustomerPayment, CustomerSenderId, SmsStats } from '../../lib/types';
+import type { CustomerPayment, CustomerSenderId, SmsStats } from '../../lib/types';
 
 export function DashboardPage() {
   const stats = useApi<SmsStats>('/customer/sms/stats?days=30');
@@ -18,7 +19,6 @@ export function DashboardPage() {
     '/customer/payments?limit=1',
   );
   const senderIds = useApi<{ senderIds: CustomerSenderId[] }>('/customer/sender-ids');
-  const keys = useApi<{ apiKeys: CustomerApiKey[] }>('/customer/api-keys');
 
   const spent = payments.data?.summary.paidThisMonthGhs ?? 0;
   const approved = (senderIds.data?.senderIds ?? []).filter((s) => s.status === 'approved').length;
@@ -58,7 +58,7 @@ export function DashboardPage() {
     {
       loading: payments.loading && !payments.data,
       data: {
-        label: 'Top-ups this month',
+        label: 'SMS top-ups this month',
         value: formatGhs(spent),
         footer: 'paid into your wallet',
         icon: Banknote,
@@ -83,11 +83,16 @@ export function DashboardPage() {
     <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1">
       <WelcomeHeader />
 
+      <ServiceLauncher />
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <BalanceCard />
         <QuickActionsCard />
       </div>
 
+      <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 -mb-2">
+        Bulk SMS <span className="font-medium text-slate-500 dark:text-slate-400">· last 30 days</span>
+      </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((m) => (
           <MetricCard key={m.data.label} metric={m.data} loading={m.loading} />
@@ -100,7 +105,7 @@ export function DashboardPage() {
           <RecentTransactions />
         </div>
         <div className="lg:col-span-5 space-y-6">
-          <ServiceOverview activeKeys={keys.data ? keys.data.apiKeys.filter((k) => k.status === 'active').length : null} />
+          <RecentDataOrders />
           <RecentNotifications />
           <ApiBanner />
         </div>

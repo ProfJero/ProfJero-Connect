@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Send,
@@ -86,28 +86,25 @@ export function Sidebar({
     return initial;
   });
 
-  useEffect(() => {
-    // When the URL changes into a group, ensure that group is open.
-    for (const entry of navEntries) {
-      if (
-        isGroup(entry) &&
-        entry.items.some(
-          (item) =>
-            location.pathname === item.path ||
-            location.pathname.startsWith(item.path + '/'),
-        )
-      ) {
-        setOpenGroups((prev) => {
-          if (prev.has(entry.label)) return prev;
-          const next = new Set(prev);
-          next.add(entry.label);
-          return next;
-        });
-      }
+  // When the URL moves into a group, open it. Adjusted during render
+  // (React's pattern for state derived from a changing input) rather
+  // than in an effect.
+  const [seenPath, setSeenPath] = useState(location.pathname);
+  if (seenPath !== location.pathname) {
+    setSeenPath(location.pathname);
+    const toOpen = navEntries
+      .filter(
+        (entry) =>
+          isGroup(entry) &&
+          entry.items.some(
+            (item) => location.pathname === item.path || location.pathname.startsWith(item.path + '/'),
+          ),
+      )
+      .map((entry) => entry.label);
+    if (toOpen.some((label) => !openGroups.has(label))) {
+      setOpenGroups((prev) => new Set([...prev, ...toOpen]));
     }
-    // bestMatch intentionally omitted — we only want to react to URL changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => {

@@ -20,7 +20,7 @@ export function BalanceCard() {
               <Wallet className="w-4 h-4 text-white" strokeWidth={2} />
             </div>
             <span className="text-xs text-white font-medium tracking-wide">
-              Available Balance
+              SMS balance
             </span>
           </div>
           <Link
@@ -28,7 +28,7 @@ export function BalanceCard() {
             className="bg-white hover:bg-blue-50 text-[#1764e0] font-semibold px-3 py-1.5 rounded-lg text-xs shadow-sm flex items-center gap-1 transition-all"
           >
             <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
-            <span>Add Funds</span>
+            <span>Buy units</span>
           </Link>
         </div>
 

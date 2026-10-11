@@ -18,10 +18,15 @@ const TITLES: Array<[RegExp, string]> = [
   [/^\/messaging/, 'Messaging'],
   [/^\/contacts\/groups/, 'Contact groups'],
   [/^\/contacts/, 'Contacts'],
+  [/^\/services\/data\/orders\/[^/]+/, 'Data order'],
+  [/^\/services\/data\/orders/, 'My data orders'],
+  [/^\/services\/data\/complete/, 'Data order'],
+  [/^\/services\/data/, 'Buy data'],
+  [/^\/services\/airtime/, 'Airtime'],
   [/^\/services/, 'Services'],
-  [/^\/wallet\/add-funds/, 'Add funds'],
-  [/^\/wallet/, 'Wallet'],
-  [/^\/transactions/, 'Transactions'],
+  [/^\/wallet\/add-funds/, 'Buy SMS units'],
+  [/^\/wallet/, 'SMS wallet'],
+  [/^\/transactions/, 'Purchase history'],
   [/^\/api/, 'API & Integrations'],
   [/^\/notifications/, 'Notifications'],
   [/^\/settings/, 'Settings'],
@@ -32,7 +37,7 @@ export function RouteTitle() {
   const { pathname } = useLocation();
   useEffect(() => {
     const page = TITLES.find(([re]) => re.test(pathname))?.[1];
-    document.title = page ? `${page} · ProfJero Connect` : 'ProfJero Connect — Bulk SMS, Campaigns & SMS API for Ghana';
+    document.title = page ? `${page} · ProfJero Connect` : 'ProfJero Connect — Bulk SMS, Data Bundles & API for Ghana';
   }, [pathname]);
   return null;
 }

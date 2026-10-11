@@ -1,4 +1,4 @@
-import { ArrowRight, Send, Plus, AtSign, Users, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Send, Plus, Wifi, Users, type LucideIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
@@ -23,19 +23,19 @@ const quickActions: QuickAction[] = [
     hover: 'hover:border-blue-200 hover:bg-blue-50/30 dark:hover:bg-blue-500/5',
   },
   {
-    label: 'Add Funds',
-    description: 'Buy SMS units',
-    to: '/wallet/add-funds',
-    icon: Plus,
+    label: 'Buy Data',
+    description: 'All networks',
+    to: '/services/data',
+    icon: Wifi,
     iconBg: 'bg-emerald-500/10',
     iconColor: 'text-emerald-700 dark:text-emerald-400',
     hover: 'hover:border-emerald-200 hover:bg-emerald-50/30 dark:hover:bg-emerald-500/5',
   },
   {
-    label: 'Sender ID',
-    description: 'Request a sender name',
-    to: '/messaging/sender-ids/request',
-    icon: AtSign,
+    label: 'SMS Units',
+    description: 'Top up your wallet',
+    to: '/wallet/add-funds',
+    icon: Plus,
     iconBg: 'bg-purple-500/10',
     iconColor: 'text-purple-600 dark:text-purple-400',
     hover: 'hover:border-purple-200 hover:bg-purple-50/30 dark:hover:bg-purple-500/5',

@@ -1,13 +1,12 @@
-import { test, expect, adminLogin, adminApi, customerSignup, API, ADMIN_URL, CUSTOMER_URL, VIEWER } from './fixtures';
+import { test, expect, adminLogin, adminApi, adminNavLink, customerSignup, API, ADMIN_URL, CUSTOMER_URL, VIEWER } from './fixtures';
 
-const NAV = ['Dashboard', 'Projects / Clients', 'Sender IDs', 'Pricing', 'SMS Logs', 'Wallets & Units', 'Payments', 'Providers', 'Reports', 'Settings'];
+const NAV = ['Dashboard', 'Projects / Clients', 'Sender IDs', 'Pricing', 'SMS Logs', 'Wallets & Units', 'Payments', 'Providers', 'Data Bundles', 'Data Orders', 'Reports', 'Monitoring', 'Settings'];
 
 test.describe('admin dashboard', () => {
   test('every nav page loads without errors', async ({ page }) => {
     await adminLogin(page);
-    const nav = page.getByRole('navigation', { name: 'Sidebar Navigation' });
     for (const label of NAV) {
-      await nav.getByRole('link', { name: label, exact: true }).click();
+      await (await adminNavLink(page, label)).click();
       // Exactly one page title per screen (screen-reader landmark).
       await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
       await page.waitForLoadState('networkidle');
@@ -142,7 +141,7 @@ test.describe('admin dashboard', () => {
     // Some traffic, including a blocked request.
     await fetch(`${API}/v1/balance`, { headers: { Authorization: 'Bearer pk_live_000000000000000000_bad' } });
     await adminLogin(page);
-    await page.getByRole('navigation', { name: 'Sidebar Navigation' }).getByRole('link', { name: 'Monitoring' }).click();
+    await (await adminNavLink(page, 'Monitoring')).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Monitoring' })).toBeVisible();
     await expect(page.getByText('Requests', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Server error rate')).toBeVisible();
@@ -155,7 +154,7 @@ test.describe('admin dashboard', () => {
 
   test('monitoring is hidden from viewers', async ({ page }) => {
     await adminLogin(page, VIEWER);
-    await expect(page.getByRole('navigation', { name: 'Sidebar Navigation' }).getByRole('link', { name: 'Monitoring' })).toHaveCount(0);
+    await expect(await adminNavLink(page, 'Monitoring')).toHaveCount(0);
   });
 
   test('the real logo and favicon are used', async ({ page }) => {
@@ -165,4 +164,3 @@ test.describe('admin dashboard', () => {
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
   });
 });
-

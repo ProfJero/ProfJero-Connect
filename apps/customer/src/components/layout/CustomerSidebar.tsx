@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { ChevronDown, LifeBuoy, ExternalLink, X } from 'lucide-react';
-import { navItems, type NavItem } from '../../lib/nav';
+import { navSections, type NavItem, type NavChild } from '../../lib/nav';
 import { useAccount } from '../../lib/account';
 import { usePlatformConfig } from '../../lib/account';
 import { cn } from '../../lib/utils';
@@ -54,9 +54,25 @@ export function CustomerSidebar({
             </button>
           </div>
 
-          <nav aria-label="Main Sidebar Navigation" className="mt-2 px-3 space-y-1">
-            {navItems.map((item) => (
-              <NavEntry key={item.label} item={item} onNavigate={onClose} />
+          <nav aria-label="Main Sidebar Navigation" className="mt-1 px-3 pb-2">
+            {navSections.map((section, i) => (
+              <div key={section.heading ?? i} className={cn(i > 0 && 'mt-5')}>
+                {section.heading && (
+                  <div className="px-3.5 mb-1.5 flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">{section.heading}</span>
+                    {section.action && (
+                      <Link to={section.action.path} onClick={onClose} className="text-[10px] font-semibold text-blue-300 hover:text-white">
+                        {section.action.label}
+                      </Link>
+                    )}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  {section.items.map((item) => (
+                    <NavEntry key={item.label} item={item} onNavigate={onClose} />
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
         </div>
@@ -102,9 +118,10 @@ export function CustomerSidebar({
 
 function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const location = useLocation();
-  const hasActiveChild = item.children?.some((c) => location.pathname === c.path) ?? false;
+  const activeChild = item.children ? pickActiveChild(item.children, location.pathname) : null;
   const isParentActive = item.path ? location.pathname === item.path : false;
-  const isHighlighted = hasActiveChild || isParentActive;
+  const inSection = (item.match ?? []).some((m) => location.pathname === m || location.pathname.startsWith(`${m}/`));
+  const isHighlighted = activeChild !== null || isParentActive || inSection;
 
   // null = follow the route (open when active); a click pins it.
   const [toggled, setToggled] = useState<boolean | null>(null);
@@ -121,6 +138,7 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
     return (
       <NavLink
         to={item.path}
+        end
         onClick={onNavigate}
         className={({ isActive }) =>
           cn(
@@ -134,6 +152,7 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
         <span className="flex items-center gap-3 min-w-0">
           <Icon className="w-4 h-4 shrink-0" strokeWidth={2} />
           <span className="truncate">{item.label}</span>
+          <NavTag item={item} active={isParentActive} />
         </span>
         {badge > 0 && (
           <span className="bg-red-500 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full shrink-0">
@@ -159,13 +178,14 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
           <NavLink
             to={item.path}
             onClick={onNavigate}
-            className="flex-1 flex items-center gap-3 px-3.5 py-2.5 rounded-l-lg min-w-0"
+            className="flex-1 flex items-center gap-2.5 pl-3.5 pr-1 py-2.5 rounded-l-lg min-w-0"
           >
             <Icon
               className={cn('w-4 h-4 shrink-0', isHighlighted && 'text-white')}
               strokeWidth={2}
             />
             <span className="truncate">{item.label}</span>
+            <NavTag item={item} active={isHighlighted} />
           </NavLink>
         ) : (
           <button
@@ -184,7 +204,7 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="px-2.5 py-2.5 rounded-r-lg shrink-0"
+          className="px-2 py-2.5 rounded-r-lg shrink-0"
           aria-label={expanded ? 'Collapse section' : 'Expand section'}
         >
           <ChevronDown
@@ -204,20 +224,20 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
             <NavLink
               key={child.path}
               to={child.path}
+              end
               onClick={onNavigate}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center py-1.5 transition-colors',
-                  isActive ? 'text-white font-medium' : 'text-slate-400 hover:text-white',
-                )
-              }
+              aria-current={activeChild === child ? 'page' : undefined}
+              className={cn(
+                'flex items-center py-1.5 transition-colors',
+                activeChild === child ? 'text-white font-medium' : 'text-slate-400 hover:text-white',
+              )}
             >
-              {({ isActive }) => (
+              {() => (
                 <>
                   <span
                     className={cn(
                       'w-1.5 h-1.5 rounded-full mr-2.5 shrink-0',
-                      isActive ? 'bg-[#1a6cf0]' : 'bg-transparent',
+                      activeChild === child ? 'bg-[#1a6cf0]' : 'bg-transparent',
                     )}
                   />
                   <span className="truncate">{child.label}</span>
@@ -228,5 +248,31 @@ function NavEntry({ item, onNavigate }: { item: NavItem; onNavigate?: () => void
         </div>
       )}
     </div>
+  );
+}
+/** The child whose path is the longest prefix of the current path. */
+function pickActiveChild(children: NavChild[], pathname: string): NavChild | null {
+  let best: NavChild | null = null;
+  for (const c of children) {
+    if (pathname === c.path || pathname.startsWith(`${c.path}/`)) {
+      if (!best || c.path.length > best.path.length) best = c;
+    }
+  }
+  return best;
+}
+
+function NavTag({ item, active }: { item: NavItem; active: boolean }) {
+  if (!item.tag) return null;
+  return (
+    <span
+      className={cn(
+        'px-1.5 py-px rounded text-[9px] font-bold uppercase shrink-0',
+        item.tag.tone === 'new'
+          ? active ? 'bg-white text-[#1764e0]' : 'bg-emerald-500/20 text-emerald-300'
+          : active ? 'bg-white text-[#1764e0]' : 'bg-slate-700/70 text-slate-300',
+      )}
+    >
+      {item.tag.label}
+    </span>
   );
 }

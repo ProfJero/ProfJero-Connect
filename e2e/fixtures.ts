@@ -117,6 +117,18 @@ export async function adminLogin(page: Page, who = ROOT) {
 }
 
 let signupSeq = 0;
+/**
+ * A link in the admin sidebar. Groups (Messaging, Services, Finance,
+ * Insights) start collapsed, so open them all first.
+ */
+export async function adminNavLink(page: Page, label: string) {
+  const nav = page.getByRole('navigation', { name: 'Sidebar Navigation' });
+  await nav.getByRole('link', { name: 'Dashboard', exact: true }).waitFor();
+  const closed = nav.locator('button[aria-expanded="false"]');
+  while ((await closed.count()) > 0) await closed.first().click();
+  return nav.getByRole('link', { name: label, exact: true });
+}
+
 export async function customerSignup(page: Page, org = 'Test Org') {
   const email = `cust${Date.now().toString(36)}${++signupSeq}@example.com`;
   await page.goto(`${CUSTOMER_URL}/signup`);

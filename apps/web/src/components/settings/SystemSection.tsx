@@ -27,7 +27,7 @@ interface SystemResponse {
     emailConfigured: boolean;
     customerAppUrl: string | null;
   };
-  jobs: Partial<Record<'reconciliation' | 'providerCleanup' | 'balanceRefresh' | 'dispatcher', JobRun>>;
+  jobs: Partial<Record<'reconciliation' | 'providerCleanup' | 'balanceRefresh' | 'dispatcher' | 'dataBundleSync' | 'dataOrders', JobRun>>;
   queues: {
     unknownRecords: number;
     unknownOlderThanHour: number;
@@ -126,6 +126,18 @@ export function SystemSection() {
             value={data.jobs.dispatcher ? timeAgo(data.jobs.dispatcher.lastRunAt) : 'Never run'}
             health={!data.jobs.dispatcher ? (isProd ? 'bad' : 'warn') : !data.jobs.dispatcher.ok || openedAt - new Date(data.jobs.dispatcher.lastRunAt).getTime() > 5 * 60_000 ? 'bad' : 'ok'}
             hint={data.jobs.dispatcher?.summary ?? 'Needs the "* * * * *" cron trigger in wrangler.toml.'}
+          />
+          <Row
+            label="Data orders: delivery checks (every 15 min)"
+            value={data.jobs.dataOrders ? timeAgo(data.jobs.dataOrders.lastRunAt) : 'Never run'}
+            health={data.jobs.dataOrders ? (data.jobs.dataOrders.ok ? 'ok' : 'bad') : 'warn'}
+            hint={data.jobs.dataOrders?.summary}
+          />
+          <Row
+            label="Data bundle catalogue sync (every 6 h)"
+            value={data.jobs.dataBundleSync ? timeAgo(data.jobs.dataBundleSync.lastRunAt) : 'Never run'}
+            health={data.jobs.dataBundleSync ? (data.jobs.dataBundleSync.ok ? 'ok' : 'bad') : 'warn'}
+            hint={data.jobs.dataBundleSync?.summary}
           />
           <Row
             label="Provider balance refresh (every 15 min)"

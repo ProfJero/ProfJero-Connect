@@ -3,8 +3,8 @@ import { BrandMark } from '../brand/BrandMark';
 
 const FEATURES = [
   { icon: MessageSquare, title: 'Bulk SMS', description: 'Reach your audience instantly' },
-  { icon: Database, title: 'Mobile Data', description: 'Fast and reliable data bundles' },
-  { icon: Phone, title: 'Airtime', description: 'Top up and keep your world connected' },
+  { icon: Database, title: 'Data Bundles', description: 'MTN, Telecel and AirtelTigo data in seconds' },
+  { icon: Phone, title: 'Airtime', description: 'Coming soon — top up any number' },
   { icon: Code2, title: 'API & Integrations', description: 'Build and automate your communications' },
   { icon: ShieldCheck, title: 'Secure & Reliable', description: 'Your data and transactions are protected' },
 ];
@@ -58,8 +58,8 @@ export function LoginHero() {
             <span className="text-cyan-400">Communication &amp; Connectivity</span> Platform
           </h1>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-lg">
-            Send messages, buy data, purchase airtime and access powerful communication
-            tools — all from one secure platform.
+            Send bulk SMS, buy data bundles for any network and connect your own
+            systems — all from one secure account.
           </p>
         </div>
 

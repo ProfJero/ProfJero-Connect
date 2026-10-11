@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { DataOrdersTable } from '../../components/data/DataOrdersTable';
 import { ArrowRightLeft, Wallet, CalendarDays, Package, Clock } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { MetricCard } from '../../components/dashboard/MetricCard';
@@ -8,7 +10,7 @@ import { ErrorState } from '../../components/ui/States';
 import { useApi } from '../../lib/useApi';
 import { formatGhs } from '../../lib/format';
 import { cn } from '../../lib/utils';
-import type { CustomerPayment } from '../../lib/types';
+import type { CustomerPayment, DataOrder } from '../../lib/types';
 
 interface PaymentsSummary {
   totalPaidGhs: number;
@@ -26,7 +28,52 @@ const TYPE_FILTERS: Array<{ label: string; types?: string }> = [
   { label: 'Adjustments', types: 'manual_debit,reversal,adjustment' },
 ];
 
+const TABS = [
+  { id: 'sms', label: 'SMS wallet' },
+  { id: 'data', label: 'Data bundles' },
+] as const;
+
+/** Everything the customer has bought, one tab per service. */
 export function TransactionsPage() {
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'data' ? 'data' : 'sms';
+  return (
+    <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 max-w-[1440px] w-full mx-auto">
+      <PageHeader icon={ArrowRightLeft} title="Purchase history" subtitle="Everything you've bought and every change to your SMS wallet." />
+      <nav aria-label="Purchase type" className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            aria-current={tab === t.id ? 'page' : undefined}
+            onClick={() => setParams(t.id === 'sms' ? {} : { tab: t.id }, { replace: true })}
+            className={cn(
+              '-mb-px px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors',
+              tab === t.id ? 'border-[#1a6cf0] text-[#1764e0] dark:text-blue-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200',
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      {tab === 'sms' ? <SmsWalletHistory /> : <DataHistory />}
+    </main>
+  );
+}
+
+function DataHistory() {
+  const { data, loading, error, refresh } = useApi<{ orders: DataOrder[] }>('/customer/data/orders?limit=100');
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Link to="/services/data" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:underline">Buy data →</Link>
+      </div>
+      <DataOrdersTable orders={data?.orders ?? []} loading={loading && !data} error={error && !data ? error : null} onRetry={refresh} />
+    </div>
+  );
+}
+
+function SmsWalletHistory() {
   const payments = useApi<{ payments: CustomerPayment[]; summary: PaymentsSummary }>('/customer/payments?limit=1');
   const [filter, setFilter] = useState(0);
   const s = payments.data?.summary;
@@ -34,16 +81,14 @@ export function TransactionsPage() {
   const monthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
-    <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 max-w-[1440px] w-full mx-auto">
-      <PageHeader icon={ArrowRightLeft} title="Transactions" subtitle="Every top-up, SMS charge and refund on your wallet." />
-
+    <>
       {payments.error ? (
         <ErrorState error={payments.error} onRetry={payments.refresh} className="m-0" />
       ) : (
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             loading={loading}
-            metric={{ label: 'Total top-ups', value: formatGhs(s?.totalPaidGhs ?? 0), footer: `${s?.successfulCount ?? 0} payments, all time`, icon: Wallet, iconBg: 'bg-blue-50 dark:bg-blue-500/10', iconColor: 'text-[#1764e0] dark:text-blue-400' }}
+            metric={{ label: 'SMS top-ups', value: formatGhs(s?.totalPaidGhs ?? 0), footer: `${s?.successfulCount ?? 0} payments, all time`, icon: Wallet, iconBg: 'bg-blue-50 dark:bg-blue-500/10', iconColor: 'text-[#1764e0] dark:text-blue-400' }}
           />
           <MetricCard
             loading={loading}
@@ -85,6 +130,6 @@ export function TransactionsPage() {
           <RecentPayments />
         </div>
       </div>
-    </main>
+    </>
   );
 }

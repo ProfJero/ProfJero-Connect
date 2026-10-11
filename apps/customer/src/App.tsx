@@ -28,6 +28,9 @@ import { CompleteSetupPage } from './features/auth/CompleteSetupPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { AddFundsCompletePage } from './features/wallet/AddFundsCompletePage';
 import { BatchDetailPage } from './features/messaging/BatchDetailPage';
+import { BuyDataPage } from './features/data/BuyDataPage';
+import { DataOrderPage } from './features/data/DataOrderPage';
+import { DataOrdersPage } from './features/data/DataOrdersPage';
 
 export default function App() {
   return (
@@ -65,14 +68,11 @@ export default function App() {
 
                 {/* Services */}
                 <Route path="/services" element={<ServicesPage />} />
-                <Route
-                  path="/services/data"
-                  element={<ComingSoonPage title="Data" description="Buy data bundles for MTN, Telecel and AirtelTigo numbers straight from your wallet." />}
-                />
-                <Route
-                  path="/services/airtime"
-                  element={<ComingSoonPage title="Airtime" description="Top up any Ghanaian mobile number with airtime straight from your wallet." />}
-                />
+                <Route path="/services/data" element={<BuyDataPage />} />
+                <Route path="/services/data/complete" element={<DataOrderPage />} />
+                <Route path="/services/data/orders" element={<DataOrdersPage />} />
+                <Route path="/services/data/orders/:orderId" element={<DataOrderPage />} />
+                <Route path="/services/airtime" element={<ComingSoonPage serviceId="airtime" />} />
 
                 {/* Other */}
                 <Route path="/wallet" element={<WalletPage />} />

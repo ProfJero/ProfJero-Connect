@@ -17,6 +17,10 @@
     "./template": {
       "types": "./src/lib/template.ts",
       "default": "./src/lib/template.ts"
+    },
+    "./networks": {
+      "types": "./src/lib/networks.ts",
+      "default": "./src/lib/networks.ts"
     }
   },
   "scripts": {

@@ -5,7 +5,7 @@ import {
   Settings,
   Wallet,
   Building2,
-    Menu,
+  Menu,
   LogOut,
   Sun,
   Moon,
@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../lib/auth';
 import { useTheme } from '../../lib/theme';
 import { useAccount } from '../../lib/account';
+import { BuyMenu } from './BuyMenu';
 
 export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth();
@@ -40,7 +41,7 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
         >
           <Menu className="w-5 h-5" />
         </button>
-
+        <BuyMenu />
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 shrink-0">
@@ -74,10 +75,10 @@ export function CustomerTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
           </div>
           <div className="text-left leading-tight">
             <div className="font-bold text-slate-800 dark:text-slate-100 text-[11px]">
-              {wallet.data ? `${wallet.data.availableUnits.toLocaleString()} units` : '—'}
+              {wallet.data ? `${wallet.data.availableUnits.toLocaleString()} SMS units` : '—'}
             </div>
             <div className="text-[10px] text-slate-500 dark:text-slate-500">
-              Wallet Balance <span className="text-blue-600 dark:text-blue-400 font-semibold">→</span>
+              Top up <span className="text-blue-600 dark:text-blue-400 font-semibold">→</span>
             </div>
           </div>
         </Link>

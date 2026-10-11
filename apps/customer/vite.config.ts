@@ -18,4 +18,7 @@ function siteUrl(mode: string): Plugin {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), siteUrl(mode)],
+  // Discover every page's dependencies at start-up, so the dev server
+  // doesn't reload the page the first time a new screen is opened.
+  optimizeDeps: { entries: ['index.html', 'src/**/*.tsx'] },
 }))

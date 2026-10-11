@@ -2,6 +2,7 @@ import { test, expect, adminLogin, customerSignup, axeViolations, ADMIN_URL, CUS
 
 test.describe('accessibility (axe, WCAG 2.1 A/AA)', () => {
   test('admin screens', async ({ page }) => {
+    test.setTimeout(180_000);
     const found: string[] = [];
     await page.goto(`${ADMIN_URL}/login`);
     found.push(...await axeViolations(page, 'admin /login'));
@@ -18,6 +19,7 @@ test.describe('accessibility (axe, WCAG 2.1 A/AA)', () => {
   });
 
   test('customer screens', async ({ page }) => {
+    test.setTimeout(180_000);
     const found: string[] = [];
     for (const path of ['/login', '/signup', '/forgot-password', '/developers']) {
       await page.goto(`${CUSTOMER_URL}${path}`);
@@ -25,7 +27,7 @@ test.describe('accessibility (axe, WCAG 2.1 A/AA)', () => {
     }
     await customerSignup(page, 'A11y Org');
     for (const path of ['/dashboard', '/messaging/sms', '/messaging/history', '/messaging/sender-ids', '/messaging/sender-ids/request',
-      '/contacts', '/contacts/groups', '/wallet', '/wallet/add-funds', '/transactions', '/api', '/notifications', '/settings', '/settings?tab=organisation', '/settings?tab=security', '/messaging/campaigns']) {
+      '/contacts', '/contacts/groups', '/wallet', '/wallet/add-funds', '/transactions', '/api', '/notifications', '/settings', '/settings?tab=organisation', '/settings?tab=security', '/messaging/campaigns', '/services', '/services/data', '/services/data/orders', '/services/airtime', '/transactions?tab=data']) {
       await page.goto(`${CUSTOMER_URL}${path}`);
       await page.waitForLoadState('networkidle');
       found.push(...await axeViolations(page, `customer ${path}`));
