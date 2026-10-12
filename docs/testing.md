@@ -1,6 +1,6 @@
 # ProfJero Connect — Testing & Security Report
 
-_Last run: 2026-10-11, branch `claude/nifty-babbage-1reeo5`._
+_Last run: 2026-10-12, branch `claude/nifty-babbage-1reeo5`._
 
 This covers both platforms (admin `apps/web`, customer `apps/customer`) and
 the shared API (`apps/api`). Every suite runs locally without any Firebase,
@@ -15,14 +15,14 @@ Windows CMD and macOS/Linux use the same commands, from the repo root.
 |---|---|---|
 | Typecheck all apps | `npm run typecheck` | — |
 | Lint | `npm run lint --workspace=web` and `--workspace=customer` | — |
-| API: customer journey (27 checks) | `npm run test:customer --workspace=@profjero/api` | `openssl` on PATH (Git for Windows has one) |
+| API: customer journey (30 checks) | `npm run test:customer --workspace=@profjero/api` | `openssl` on PATH (Git for Windows has one) |
 | API: security & reliability (61 checks) | `npm run test:security --workspace=@profjero/api` | `openssl` |
-| API: new features (32 checks) | `npm run test:features --workspace=@profjero/api` | `openssl` |
-| API: data bundles (15 checks) | `npm run test:data --workspace=@profjero/api` | `openssl` |
+| API: new features (36 checks) | `npm run test:features --workspace=@profjero/api` | `openssl` |
+| API: data bundles (18 checks) | `npm run test:data --workspace=@profjero/api` | `openssl` |
 | API: all four suites | `npm test --workspace=@profjero/api` | `openssl` |
 | Load test | `npm run test:load --workspace=@profjero/api` (options: `-- --customers=50 --rounds=40`) | `openssl` |
 | Firestore rules (6 tests) | `cd firebase`, `npm install`, `npm test` | Java 11+ (for the emulator) |
-| Browser: UI, accessibility, mobile (28 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
+| Browser: UI, accessibility, mobile (31 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
 | Local API for manual testing | `npm run dev:fake --workspace=@profjero/api` | `openssl` |
 
 `npm run test:e2e` starts the fake-cloud API on :8787, the admin app on
@@ -50,10 +50,40 @@ any password works because Firebase Auth is answered inside the browser.
 | 14 | Dependencies | 🟠 | `npm audit` | ✅ 0 vulnerabilities (was 13) |
 | 15 | Load testing | 🟠 | `test/load.ts` | ✅ 3,000 requests, 0 errors |
 | 16 | Regression | 🟠 | all of the above + typecheck/lint/build | ✅ |
-| 17 | UI testing | 🟡 | `e2e/admin.spec.ts`, `e2e/customer.spec.ts` | ✅ 24/24 |
+| 17 | UI testing | 🟡 | `e2e/admin.spec.ts`, `e2e/customer.spec.ts` | ✅ 27/27 |
 | 18 | Accessibility | 🟡 | `e2e/accessibility.spec.ts` (axe, WCAG 2.1 A/AA) | ✅ 46 screens, 0 serious/critical |
 | 19 | Mobile | 🟠 | `e2e/mobile.spec.ts` (Pixel 7) | ✅ 2/2 (now incl. Monitoring, Campaigns, API docs) |
 | 20 | Monitoring & recovery | 🔴 | security suite §Monitoring & recovery | ✅ 7/7 |
+
+## Sender IDs, verified sign-ups, overview (2026-10-12)
+
+API checks added:
+- **Sender IDs:** clean names approved instantly; government, brand,
+  generic and scam names refused with the reason and nothing stored;
+  description under 50 characters refused; a look-alike is held and
+  blocks sending; auto-approval switch; the admin queue shows the
+  description and the reason it was held, once; provider verification
+  moves not_sent → pending (first send) → verified (first delivery
+  receipt), or rejected (provider refuses) with units returned; admin
+  override.
+- **Sign-ups:** an unverified email or a throwaway domain can't create an
+  account or get free units.
+- **Data pricing:** cost = published API price (4.00, not the listed
+  4.70); 10% markup → 4.40; the sync keeps admin prices; markup is
+  remembered for new bundles; the data provider shows on Providers with
+  its wallet balance.
+- **Overview:** one request covers every service.
+
+Browser tests added: email-link sign-up (now the default helper),
+password sign-up waiting for confirmation, throwaway email refused,
+sign-in by emailed link, dashboard Account overview after a data
+purchase, Buy menu inside the phone screen.
+
+Found and fixed while testing: a float-rounding overcharge of 10 pesewas
+on data bundles; the catalogue sync overwrote admin prices every 6 hours;
+the dashboard chart was focusable while hidden from screen readers;
+duplicate rows in the admin Sender ID queue; the sign-up page's Google
+button did nothing.
 
 ## Data bundles and services-first UI (2026-10-11)
 

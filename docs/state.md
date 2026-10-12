@@ -93,6 +93,9 @@ text
 | **Logo, SEO, share previews, public API docs** | ✅ Done (§16) |
 | **Data bundles** (catalogue, checkout, delivery, refunds, admin orders) | ✅ Done (§17) — needs the Firestore indexes |
 | **Services-first customer UI** (catalogue-driven nav, Buy menu, launcher) | ✅ Done (§17) |
+| **Automatic Sender ID approval + provider verification** | ✅ Done (§18) |
+| **Verified sign-ups** (email link, Google, confirmed passwords) | ✅ Done (§18) — Firebase console steps below |
+| **Multi-service dashboard, update notices** | ✅ Done (§18) |
 | **Test suites** (API, security, features, load, rules, browser, a11y, mobile) | ✅ All passing — see `docs/testing.md` |
 
 ---
@@ -1054,4 +1057,106 @@ Data tabs) and Developers (API keys, API docs) are grouped under Workspace.
 5. Admin → Data Bundles → Sync, set prices, switch bundles on.
 6. Make a small real purchase to your own number and watch it go
    Payment → Sending → Delivered.
+
+---
+
+## 18. Phase 5 — automatic Sender IDs, verified sign-ups, account overview
+
+### Sender IDs
+
+- `packages/shared/src/lib/senderIdCheck.ts` screens a requested name in
+  microseconds, with no database or network calls. The same code runs in the request
+  form (live feedback) and on the server (decision):
+  - **refused** (400, nothing stored): bad format, government / regulator
+    / security-service / utility names, protected brands (networks, banks,
+    payments, big platforms, SMS providers), generic spoof words (INFO,
+    ALERT, BANK, OTP…), scam bait (WINNER, LOTTERY…), profanity, our own
+    brand, description under 50 characters;
+  - **held for review**: close look-alikes (G00GLE, PAYSTAK), names
+    starting with a short protected brand (MTN…, MOMO…), a brand
+    requested by an organisation whose name contains it, thin
+    descriptions, or a name another project already uses;
+  - **approved instantly** otherwise (approver `system:auto-check`).
+- Admin → Settings → SMS → "Approve Sender IDs automatically" turns this
+  off (everything then waits for an admin).
+- The admin queue now shows the customer's purpose, description and why
+  the request was held. Each request appears once (previously twice).
+- **Verification by our SMS provider** happens on the first send.
+  `providerStatus` on the assignment moves not_sent → pending (first
+  message accepted) → verified (first delivery receipt), or rejected (every
+  message refused for a sender reason). The customer is notified at each
+  step and sees it in the Sender IDs list. An admin can override it from
+  the registry ("Mark verified / Mark refused"). The cost is one read per
+  finished batch until the Sender ID is verified.
+
+### Sign-up and sign-in (customer app)
+
+- **Sign up:** Google; or name + organisation + email → a **sign-up link**
+  (no password); or a password plus a **confirmation email**
+  (`/verify-email` waits and continues by itself).
+- **Sign in:** Google, password, or an **emailed sign-in link**
+  (`/auth/link`; it asks for the email when the link is opened on another
+  device, as Firebase recommends).
+- The server (`/customer/register`) creates an account, and grants the
+  free starter units, only for a **verified** email. It refuses common
+  throwaway email domains (`packages/shared/src/lib/emailCheck.ts`).
+  Existing customers are unaffected.
+- **Firebase console** (Security → Authentication):
+  1. Sign-in method: Email/Password **on**, Email link (passwordless)
+     **on**, Google **on** (support email set).
+  2. Settings → Authorized domains: add the customer app's domain(s), e.g.
+     `profjeroconnect.pages.dev` and any custom domain.
+  3. Templates → Email address verification / Email link sign-in: set the
+     sender name to ProfJero Connect (optional, recommended).
+
+### Dashboard
+
+- `GET /customer/overview?days=7|30|90` returns, in one request, spend per
+  service, usage, a per-day series, a mixed activity feed and next steps.
+- The dashboard shows next steps, then services, then **Account overview**
+  (spent across services, messages, data delivered, SMS balance, a
+  spending-by-service chart, recent activity), then the Bulk SMS detail.
+
+### Data pricing
+
+- Costs use the provider's **published API price list**
+  (`packages/shared/src/lib/dataPricing.ts`; MTN 1GB = GH₵4.00 … 30GB =
+  GH₵120.00), not the price the bundle list reports. The provider's
+  guest price is stored too, so admin can see when we're dearer than
+  buying direct.
+- The default markup is **10%** (MTN 1GB → GH₵4.40, below the GH₵4.70
+  guest price). Admin → Pricing → Data Bundles sets one markup for every
+  bundle, and that markup is remembered for new bundles.
+- Fixed: the 6-hourly sync used to overwrite admin prices and markup with
+  25%. It now keeps them unless our cost changes.
+- Fixed: floating-point rounding added 10 pesewas (4.00 × 1.10 gave 4.50).
+- After deploying, open Data Bundles → **Sync** once. Existing bundles get
+  the correct cost but keep their current markup. To re-price everything,
+  apply 10% (or your choice) on Pricing → Data Bundles.
+
+### Admin
+
+- Providers shows the data provider (`data_gw_01`, created automatically
+  when `ELITEDATA_API_KEY` is set) with its wallet balance. The balance
+  refreshes hourly and emails when it drops below GH₵50.
+
+### Updates and caching
+
+- Every build writes `/version.json`. Open tabs check it every 5 minutes,
+  on focus and on navigation (a static file, no database reads), and show
+  "A new version is ready → Update now" with the newest entry of
+  `apps/*/release-notes.json`. **Add a line there for each release.**
+- `public/_headers` (Cloudflare Pages): `version.json` is never cached;
+  hashed `/assets/*` are cached long-term.
+- The customer app shares GET responses for 15 seconds (and de-duplicates
+  identical in-flight requests). Any write or sign-in change clears the
+  cache. This cuts repeated Firestore reads when moving between pages.
+
+### Deploy checklist (phase 5)
+
+1. Deploy the API.
+2. Firebase console steps above (Email link, Google, authorised domains).
+3. Deploy both front ends (Pages picks up `_headers` and `version.json`).
+4. Admin → Data Bundles → Sync; Pricing → Data Bundles → check markup.
+5. Admin → Settings → SMS: confirm "Approve Sender IDs automatically".
 
