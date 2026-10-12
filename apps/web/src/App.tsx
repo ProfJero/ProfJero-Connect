@@ -1,6 +1,7 @@
 import { MonitoringPage } from './features/monitoring/MonitoringPage';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { RouteTitle } from './components/RouteTitle';
+import { UpdateBanner } from './components/UpdateBanner';
 import { AuthProvider } from './lib/auth';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
@@ -28,6 +29,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <RouteTitle />
+          <UpdateBanner />
         <Routes>
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />

@@ -15,6 +15,7 @@ import { customerNotificationsRouter } from './notifications';
 import { customerConfigRouter } from './config';
 import { customerCampaignsRouter } from './campaigns';
 import { customerDataRouter } from './data';
+import { customerOverviewRouter } from './overview';
 
 const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -50,5 +51,6 @@ router.route('/', customerNotificationsRouter);
 router.route('/', customerConfigRouter);
 router.route('/', customerCampaignsRouter);
 router.route('/', customerDataRouter);
+router.route('/', customerOverviewRouter);
 
 export { router as customerRouter };

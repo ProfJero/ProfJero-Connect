@@ -274,9 +274,14 @@ test.describe('customer app', () => {
     await expect(page.getByText('Delivered').first()).toBeVisible();
     await page.goto(`${CUSTOMER_URL}/transactions?tab=data`);
     await expect(page.getByRole('region', { name: 'Data orders' }).getByText('1GB')).toBeVisible();
+    // The dashboard overview covers every service, not just SMS.
     await page.goto(`${CUSTOMER_URL}/dashboard`);
-    await expect(page.getByRole('heading', { name: 'Data purchases' })).toBeVisible();
-    await expect(page.getByText('MTN 1GB Data').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Account overview' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Spending by service' })).toBeVisible();
+    const feed = page.locator('section', { has: page.getByRole('heading', { name: 'Account overview' }) });
+    await expect(feed.getByText('MTN 1GB data').first()).toBeVisible();
+    await expect(feed.getByText('1 bundle')).toBeVisible();
+    await expect(feed.getByText('Data GH₵4.40', { exact: true })).toBeVisible();
   });
 
   test('data orders: operators see customer purchases with cost and margin', async ({ page }) => {

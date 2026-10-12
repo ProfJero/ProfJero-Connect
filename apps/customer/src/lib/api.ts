@@ -35,6 +35,41 @@ export interface RequestOptions {
   idempotencyKey?: string;
 }
 
+// ── Short-lived GET cache ────────────────────────────────────────────
+// Several widgets often ask for the same thing (e.g. the overview and the
+// attention strip, or the wallet in the topbar and on a page). Sharing one
+// response for a few seconds — and one in-flight request — saves database
+// reads (free-tier quota) and makes navigation feel instant. Any write
+// (POST/PUT/PATCH/DELETE) or sign-in change clears it, so data a customer
+// just changed is never stale.
+const GET_TTL_MS = 15_000;
+const getCache = new Map<string, { at: number; data: unknown }>();
+const inflight = new Map<string, Promise<unknown>>();
+
+export function invalidateApiCache(): void {
+  getCache.clear();
+  inflight.clear();
+}
+
+async function cachedGet<T>(path: string, fresh: boolean): Promise<T> {
+  if (!fresh) {
+    const hit = getCache.get(path);
+    if (hit && Date.now() - hit.at < GET_TTL_MS) return hit.data as T;
+    const pending = inflight.get(path);
+    if (pending) return pending as Promise<T>;
+  }
+  const p = request<T>('GET', path)
+    .then((data) => {
+      getCache.set(path, { at: Date.now(), data });
+      return data;
+    })
+    .finally(() => {
+      if (inflight.get(path) === p) inflight.delete(path);
+    });
+  inflight.set(path, p);
+  return p;
+}
+
 async function request<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
@@ -102,11 +137,12 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>('GET', path),
+  /** `fresh: true` skips the short cache (manual refresh, polling). */
+  get: <T>(path: string, opts: { fresh?: boolean } = {}) => cachedGet<T>(path, opts.fresh ?? false),
   post: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
-    request<T>('POST', path, body, opts),
-  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
-  del: <T>(path: string) => request<T>('DELETE', path),
+    request<T>('POST', path, body, opts).finally(invalidateApiCache),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body).finally(invalidateApiCache),
+  del: <T>(path: string) => request<T>('DELETE', path).finally(invalidateApiCache),
 };
 
 /** Fresh key for one logical, retry-safe action (e.g. one Send click). */

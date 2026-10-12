@@ -320,4 +320,20 @@ await step('paused checkout blocks new orders with the operator message', async 
   await call('PUT', '/admin/settings/payments', { token: root, body: { customerTopupsEnabled: true, topupsDisabledMessage: null } });
 });
 
+await step('the dashboard overview covers every service in one request', async () => {
+  const o = await call('GET', '/customer/overview?days=30', { token: esi });
+  assert.equal(o.status, 200, JSON.stringify(o.body));
+  assert.equal(o.body.series.length, 30);
+  assert.ok(o.body.services.data.delivered >= 2);
+  assert.ok(o.body.services.data.spentGhs > 0);
+  assert.equal(o.body.services.data.spentGhs, o.body.totals.spentGhs, 'no SMS top-ups for this customer');
+  assert.ok(o.body.activity.some((a: { service: string }) => a.service === 'data'));
+  assert.ok(o.body.series.reduce((s: number, d: { dataGhs: number }) => s + d.dataGhs, 0) > 0);
+  assert.ok(!/providerCost|elitedata/i.test(JSON.stringify(o.body)));
+  const empty = await call('GET', '/customer/overview?days=7', { token: kojo });
+  assert.equal(empty.body.totals.spentGhs, 0);
+  assert.equal(empty.body.series.length, 7);
+  assert.ok(empty.body.attention.some((a: { id: string }) => a.id === 'no_sender'));
+});
+
 finish('Data bundles suite');

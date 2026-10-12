@@ -120,11 +120,12 @@ for (const b of cloud.dataProvider.bundles) {
   await call('PUT', `/admin/providers/data/bundles/${b.bundleId}/availability`, rootToken, { available: true });
 }
 
-// A customer with a pending Sender ID request → the admin bell has an alert.
+// A customer with a Sender ID held for review (starts with a protected
+// brand) → the admin bell has an alert.
 const seedTok = await mint('seedcust', 'kofi@example.com', true);
 await call('POST', '/customer/register', seedTok, { displayName: 'Kofi Boateng', organisationName: 'Boateng Pharmacy', acceptedTerms: true });
 await call('POST', '/customer/sender-ids', await mint('seedcust', 'kofi@example.com', true), {
-  value: 'BOATENG', purpose: 'Transactional & Alerts', description: 'We text patients when their prescriptions are ready for pickup at our pharmacy branches.',
+  value: 'MTNBOATENG', purpose: 'Transactional & Alerts', description: 'We text patients when their prescriptions are ready for pickup at our pharmacy branches.',
 });
 
 // ---------- HTTP ----------

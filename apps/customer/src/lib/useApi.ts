@@ -25,7 +25,8 @@ export function useApi<T>(path: string | null) {
   useEffect(() => {
     if (path === null || key === null) return;
     let cancelled = false;
-    api.get<T>(path).then(
+    // First load may use the short shared cache; refresh() always refetches.
+    api.get<T>(path, { fresh: nonce > 0 }).then(
       (data) => {
         if (!cancelled) setState({ data, error: null, settledKey: key });
       },
@@ -41,7 +42,7 @@ export function useApi<T>(path: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [path, key]);
+  }, [path, key, nonce]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
   const setData = useCallback(

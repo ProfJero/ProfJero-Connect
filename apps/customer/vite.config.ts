@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 
 /**
@@ -15,10 +16,41 @@ function siteUrl(mode: string): Plugin {
   }
 }
 
+/**
+ * Every build gets a version id. It is compiled into the app and written
+ * to /version.json (never cached), so an open tab can notice a newer
+ * deploy and offer to update. The newest entry of release-notes.json
+ * becomes the "What's new" list.
+ */
+function appVersion(): { plugin: Plugin; version: string } {
+  const version = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)
+  let notes: string[] = []
+  try {
+    const all = JSON.parse(readFileSync(new URL('./release-notes.json', import.meta.url), 'utf8')) as Array<{ items: string[] }>
+    notes = all[0]?.items ?? []
+  } catch {
+    /* no notes */
+  }
+  return {
+    version,
+    plugin: {
+      name: 'app-version',
+      apply: 'build',
+      generateBundle() {
+        this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version, notes }) })
+      },
+    },
+  }
+}
+
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => ({
-  plugins: [react(), siteUrl(mode)],
+export default defineConfig(({ mode }) => {
+  const v = appVersion()
+  return {
+  plugins: [react(), siteUrl(mode), v.plugin],
+  define: { __APP_VERSION__: JSON.stringify(mode === 'development' ? 'dev' : v.version) },
   // Discover every page's dependencies at start-up, so the dev server
   // doesn't reload the page the first time a new screen is opened.
   optimizeDeps: { entries: ['index.html', 'src/**/*.tsx'] },
-}))
+}
+})

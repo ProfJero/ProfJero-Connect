@@ -25,6 +25,11 @@ test.describe('mobile @mobile', () => {
       await page.waitForLoadState('networkidle');
       await expectNoHorizontalOverflow(page, `customer ${path}`);
     }
+    // The Buy menu fits the phone screen.
+    await page.getByRole('button', { name: 'Buy' }).click();
+    const menu = page.getByRole('menu', { name: 'Buy' });
+    await expect(menu).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('navigation', { name: 'Main Sidebar Navigation' }).getByRole('link', { name: /^Data Bundles/ }).click();
     await expect(page).toHaveURL(/\/services\/data$/);

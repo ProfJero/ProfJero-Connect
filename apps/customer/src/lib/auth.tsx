@@ -30,7 +30,7 @@ import {
 } from 'firebase/auth';
 import { isDisposableEmail } from '@profjero/shared/email-check';
 import { firebaseAuth } from './firebase';
-import { api, ApiError } from './api';
+import { api, ApiError, invalidateApiCache } from './api';
 
 // ── Public interface (compatible with the previous stub) ─────────────
 
@@ -315,6 +315,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(firebaseAuth, async (fbUser) => {
+      // Never show one person's cached data to the next.
+      invalidateApiCache();
       await loadCustomer(fbUser);
       if (mountedRef.current) setIsReady(true);
     });

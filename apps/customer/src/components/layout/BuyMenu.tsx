@@ -46,7 +46,7 @@ export function BuyMenu() {
         <div
           role="menu"
           aria-label="Buy"
-          className="absolute right-0 sm:left-0 sm:right-auto top-full mt-2 w-72 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-50"
+          className="fixed left-4 right-4 top-[68px] sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-72 max-h-[calc(100vh-88px)] overflow-y-auto bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-50"
         >
           <div className="px-2.5 pt-1.5 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             What would you like to buy?

@@ -168,3 +168,17 @@ export async function listAllOrders(
     nextCursor: hasMore && page.length > 0 ? String(page[page.length - 1].data.createdAt ?? '') || null : null,
   };
 }
+
+/** A project's orders created since `since` (newest first, capped). Index: projectId + createdAt. */
+export async function listOrdersSince(env: Env, projectId: string, since: string, limit = 300): Promise<DataOrder[]> {
+  const docs = await firestoreQuery(
+    env,
+    COLLECTION,
+    [
+      { field: 'projectId', op: 'EQUAL', value: projectId },
+      { field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: since },
+    ],
+    { orderBy: { field: 'createdAt', direction: 'DESCENDING' }, limit },
+  );
+  return docs.map((d) => parse(d.id, d.data));
+}

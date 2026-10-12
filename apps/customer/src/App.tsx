@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { RouteTitle } from './components/RouteTitle';
+import { UpdateBanner } from './components/UpdateBanner';
 import { DevelopersPage } from './features/developers/DevelopersPage';
 import { AuthProvider } from './lib/auth';
 import { ThemeProvider } from './lib/theme';
@@ -40,6 +41,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <RouteTitle />
+          <UpdateBanner />
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
