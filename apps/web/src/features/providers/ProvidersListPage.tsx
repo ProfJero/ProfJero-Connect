@@ -167,6 +167,20 @@ function ProviderCard({
         />
       </div>
 
+      {provider.service === 'data' ? (
+        <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
+          <div>
+            <div className="text-[10px] text-slate-500 font-medium">Wallet balance</div>
+            <div className="text-sm font-bold text-slate-800 mt-0.5">
+              {provider.mainBalanceGhs !== null ? `GHS ${provider.mainBalanceGhs.toFixed(2)}` : '—'}
+            </div>
+          </div>
+          <div>
+            <div className="text-[10px] text-slate-500 font-medium">Pricing</div>
+            <div className="text-sm font-bold text-slate-800 mt-0.5">Per bundle</div>
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
         <div>
           <div className="text-[10px] text-slate-500 font-medium">Credits</div>
@@ -187,6 +201,7 @@ function ProviderCard({
           </div>
         </div>
       </div>
+      )}
 
       {balanceUpdated && (
         <div className="text-[10px] text-slate-500 mt-3">

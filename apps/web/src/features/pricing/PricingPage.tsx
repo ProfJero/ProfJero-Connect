@@ -4,6 +4,7 @@ import { UnitRateCard } from '../../components/pricing/UnitRateCard';
 import { PackagesTable } from '../../components/pricing/PackagesTable';
 import { EditSettingsModal } from '../../components/pricing/EditSettingsModal';
 import { PackageFormModal } from '../../components/pricing/PackageFormModal';
+import { DataPricingPanel } from '../../components/pricing/DataPricingPanel';
 import { useApi } from '../../lib/useApi';
 import { cn } from '../../lib/utils';
 import type { Package, PricingResponse, Service } from '@profjero/shared';
@@ -15,7 +16,7 @@ const SERVICE_TABS: Array<{
 }> = [
   { key: 'sms', label: 'SMS', available: true },
   { key: 'airtime', label: 'Airtime', available: false },
-  { key: 'data', label: 'Data Bundles', available: false },
+  { key: 'data', label: 'Data Bundles', available: true },
 ];
 
 export function PricingPage() {
@@ -24,8 +25,9 @@ export function PricingPage() {
   const [packageModalOpen, setPackageModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
 
+  // Data bundles are priced per bundle (cost + markup), not per unit.
   const api = useApi<PricingResponse>(
-    service ? `/admin/pricing/${service}` : null,
+    service && service !== 'data' ? `/admin/pricing/${service}` : null,
   );
 
   const pricing = api.data?.pricing;
@@ -53,7 +55,7 @@ export function PricingPage() {
             Pricing
           </h1>
           <p className="text-xs text-slate-500">
-            Configure the unit rate and package catalog clients see.
+            What customers pay for each service.
           </p>
         </div>
       </div>
@@ -88,7 +90,9 @@ export function PricingPage() {
         })}
       </div>
 
-      {api.error && (
+      {service === 'data' && <DataPricingPanel />}
+
+      {service !== 'data' && api.error && (
         <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" strokeWidth={2} />
           <div className="flex-1">

@@ -140,15 +140,38 @@ export function ProviderDetailPage() {
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ProviderBalanceCard provider={provider} onChanged={reloadAll} />
-        <ProviderSettingsCard provider={provider} onChanged={reloadAll} />
+        {provider.service === 'data' ? (
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs p-5">
+            <h2 className="text-sm font-bold text-slate-900">Data bundles</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Customers pay per bundle at checkout; each paid order is bought from this provider's wallet. Keep the wallet topped up.
+            </p>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {[
+                { to: '/providers/data/bundles', label: 'Bundles', hint: 'Sync, prices, on sale' },
+                { to: '/providers/data/orders', label: 'Orders', hint: 'Delivery, refunds' },
+                { to: '/pricing', label: 'Pricing', hint: 'Markup vs retail' },
+              ].map((l) => (
+                <Link key={l.to} to={l.to} className="rounded-lg border border-slate-200 p-3 hover:border-[#1976d2] hover:bg-blue-50/40 transition">
+                  <div className="text-xs font-bold text-slate-900">{l.label}</div>
+                  <div className="text-[11px] text-slate-500">{l.hint}</div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <ProviderSettingsCard provider={provider} onChanged={reloadAll} />
+        )}
       </div>
 
-      {/* Requests table */}
-      <ProviderRequestsTable
-        requests={requests}
-        loading={requestsApi.loading && !requestsApi.data}
-        onRefresh={reloadAll}
-      />
+      {/* Requests table (SMS provider calls are logged) */}
+      {provider.service !== 'data' && (
+        <ProviderRequestsTable
+          requests={requests}
+          loading={requestsApi.loading && !requestsApi.data}
+          onRefresh={reloadAll}
+        />
+      )}
     </main>
   );
 }

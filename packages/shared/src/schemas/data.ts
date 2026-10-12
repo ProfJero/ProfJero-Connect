@@ -9,9 +9,13 @@ export const DataBundleSchema = z.object({
   network: z.string(),                // 'MTN', 'Telecel', etc — string so provider drift doesn't break us
   size: z.string(),                   // '1GB'
   label: z.string(),                  // 'MTN 1GB Data'
-  providerCostGhs: z.number().nonnegative(),
+  providerCostGhs: z.number().nonnegative(),     // what we pay (API price)
   sellPriceGhs: z.number().nonnegative(),
   markupPercent: z.number().nonnegative(),
+  /** Price the provider's bundle list reported (kept for comparison). */
+  providerListedPriceGhs: z.number().nonnegative().nullable().optional(),
+  /** Provider's public guest price — our price should stay at or below it. */
+  guestPriceGhs: z.number().nonnegative().nullable().optional(),
   availableToCustomers: z.boolean(),  // curated toggle
   active: z.boolean(),                // false when provider stops offering it
   displayOrder: z.number().int(),

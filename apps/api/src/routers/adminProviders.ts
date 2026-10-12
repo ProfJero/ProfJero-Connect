@@ -10,6 +10,7 @@ import {
   SetBundlePriceInputSchema,
   UpdateBundleInputSchema,
   SetGlobalMarkupInputSchema,
+  DEFAULT_DATA_MARKUP_PERCENT,
 } from '@profjero/shared';
 import { requireRole } from '../middleware/roles';
 import {
@@ -31,8 +32,11 @@ import {
   updateBundleFields,
   deleteBundle,
   applyGlobalMarkup,
+  getDataMarkupPercent,
+  setDataMarkupPercent,
 } from '../repositories/dataBundles';
 import type { AuthVariables, Env } from '../types/env';
+import { DATA_PROVIDER_ID, ensureDataProvider } from '../services/providerBalance';
 import type { Context } from 'hono';
 import type { DataOrder, DataOrderStatus } from '@profjero/shared';
 import { listAllOrders } from '../repositories/dataOrders';
@@ -83,7 +87,13 @@ function providerErrorResponse(err: unknown): never {
 
 // --- GET /admin/providers ---
 adminProvidersRouter.get('/', async (c) => {
-  const records = await listProviderRecords(c.env);
+  let records = await listProviderRecords(c.env);
+  // The data provider is configured by its API key; give it a record the
+  // first time so it shows up next to the SMS provider.
+  if (c.env.ELITEDATA_API_KEY && !records.some((r) => r.id === DATA_PROVIDER_ID)) {
+    await ensureDataProvider(c.env, c.get('admin')?.uid ?? 'system');
+    records = await listProviderRecords(c.env);
+  }
   const providers = records.map(toPublicProvider);
   return c.json(
     ProviderListResponseSchema.parse({
@@ -100,6 +110,7 @@ adminProvidersRouter.post(
   '/bootstrap',
   requireRole('super_admin'),
   async (c) => {
+    if (c.env.ELITEDATA_API_KEY) await ensureDataProvider(c.env, c.get('admin').uid);
     const existing = await getProviderRecord(c.env, 'sms_gw_01');
     if (existing) {
       return c.json(
@@ -186,8 +197,11 @@ adminProvidersRouter.get(
   '/data/bundles',
   requireRole('super_admin', 'admin', 'finance'),
   async (c) => {
-    const bundles = await listAllBundles(c.env);
-    return c.json({ ok: true, bundles, count: bundles.length });
+    const [bundles, markupPercent] = await Promise.all([
+      listAllBundles(c.env),
+      getDataMarkupPercent(c.env, DEFAULT_DATA_MARKUP_PERCENT),
+    ]);
+    return c.json({ ok: true, bundles, count: bundles.length, markupPercent });
   },
 );
 
@@ -369,10 +383,22 @@ adminProvidersRouter.post(
     // EliteData has its own /data/balance route above because its balance
     // shape (wallet GHS) doesn't map to the smsCredits field on the
     // provider record.
+    if (record.driver === 'elitedata') {
+      try {
+        const bal = await elitedata.getBalance(c.env);
+        const updated = await updateProvider(
+          c.env,
+          id,
+          { mainBalanceGhs: Math.max(0, bal.balance), balanceCheckedAt: new Date().toISOString() },
+          c.get('admin').uid,
+        );
+        return c.json(ProviderResponseSchema.parse({ provider: toPublicProvider(updated) }));
+      } catch (err) {
+        providerErrorResponse(err);
+      }
+    }
     if (record.driver !== 'arkesel') {
-      throw new HTTPException(400, {
-        message: 'Use /admin/providers/data/balance for data providers.',
-      });
+      throw new HTTPException(400, { message: 'Balance checks are not available for this provider.' });
     }
     if (!c.env.ARKESEL_API_KEY) {
       throw new HTTPException(500, {
@@ -478,6 +504,7 @@ adminProvidersRouter.put(
       });
     }
     const result = await applyGlobalMarkup(c.env, parsed.data.markupPercent);
+    await setDataMarkupPercent(c.env, parsed.data.markupPercent, c.get('admin').uid);
     return c.json({
       ok: true,
       markupPercent: parsed.data.markupPercent,

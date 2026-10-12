@@ -248,9 +248,9 @@ test.describe('customer app', () => {
     await expect(page.getByRole('tab', { name: /Telecel/ })).toHaveAttribute('aria-selected', 'true');
     // Pick an MTN bundle for a Telecel number → warning, pay blocked until confirmed.
     await page.getByRole('tab', { name: /^MTN/ }).click();
-    await page.getByRole('radio', { name: /^1GB for GH₵5\.00/ }).click();
+    await page.getByRole('radio', { name: /^1GB for GH₵4\.40/ }).click();
     await expect(page.getByText(/looks like a Telecel number/)).toBeVisible();
-    const pay = page.getByRole('button', { name: 'Pay GH₵5.00' });
+    const pay = page.getByRole('button', { name: 'Pay GH₵4.40' });
     await expect(pay).toBeDisabled();
     // Switch to the right number instead.
     await page.getByLabel('Phone number').fill('0241234567');

@@ -114,8 +114,8 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
   const dataProvider: FakeCloud['dataProvider'] = {
     mode: 'processing',
     bundles: [
-      { bundleId: 'mtn_1gb', network: 'MTN', size: '1GB', price: 4.0, label: 'MTN 1GB Data' },
-      { bundleId: 'mtn_5gb', network: 'MTN', size: '5GB', price: 18.5, label: 'MTN 5GB Data' },
+      { bundleId: 'mtn_1gb', network: 'MTN', size: '1GB', price: 4.7, label: 'MTN 1GB Data' },
+      { bundleId: 'mtn_5gb', network: 'MTN', size: '5GB', price: 23.5, label: 'MTN 5GB Data' },
       { bundleId: 'tel_2gb', network: 'Telecel', size: '2GB', price: 8.0, label: 'Telecel 2GB Data' },
       { bundleId: 'at_3gb', network: 'AirtelTigo', size: '3GB', price: 9.0, label: 'AirtelTigo 3GB Data' },
     ],

@@ -78,9 +78,11 @@ export function ProviderBalanceCard({ provider, onChanged }: Props) {
 
       <div className="grid grid-cols-2 gap-3">
         <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-          <div className="text-[10px] text-slate-500 font-medium">Credits</div>
+          <div className="text-[10px] text-slate-500 font-medium">{provider.service === 'data' ? 'Pays for' : 'Credits'}</div>
           <div className="text-lg font-bold text-slate-900 mt-0.5">
-            {provider.credits !== null
+            {provider.service === 'data'
+              ? 'Data orders'
+              : provider.credits !== null
               ? provider.credits.toLocaleString()
               : '—'}
           </div>

@@ -11,6 +11,8 @@ export interface EditableBundle {
   providerCostGhs: number;
   sellPriceGhs: number;
   markupPercent: number;
+  /** Provider's public guest price, when known — stay at or below it. */
+  guestPriceGhs?: number | null;
   availableToCustomers: boolean;
   active: boolean;
   displayOrder: number;

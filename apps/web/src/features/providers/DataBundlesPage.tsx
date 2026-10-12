@@ -263,8 +263,9 @@ export function DataBundlesPage() {
                 <tr className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/60 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                   <th className="py-3 px-5 whitespace-nowrap">Bundle</th>
                   <th className="py-3 px-4 whitespace-nowrap">Network</th>
-                  <th className="py-3 px-4 text-right whitespace-nowrap">Cost</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Cost (API)</th>
                   <th className="py-3 px-4 text-right whitespace-nowrap">Sell</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Provider retail</th>
                   <th className="py-3 px-4 text-right whitespace-nowrap">Margin</th>
                   <th className="py-3 px-4 text-center whitespace-nowrap">Visible</th>
                   <th className="py-3 px-5 text-right whitespace-nowrap">Actions</th>
@@ -305,6 +306,14 @@ export function DataBundlesPage() {
                       </td>
                       <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
                         GHS {b.sellPriceGhs.toFixed(2)}
+                        {b.guestPriceGhs != null && b.sellPriceGhs > b.guestPriceGhs && (
+                          <div className="text-[10px] font-semibold text-rose-600" title="Customers could buy it cheaper directly from the provider.">
+                            above retail
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right text-slate-500 dark:text-slate-400 tabular-nums">
+                        {b.guestPriceGhs != null ? `GHS ${b.guestPriceGhs.toFixed(2)}` : '—'}
                       </td>
                       <td className="py-3 px-4 text-right tabular-nums">
                         <span

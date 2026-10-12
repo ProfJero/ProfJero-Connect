@@ -1,10 +1,14 @@
 import {
+  DEFAULT_DATA_MARKUP_PERCENT,
+  applyDataMarkup,
+  dataReferencePrice,
   type CustomerDataBundle,
   type DataOrder,
 } from '@profjero/shared';
 import { elitedata } from '../providers/elitedataClient';
 import {
   getBundle,
+  getDataMarkupPercent,
   listAllBundles,
   listCustomerVisibleBundles,
   upsertBundle,
@@ -16,9 +20,6 @@ import {
 import { DomainError } from '../lib/domainError';
 import type { Env } from '../types/env';
 
-const DEFAULT_MARKUP_PERCENT = 25;
-/** Round sell prices up to the nearest 0.10 GHS (10 pesewas). */
-const ROUND_TO_PESEWAS = 10;
 
 /**
  * Apply a markup percentage to a cost and round up to the nearest
@@ -29,9 +30,7 @@ const ROUND_TO_PESEWAS = 10;
  *   cost 3.30, markup 25% → raw 4.125 → 4.20
  */
 export function applyMarkup(costGhs: number, markupPercent: number): number {
-  const raw = costGhs * (1 + markupPercent / 100);
-  const pesewas = Math.ceil((raw * 100) / ROUND_TO_PESEWAS) * ROUND_TO_PESEWAS;
-  return pesewas / 100;
+  return applyDataMarkup(costGhs, markupPercent);
 }
 
 /**
@@ -85,33 +84,54 @@ export async function syncBundlesFromProvider(env: Env): Promise<{
   const existingById = new Map(existing.map((b) => [b.id, b]));
 
   const now = new Date().toISOString();
+  const markup = await getDataMarkupPercent(env, DEFAULT_DATA_MARKUP_PERCENT);
   let created = 0;
   let updated = 0;
 
   for (const pb of providerBundles) {
-    const sellPriceGhs = applyMarkup(pb.price, DEFAULT_MARKUP_PERCENT);
-    const isNew = !existingById.has(pb.bundleId);
-    await upsertBundle(env, {
-      id: pb.bundleId,
-      network: pb.network,
-      size: pb.size,
-      label: bundleLabel(pb.network, pb.size, pb.label),
-      providerCostGhs: pb.price,
-      sellPriceGhs,
-      markupPercent: DEFAULT_MARKUP_PERCENT,
-      availableToCustomers: false,  // ignored for existing rows
-      active: true,
-      displayOrder: displayOrderFor(pb.network, pb.size),
-      syncedAt: now,
-    });
-    if (isNew) created++;
-    else updated++;
+    // What we really pay: the published API price when we know it (the
+    // bundle list may report a retail price), else what the API reports.
+    const ref = dataReferencePrice(pb.network, pb.size);
+    const cost = ref?.api ?? pb.price;
+    const stored = existingById.get(pb.bundleId) ?? null;
+    // Keep the admin's price and markup unless our cost changed; then
+    // re-price with the bundle's own markup.
+    let sellPriceGhs: number;
+    let markupPercent: number;
+    if (stored && Math.abs(stored.providerCostGhs - cost) < 0.005) {
+      sellPriceGhs = stored.sellPriceGhs;
+      markupPercent = stored.markupPercent;
+    } else {
+      markupPercent = stored ? stored.markupPercent : markup;
+      sellPriceGhs = applyMarkup(cost, markupPercent);
+    }
+    await upsertBundle(
+      env,
+      {
+        id: pb.bundleId,
+        network: pb.network,
+        size: pb.size,
+        label: bundleLabel(pb.network, pb.size, pb.label),
+        providerCostGhs: cost,
+        sellPriceGhs,
+        markupPercent,
+        providerListedPriceGhs: pb.price,
+        guestPriceGhs: ref?.guest ?? null,
+        availableToCustomers: false, // ignored for existing rows
+        active: true,
+        displayOrder: displayOrderFor(pb.network, pb.size),
+        syncedAt: now,
+      },
+      stored,
+    );
+    if (stored) updated++;
+    else created++;
   }
 
   let deactivated = 0;
   for (const b of existing) {
     if (!providerIds.has(b.id) && b.active) {
-      await upsertBundle(env, { ...b, active: false, syncedAt: now });
+      await upsertBundle(env, { ...b, active: false, syncedAt: now }, b);
       deactivated++;
     }
   }
