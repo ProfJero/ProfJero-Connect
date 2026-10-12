@@ -59,14 +59,14 @@ const ctx = {
 } as unknown as ExecutionContext;
 
 /** Firebase-style ID token, carrying any custom claims the fake has set. */
-async function mint(uid: string, email: string): Promise<string> {
+async function mint(uid: string, email: string, verified = false, provider = 'password'): Promise<string> {
   const t = Math.floor(Date.now() / 1000);
   return new SignJWT({
     email,
-    email_verified: false,
+    email_verified: verified,
     auth_time: t,
     user_id: uid,
-    firebase: { identities: { email: [email] }, sign_in_provider: 'password' },
+    firebase: { identities: { email: [email] }, sign_in_provider: provider },
     ...(cloud.claims.get(uid) ?? {}),
   })
     .setProtectedHeader({ alg: 'RS256', kid: KID })
@@ -121,9 +121,9 @@ for (const b of cloud.dataProvider.bundles) {
 }
 
 // A customer with a pending Sender ID request → the admin bell has an alert.
-const seedTok = await mint('seedcust', 'kofi@example.com');
+const seedTok = await mint('seedcust', 'kofi@example.com', true);
 await call('POST', '/customer/register', seedTok, { displayName: 'Kofi Boateng', organisationName: 'Boateng Pharmacy', acceptedTerms: true });
-await call('POST', '/customer/sender-ids', await mint('seedcust', 'kofi@example.com'), {
+await call('POST', '/customer/sender-ids', await mint('seedcust', 'kofi@example.com', true), {
   value: 'BOATENG', purpose: 'Transactional & Alerts', description: 'We text patients when their prescriptions are ready for pickup at our pharmacy branches.',
 });
 
@@ -134,7 +134,12 @@ createServer(async (req, res) => {
   const cors = { 'access-control-allow-origin': '*' };
   try {
     if (url.pathname === '/__test/token') {
-      const tok = await mint(url.searchParams.get('uid')!, url.searchParams.get('email')!);
+      const tok = await mint(
+        url.searchParams.get('uid')!,
+        url.searchParams.get('email')!,
+        url.searchParams.get('verified') === '1',
+        url.searchParams.get('provider') ?? 'password',
+      );
       res.writeHead(200, { 'content-type': 'text/plain', ...cors }).end(tok);
       return;
     }

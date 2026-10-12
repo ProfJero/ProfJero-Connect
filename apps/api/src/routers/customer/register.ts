@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { RegisterCustomerRequestSchema } from '@profjero/shared';
 import { verifyFirebaseIdToken } from '../../lib/firebase';
+import { isDisposableEmail } from '@profjero/shared';
 import { setCustomerClaim } from '../../lib/firebase';
 import { createCustomerAndProject } from '../../services/customerService';
 import { getSettings } from '../../services/settings';
@@ -69,6 +70,20 @@ router.post('/register', async (c) => {
     if (!settings.security.customerSignupsEnabled) {
       return c.json(
         { error: { code: 'signups_closed', message: 'New sign-ups are paused right now. Please try again later.', requestId: c.get('requestId') } },
+        403,
+      );
+    }
+    // One real, verified email per account: no free credit for throwaway
+    // or unconfirmed addresses.
+    if (verified.email && isDisposableEmail(verified.email)) {
+      return c.json(
+        { error: { code: 'disposable_email', message: 'Temporary email addresses can’t be used. Please sign up with your work or personal email.', requestId: c.get('requestId') } },
+        400,
+      );
+    }
+    if (!verified.emailVerified) {
+      return c.json(
+        { error: { code: 'email_not_verified', message: 'Please confirm your email address first — open the link we sent to your inbox.', requestId: c.get('requestId') } },
         403,
       );
     }

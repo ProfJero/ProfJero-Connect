@@ -52,9 +52,9 @@ const env: Env = {
 const signingKey = await importPKCS8(keyPem, 'RS256');
 
 /** Mint a Firebase-style ID token, carrying any claims the fake has set. */
-async function idToken(uid: string, email: string): Promise<string> {
+async function idToken(uid: string, email: string, verified = true): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  return new SignJWT({ email, ...(cloud.claims.get(uid) ?? {}) })
+  return new SignJWT({ email, email_verified: verified, ...(cloud.claims.get(uid) ?? {}) })
     .setProtectedHeader({ alg: 'RS256', kid: KID })
     .setIssuer(`https://securetoken.google.com/${PROJECT}`)
     .setAudience(PROJECT)
@@ -134,6 +134,19 @@ await step('rejects unauthenticated requests', async () => {
   const r = await call('GET', '/customer/me');
   assert.equal(r.status, 401);
   assert.ok(r.body.error.requestId);
+});
+
+await step('an unconfirmed or throwaway email can\'t create an account (no free units)', async () => {
+  const body = { displayName: 'Farmer', organisationName: 'Free Units Ltd', acceptedTerms: true };
+  const unverified = await call('POST', '/customer/register', { token: await idToken('uid-fake', 'someone@example.com', false), body });
+  assert.equal(unverified.status, 403);
+  assert.equal(unverified.body.error.code, 'email_not_verified');
+  const throwaway = await call('POST', '/customer/register', { token: await idToken('uid-temp', 'abc@mailinator.com'), body });
+  assert.equal(throwaway.status, 400);
+  assert.equal(throwaway.body.error.code, 'disposable_email');
+  assert.equal(cloud.get('customers/uid-fake'), null);
+  assert.equal(cloud.get('customers/uid-temp'), null);
+  assert.equal(cloud.list('wallets').length, 0, 'no wallet, no starter units');
 });
 
 await step('register creates account, wallet, starter credit and claim', async () => {

@@ -19,3 +19,4 @@ export * from './schemas/campaigns';
 export * from './schemas/data';export * from './lib/networks';
 export * from './lib/senderIdCheck';
 export * from './lib/dataPricing';
+export * from './lib/emailCheck';

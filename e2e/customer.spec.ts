@@ -291,4 +291,49 @@ test.describe('customer app', () => {
     await page.getByRole('tab', { name: 'Needs attention' }).click();
     await expect(page.getByText('Nothing needs attention')).toBeVisible();
   });
+
+  test('password sign-up waits for the email to be confirmed, then opens the account', async ({ page }) => {
+    const email = `pw${Date.now().toString(36)}@example.com`;
+    await page.goto(`${CUSTOMER_URL}/signup`);
+    await page.fill('#signup-name', 'Kwame Asare');
+    await page.fill('#signup-company', 'Asare Logistics');
+    await page.fill('#signup-email', email);
+    await page.getByRole('button', { name: /Prefer a password/ }).click();
+    await page.fill('#signup-password', 'password123');
+    await page.fill('#signup-confirm', 'password123');
+    await page.check('input[type=checkbox]');
+    await page.getByRole('button', { name: 'Create Account' }).click();
+    await expect(page).toHaveURL(/\/verify-email/);
+    await expect(page.getByRole('heading', { name: 'Check your inbox' })).toBeVisible();
+    await expect(page.getByText(email)).toBeVisible();
+    // The test inbox "clicks" the link at once; the page continues on its own.
+    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await expect(page.getByText('Asare Logistics').first()).toBeVisible();
+  });
+
+  test('throwaway emails are refused before anything is sent', async ({ page }) => {
+    await page.goto(`${CUSTOMER_URL}/signup`);
+    await page.fill('#signup-name', 'Free Units');
+    await page.fill('#signup-company', 'Farm Ltd');
+    await page.fill('#signup-email', 'x@mailinator.com');
+    await page.check('input[type=checkbox]');
+    await page.getByRole('button', { name: 'Email me a sign-up link' }).click();
+    await expect(page.getByText(/Temporary email addresses/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Check your inbox' })).toHaveCount(0);
+  });
+
+  test('sign in with an emailed link instead of a password', async ({ page }) => {
+    const email = await customerSignup(page, 'Link Users Ltd');
+    await page.getByRole('button', { name: /Ama Mensah/ }).click();
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.goto(`${CUSTOMER_URL}/login`);
+    await page.getByRole('button', { name: 'Email me a sign-in link instead' }).click();
+    await page.fill('#login-email', email);
+    await page.getByRole('button', { name: 'Email me a sign-in link' }).click();
+    await expect(page.getByRole('heading', { name: 'Check your inbox' })).toBeVisible();
+    await page.goto(`${CUSTOMER_URL}/auth/link?apiKey=test-api-key&oobCode=login1&mode=signIn&lang=en`);
+    await page.waitForURL(/\/dashboard/);
+    await expect(page.getByText('Link Users Ltd').first()).toBeVisible();
+  });
 });
+

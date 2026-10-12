@@ -9,8 +9,8 @@ export const CUSTOMER_URL = 'http://localhost:5174';
 export const ROOT = { uid: 'root', email: 'root@ops.example' };
 export const VIEWER = { uid: 'viewer', email: 'viewer@ops.example' };
 
-export const mintToken = async (uid: string, email: string) =>
-  (await fetch(`${API}/__test/token?uid=${uid}&email=${encodeURIComponent(email)}`)).text();
+export const mintToken = async (uid: string, email: string, verified = false) =>
+  (await fetch(`${API}/__test/token?uid=${uid}&email=${encodeURIComponent(email)}${verified ? '&verified=1' : ''}`)).text();
 
 /** Call the API as an admin, outside the browser (test setup/teardown). */
 export async function adminApi(method: string, path: string, body?: unknown, who = ROOT) {
@@ -44,6 +44,9 @@ async function fakeFirebaseAuth(page: Page) {
         : route.fulfill({ status: 200, body: '', contentType: route.request().resourceType() === 'stylesheet' ? 'text/css' : 'text/plain' }),
   );
   const uids = new Map<string, string>([[ROOT.email, ROOT.uid], [VIEWER.email, VIEWER.uid]]);
+  // Emails whose owner "clicked" the link. A verification email counts as
+  // clicked at once; an email sign-in link is opened by the test.
+  const verified = new Set<string>();
   const uidFor = (email: string) => {
     if (!uids.has(email)) uids.set(email, `u${uids.size + 1}${Date.now().toString(36)}`);
     return uids.get(email)!;
@@ -58,25 +61,35 @@ async function fakeFirebaseAuth(page: Page) {
     if (url.includes('accounts:signUp') || url.includes('accounts:signInWithPassword')) {
       const { email } = JSON.parse(body);
       const uid = uidFor(email);
-      return ok({ kind: 'x', localId: uid, email, idToken: await mintToken(uid, email), refreshToken: `${uid}|${email}`, expiresIn: '3600', registered: true });
+      return ok({ kind: 'x', localId: uid, email, idToken: await mintToken(uid, email, verified.has(email)), refreshToken: `${uid}|${email}`, expiresIn: '3600', registered: true });
+    }
+    if (url.includes('accounts:signInWithEmailLink')) {
+      const { email } = JSON.parse(body);
+      const uid = uidFor(email);
+      verified.add(email);
+      return ok({ kind: 'x', localId: uid, email, idToken: await mintToken(uid, email, true), refreshToken: `${uid}|${email}`, expiresIn: '3600', isNewUser: true });
     }
     if (url.includes('securetoken.googleapis.com')) {
       const rt = decodeURIComponent(new URLSearchParams(body).get('refresh_token') ?? '');
       const [uid, email] = rt.split('|');
-      const t = await mintToken(uid, email);
+      const t = await mintToken(uid, email, verified.has(email));
       return ok({ access_token: t, id_token: t, expires_in: '3600', token_type: 'Bearer', refresh_token: rt, user_id: uid, project_id: 'test-project' });
     }
     if (url.includes('accounts:lookup')) {
       const { idToken } = JSON.parse(body);
       const { sub: uid, email } = decodeJwt(idToken);
-      return ok({ kind: 'x', users: [{ localId: uid, email, emailVerified: false, passwordHash: 'x', providerUserInfo: [{ providerId: 'password', email, federatedId: email, rawId: email }], createdAt: '1', lastLoginAt: '1' }] });
+      return ok({ kind: 'x', users: [{ localId: uid, email, emailVerified: verified.has(email), passwordHash: 'x', providerUserInfo: [{ providerId: 'password', email, federatedId: email, rawId: email }], createdAt: '1', lastLoginAt: '1' }] });
     }
     if (url.includes('accounts:update')) {
       const { idToken } = JSON.parse(body);
       const { sub: uid, email } = decodeJwt(idToken);
-      return ok({ kind: 'x', localId: uid, email, idToken: await mintToken(uid, email), refreshToken: `${uid}|${email}`, expiresIn: '3600' });
+      return ok({ kind: 'x', localId: uid, email, idToken: await mintToken(uid, email, verified.has(email)), refreshToken: `${uid}|${email}`, expiresIn: '3600' });
     }
-    if (url.includes('sendOobCode')) return ok({ kind: 'x', email: JSON.parse(body).email });
+    if (url.includes('sendOobCode')) {
+      const b = JSON.parse(body);
+      if (b.requestType === 'VERIFY_EMAIL' && b.idToken) verified.add(decodeJwt(b.idToken).email);
+      return ok({ kind: 'x', email: b.email ?? (b.idToken ? decodeJwt(b.idToken).email : '') });
+    }
     if (url.includes('recaptchaConfig')) return ok({ recaptchaEnforcementState: [] });
     return ok({});
   });
@@ -129,16 +142,20 @@ export async function adminNavLink(page: Page, label: string) {
   return nav.getByRole('link', { name: label, exact: true });
 }
 
+/**
+ * Sign up the default way: name, organisation, email → "Email me a
+ * sign-up link" → open the link (same device) → dashboard.
+ */
 export async function customerSignup(page: Page, org = 'Test Org') {
   const email = `cust${Date.now().toString(36)}${++signupSeq}@example.com`;
   await page.goto(`${CUSTOMER_URL}/signup`);
   await page.fill('#signup-name', 'Ama Mensah');
   await page.fill('#signup-company', org);
   await page.fill('#signup-email', email);
-  await page.fill('#signup-password', 'password123');
-  await page.fill('#signup-confirm', 'password123');
   await page.check('input[type=checkbox]');
-  await page.click('button[type=submit]');
+  await page.getByRole('button', { name: 'Email me a sign-up link' }).click();
+  await page.getByRole('heading', { name: 'Check your inbox' }).waitFor();
+  await page.goto(`${CUSTOMER_URL}/auth/link?apiKey=test-api-key&oobCode=e2e${signupSeq}&mode=signIn&lang=en`);
   await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
   return email;
 }

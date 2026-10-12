@@ -110,7 +110,7 @@ export async function createHarness(envOverrides: Partial<Env> = {}): Promise<Ha
 
   const token: Harness['token'] = async (uid, email, opts = {}) => {
     const now = Math.floor(Date.now() / 1000);
-    return new SignJWT({ email, ...(cloud.claims.get(uid) ?? {}), ...(opts.claims ?? {}) })
+    return new SignJWT({ email, email_verified: true, ...(cloud.claims.get(uid) ?? {}), ...(opts.claims ?? {}) })
       .setProtectedHeader({ alg: 'RS256', kid: opts.kid ?? KID })
       .setIssuer(opts.issuer ?? `https://securetoken.google.com/${PROJECT}`)
       .setAudience(opts.audience ?? PROJECT)

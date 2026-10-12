@@ -6,14 +6,15 @@ import { SignupForm } from '../../components/auth/SignupForm';
 import { BrandMark } from '../../components/brand/BrandMark';
 
 export function SignupPage() {
-  const { isAuthenticated, isReady } = useAuth();
+  const { isAuthenticated, isReady, needsSetup, needsVerification } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isReady && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isReady, isAuthenticated, navigate]);
+    if (!isReady) return;
+    if (isAuthenticated) navigate('/dashboard', { replace: true });
+    else if (needsVerification) navigate('/verify-email', { replace: true });
+    else if (needsSetup) navigate('/complete-setup', { replace: true });
+  }, [isReady, isAuthenticated, needsSetup, needsVerification, navigate]);
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-950 flex items-center justify-center p-4 sm:p-6 lg:p-8">

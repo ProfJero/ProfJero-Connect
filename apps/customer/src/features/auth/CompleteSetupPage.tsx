@@ -5,10 +5,11 @@ import { firebaseAuth } from '../../lib/firebase';
 import { BrandMark } from '../../components/brand/BrandMark';
 
 export function CompleteSetupPage() {
-  const { isAuthenticated, isReady, completeSetup } = useAuth();
+  const { isAuthenticated, isReady, completeSetup, firebaseDisplayName, needsVerification } = useAuth();
   const navigate = useNavigate();
 
-  const [displayName, setDisplayName] = useState('');
+  // Google sign-ups arrive with their name already known.
+  const [displayName, setDisplayName] = useState(firebaseDisplayName ?? '');
   const [companyName, setCompanyName] = useState('');
   const [phone, setPhone] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -25,8 +26,10 @@ export function CompleteSetupPage() {
     }
     if (isAuthenticated) {
       navigate('/dashboard', { replace: true });
+    } else if (needsVerification) {
+      navigate('/verify-email', { replace: true });
     }
-  }, [isReady, isAuthenticated, navigate]);
+  }, [isReady, isAuthenticated, needsVerification, navigate]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();

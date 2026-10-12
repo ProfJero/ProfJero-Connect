@@ -41,6 +41,10 @@ export interface VerifiedToken {
   email: string | null;
   name: string | null;
   customer: boolean;
+  /** Firebase sets this once the person proved they own the address (link click, Google). */
+  emailVerified: boolean;
+  /** password | google.com | emailLink … */
+  signInProvider: string | null;
 }
 
 export async function verifyFirebaseIdToken(
@@ -72,6 +76,8 @@ export async function verifyFirebaseIdToken(
     email: typeof payload.email === 'string' ? payload.email : null,
     name: typeof payload.name === 'string' ? payload.name : null,
     customer: payload.customer === true,
+    emailVerified: payload.email_verified === true,
+    signInProvider: (payload.firebase as { sign_in_provider?: string } | undefined)?.sign_in_provider ?? null,
   };
 }
 

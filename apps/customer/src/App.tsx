@@ -25,6 +25,8 @@ import { ApiPage } from './features/api/ApiPage';
 import { NotificationsPage } from './features/notifications/NotificationsPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { CompleteSetupPage } from './features/auth/CompleteSetupPage';
+import { VerifyEmailPage } from './features/auth/VerifyEmailPage';
+import { EmailLinkPage } from './features/auth/EmailLinkPage';
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
 import { AddFundsCompletePage } from './features/wallet/AddFundsCompletePage';
 import { BatchDetailPage } from './features/messaging/BatchDetailPage';
@@ -44,6 +46,8 @@ export default function App() {
             <Route path="/developers" element={<DevelopersPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/complete-setup" element={<CompleteSetupPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/auth/link" element={<EmailLinkPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* Protected */}

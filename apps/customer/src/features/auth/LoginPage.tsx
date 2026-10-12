@@ -10,7 +10,7 @@ interface LocationState {
 }
 
 export function LoginPage() {
-  const { isAuthenticated, isReady, needsSetup } = useAuth();
+  const { isAuthenticated, isReady, needsSetup, needsVerification } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo =
@@ -22,6 +22,10 @@ export function LoginPage() {
     // User authenticated with Firebase but has no customer doc.
     // Send them to the recovery form. This is the same destination
     // ProtectedRoute would pick, but reachable directly from /login.
+    if (needsVerification) {
+      navigate('/verify-email', { replace: true });
+      return;
+    }
     if (needsSetup) {
       navigate('/complete-setup', { replace: true });
       return;
@@ -31,7 +35,7 @@ export function LoginPage() {
     if (isAuthenticated) {
       navigate(redirectTo, { replace: true });
     }
-  }, [isReady, isAuthenticated, needsSetup, navigate, redirectTo]);
+  }, [isReady, isAuthenticated, needsSetup, needsVerification, navigate, redirectTo]);
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] dark:bg-slate-950 flex items-center justify-center p-4 sm:p-6 lg:p-8">

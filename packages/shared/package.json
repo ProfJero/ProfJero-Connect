@@ -25,6 +25,10 @@
     "./sender-id-check": {
       "types": "./src/lib/senderIdCheck.ts",
       "default": "./src/lib/senderIdCheck.ts"
+    },
+    "./email-check": {
+      "types": "./src/lib/emailCheck.ts",
+      "default": "./src/lib/emailCheck.ts"
     }
   },
   "scripts": {
