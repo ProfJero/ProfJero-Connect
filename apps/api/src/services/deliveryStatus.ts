@@ -82,7 +82,15 @@ export async function applyDeliveryStatus(
       const prev = Number(batchDoc.data.deliveredCount ?? 0);
       await firestoreUpdateDoc(env, 'smsBatches', record.batchId, {
         deliveredCount: prev + 1,
+        ...(batchDoc.data.senderProviderPending ? { senderProviderPending: false } : {}),
       });
+      // First delivery from a Sender ID still in provider verification.
+      if (batchDoc.data.senderProviderPending && batchDoc.data.senderId) {
+        const { markSenderIdVerified } = await import('./senderIds');
+        await markSenderIdVerified(env, String(batchDoc.data.projectId), String(batchDoc.data.senderId)).catch((err) =>
+          console.error('[delivery] sender ID verification update failed:', err),
+        );
+      }
     }
   }
 

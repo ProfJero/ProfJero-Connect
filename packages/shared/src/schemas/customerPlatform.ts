@@ -73,7 +73,11 @@ export type SenderIdPurpose = z.infer<typeof SenderIdPurposeSchema>;
 export const CustomerRequestSenderIdSchema = z.object({
   value: SenderIdValueSchema,
   purpose: SenderIdPurposeSchema,
-  description: z.string().trim().min(10).max(500),
+  description: z
+    .string()
+    .trim()
+    .min(50, 'Describe how you will use this Sender ID in at least 50 characters.')
+    .max(500),
 });
 export type CustomerRequestSenderId = z.infer<
   typeof CustomerRequestSenderIdSchema

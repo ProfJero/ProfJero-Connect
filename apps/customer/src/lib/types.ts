@@ -126,6 +126,12 @@ export interface CustomerSenderId {
   reason: string | null;
   requestedAt: string;
   decidedAt: string | null;
+  /** Automatic check findings (why it needs review). */
+  checks: string[];
+  /** Our SMS provider's verification, which starts on the first send. Null until approved. */
+  providerStatus: 'not_sent' | 'pending' | 'verified' | 'rejected' | null;
+  providerFirstSentAt: string | null;
+  providerVerifiedAt: string | null;
 }
 
 // ── Contacts ────────────────────────────────────────────────────────

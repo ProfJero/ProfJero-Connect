@@ -25,6 +25,13 @@ const ASSIGNMENT_STATUS_STYLES: Record<SenderIdAssignmentStatus, string> = {
   revoked: 'bg-slate-100 text-slate-600 border-slate-200',
 };
 
+const PROVIDER_LABEL: Record<'not_sent' | 'pending' | 'verified' | 'rejected', string> = {
+  not_sent: 'not used yet (verifies on first send)',
+  pending: 'verifying (first message sent)',
+  verified: 'verified',
+  rejected: 'refused',
+};
+
 interface Props {
   senderIds: SenderIdWithAssignments[];
   total: number;
@@ -179,6 +186,18 @@ export function SenderIdRegistryTable({
                           projectId,
                         })
                       }
+                      onProviderStatus={(projectId, status) => {
+                        const msg = status === 'verified'
+                          ? `Mark "${s.value}" as verified by the provider for this project?\n\nOnly do this after confirming on the provider dashboard.`
+                          : `Mark "${s.value}" as refused by the provider? The customer is not notified automatically.`;
+                        if (!window.confirm(msg)) return;
+                        void runAction(`p:${s.value}:${projectId}`, () =>
+                          apiFetch(`/admin/sender-ids/${encodeURIComponent(s.value)}/assignments/${projectId}/provider-status`, {
+                            method: 'POST',
+                            body: JSON.stringify({ status }),
+                          }),
+                        );
+                      }}
                     />
                   );
                 })}
@@ -236,6 +255,7 @@ function RowGroup({
   onRejectValue,
   onApproveAssignment,
   onRejectAssignment,
+  onProviderStatus,
 }: {
   senderId: SenderIdWithAssignments;
   expanded: boolean;
@@ -246,6 +266,7 @@ function RowGroup({
   onRejectValue: () => void;
   onApproveAssignment: (projectId: string) => void;
   onRejectAssignment: (projectId: string) => void;
+  onProviderStatus?: (projectId: string, status: 'verified' | 'rejected') => void;
 }) {
   const Chevron = expanded ? ChevronDown : ChevronRight;
   const s = senderId;
@@ -330,6 +351,26 @@ function RowGroup({
                       <div className="text-[10px] text-slate-500 truncate font-mono">
                         {a.projectId}
                       </div>
+                      {a.description && (
+                        <p className="text-[11px] text-slate-600 mt-1 leading-relaxed break-words">
+                          {a.purpose && <span className="font-semibold">{a.purpose}: </span>}
+                          {a.description}
+                        </p>
+                      )}
+                      {a.status === 'approved' && (
+                        <div className="mt-1 text-[10px] text-slate-500">
+                          Provider: <span className={cn('font-semibold', a.providerStatus === 'verified' ? 'text-emerald-700' : a.providerStatus === 'rejected' ? 'text-rose-700' : 'text-amber-700')}>
+                            {PROVIDER_LABEL[a.providerStatus ?? 'not_sent']}
+                          </span>
+                          {a.decidedByAdminUid === 'system:auto-check' && <span> · auto-approved</span>}
+                          {onProviderStatus && a.providerStatus !== 'verified' && (
+                            <button type="button" onClick={() => onProviderStatus(a.projectId, 'verified')} className="ml-2 font-semibold text-[#1976d2] hover:underline">Mark verified</button>
+                          )}
+                          {onProviderStatus && a.providerStatus !== 'rejected' && (
+                            <button type="button" onClick={() => onProviderStatus(a.projectId, 'rejected')} className="ml-2 font-semibold text-rose-700 hover:underline">Mark refused</button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <span
                       className={cn(

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AtSign, Plus, Info } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { MessagingTabs } from '../../components/messaging/MessagingTabs';
@@ -9,7 +9,7 @@ import { EmptyState, ErrorState, SkeletonRows } from '../../components/ui/States
 import { btnPrimary, cardClass } from '../../components/ui/buttons';
 import { useApi } from '../../lib/useApi';
 import { formatDateTime } from '../../lib/format';
-import { SENDER_ID_STATUS } from '../../lib/statusLabels';
+import { SENDER_ID_PROVIDER_STATUS, SENDER_ID_STATUS } from '../../lib/statusLabels';
 import { cn } from '../../lib/utils';
 import type { CustomerSenderId, SenderIdStatus } from '../../lib/types';
 import { usePlatformConfig } from '../../lib/account';
@@ -28,6 +28,7 @@ export function SenderIdsPage() {
   const [filter, setFilter] = useState<SenderIdStatus | 'all'>('all');
   const all = data?.senderIds ?? [];
   const rows = filter === 'all' ? all : all.filter((s) => s.status === filter);
+  const just = (useLocation().state ?? null) as { requested?: string; decision?: 'approved' | 'review' } | null;
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 max-w-[1400px] w-full mx-auto">
@@ -45,19 +46,33 @@ export function SenderIdsPage() {
 
       <MessagingTabs />
 
+      {just?.requested && (
+        <div role="status" className={cn('rounded-xl p-4 text-xs border', just.decision === 'approved' ? 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-100' : 'bg-amber-50 border-amber-200 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-100')}>
+          {just.decision === 'approved' ? (
+            <>
+              <p className="font-bold">"{just.requested}" is approved and ready to use.</p>
+              <p className="mt-0.5">Send your first message from it now — our SMS provider verifies it with the networks on that first send.</p>
+              <Link to="/messaging/sms" className="mt-2 inline-block font-bold underline">Send a message</Link>
+            </>
+          ) : (
+            <>
+              <p className="font-bold">"{just.requested}" is with our team for a quick review.</p>
+              <p className="mt-0.5">This usually takes {senderIdReviewSla}. We'll notify you as soon as it's decided.</p>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="bg-blue-50/70 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl p-4 flex items-start gap-3.5 shadow-xs">
         <div className="w-6 h-6 rounded-full bg-[#1a6cf0] text-white flex items-center justify-center shrink-0 mt-0.5">
           <Info className="w-4 h-4" strokeWidth={2.5} />
         </div>
         <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-          <p className="font-bold text-slate-900 dark:text-slate-100 mb-0.5">
-            Every Sender ID is reviewed before it can be used.
-          </p>
-          <p>
-            Our team registers each request with the mobile networks, which usually takes {senderIdReviewSla}.
-            You'll get a notification and an email as soon as it's approved. In the meantime you can buy units,
-            add contacts, and prepare your messages.
-          </p>
+          <p className="font-bold text-slate-900 dark:text-slate-100 mb-0.5">How Sender IDs are approved</p>
+          <ol className="list-decimal pl-4 space-y-0.5">
+            <li>We check every request automatically. Names that clearly belong to you are approved instantly; anything that could impersonate a government body, bank, network or brand is refused or reviewed by our team.</li>
+            <li><strong>Verification is done by our SMS provider</strong> with the mobile networks when you send your first message from the Sender ID. Its status shows below.</li>
+          </ol>
         </div>
       </div>
 
@@ -108,6 +123,7 @@ export function SenderIdsPage() {
                   <th className="py-3.5 px-5 whitespace-nowrap">Sender ID</th>
                   <th className="py-3.5 px-5 whitespace-nowrap">Purpose</th>
                   <th className="py-3.5 px-5 whitespace-nowrap">Status</th>
+                  <th className="py-3.5 px-5 whitespace-nowrap">Provider verification</th>
                   <th className="py-3.5 px-5 whitespace-nowrap">Requested</th>
                   <th className="py-3.5 px-5 whitespace-nowrap">Decided</th>
                 </tr>
@@ -125,9 +141,22 @@ export function SenderIdsPage() {
                         {row.reason && (
                           <span className="block mt-1 text-[11px] text-rose-600 dark:text-rose-400">Reason: {row.reason}</span>
                         )}
+                        {row.status === 'pending' && row.checks.length > 0 && (
+                          <span className="block mt-1 text-[11px] text-amber-700 dark:text-amber-300">Being reviewed because: {row.checks.join(' ')}</span>
+                        )}
                       </td>
                       <td className="py-4 px-5 whitespace-nowrap">
                         <Badge tone={s.tone} label={s.label} />
+                      </td>
+                      <td className="py-4 px-5 min-w-[180px]">
+                        {row.providerStatus ? (
+                          <>
+                            <Badge tone={SENDER_ID_PROVIDER_STATUS[row.providerStatus].tone} label={SENDER_ID_PROVIDER_STATUS[row.providerStatus].label} />
+                            <span className="block mt-1 text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{SENDER_ID_PROVIDER_STATUS[row.providerStatus].hint}</span>
+                          </>
+                        ) : (
+                          <span className="text-slate-500 dark:text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="py-4 px-5 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                         {formatDateTime(row.requestedAt)}

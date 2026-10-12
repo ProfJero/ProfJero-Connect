@@ -139,7 +139,7 @@ export function DashboardPage() {
               {queue.pendingValues.length > 0 &&
                 `${queue.pendingValues.length} new value${
                   queue.pendingValues.length === 1 ? '' : 's'
-                } to register with Arkesel`}
+                } held for review`}
               {queue.pendingValues.length > 0 &&
                 queue.pendingAssignments.length > 0 &&
                 ' · '}

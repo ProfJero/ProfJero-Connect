@@ -48,7 +48,7 @@ const walletOf = (pid: string) => cloud.get(`wallets/${pid}`)!;
 async function ready(uid: string, sender: string, units: number) {
   const token = await h.signUp(uid, `${uid}@example.com`, `${uid} Org`);
   const pid = projectOf(uid);
-  await call('POST', '/customer/sender-ids', { token, body: { value: sender, purpose: 'Business Notifications', description: 'Testing the platform end to end.' } });
+  await call('POST', '/customer/sender-ids', { token, body: { value: sender, purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' } });
   await approveSenderIdValue(h.env, sender, 'root');
   seedWallet(cloud, pid, units);
   return { token, pid };
@@ -573,6 +573,94 @@ await step('an error spike raises a bell alert and emails operators once', async
 
 await step('everything above left every wallet consistent with its ledger', async () => {
   assertIntegrity();
+});
+
+
+// =====================================================================
+section('Sender IDs: automatic approval and provider verification');
+// =====================================================================
+
+await step('a clean request is approved at once; our provider verification starts on the first send', async () => {
+  const kofi = await h.signUp('kofi', 'kofi@example.com', 'Kofi Prints');
+  const D = 'We send print job ready alerts and delivery updates to customers of our print shop.';
+  const r = await call('POST', '/customer/sender-ids', { token: kofi, body: { value: 'KOFIPRINTS', purpose: 'Business Notifications', description: D } });
+  assert.equal(r.body.decision, 'approved', JSON.stringify(r.body));
+  assert.equal(r.body.senderId.providerStatus, 'not_sent');
+  assert.equal(cloud.get('senderIds/KOFIPRINTS')!.approvedByAdminUid, 'system:auto-check');
+  seedWallet(cloud, projectOf('kofi'), 50);
+
+  const LIVE: Partial<Env> = { SMS_PROVIDER: 'arkesel', ARKESEL_API_KEY: 'k' };
+  cloud.provider.mode = 'ok';
+  cloud.provider.delayMs = 0;
+  const sent = await call('POST', '/customer/sms/send', { token: kofi, headers: { 'Idempotency-Key': ikey() }, body: { senderId: 'KOFIPRINTS', message: 'Your print job is ready.', recipients: ['0241112233'] }, env: LIVE });
+  assert.equal(sent.status, 201, JSON.stringify(sent.body));
+  await drainBackground();
+  let list = await call('GET', '/customer/sender-ids', { token: kofi });
+  assert.equal(list.body.senderIds[0].providerStatus, 'pending');
+  const batch = cloud.get(`smsBatches/${sent.body.batch.id}`)!;
+  assert.equal(batch.senderProviderPending, true);
+
+  // First delivery receipt → verified (and the batch flag clears).
+  const rec = cloud.list('smsRecords').find((x) => x.data.batchId === sent.body.batch.id)!;
+  assert.equal((await call('POST', `/webhooks/arkesel?sms_id=${rec.data.providerMessageId}&status=DELIVERED`)).status, 200);
+  list = await call('GET', '/customer/sender-ids', { token: kofi });
+  assert.equal(list.body.senderIds[0].providerStatus, 'verified');
+  assert.ok(list.body.senderIds[0].providerVerifiedAt);
+  assert.equal(cloud.get(`smsBatches/${sent.body.batch.id}`)!.senderProviderPending, false);
+  const n = await call('GET', '/customer/notifications', { token: kofi });
+  assert.ok(n.body.notifications.some((x: { title: string }) => x.title === 'Sender ID "KOFIPRINTS" verified by our provider'));
+
+  // Later sends don't touch the assignment again.
+  await call('POST', '/customer/sms/send', { token: kofi, headers: { 'Idempotency-Key': ikey() }, body: { senderId: 'KOFIPRINTS', message: 'Second.', recipients: ['0241112234'] }, env: LIVE });
+  await drainBackground();
+  assert.equal((await call('GET', '/customer/sender-ids', { token: kofi })).body.senderIds[0].providerStatus, 'verified');
+});
+
+await step('if our provider refuses the Sender ID, the customer is told and units come back', async () => {
+  const efua = await h.signUp('efua', 'efua@example.com', 'Efua Fabrics');
+  const D = 'We send new fabric arrivals and order pickup reminders to customers of our fabric store.';
+  const r = await call('POST', '/customer/sender-ids', { token: efua, body: { value: 'EFUAFAB', purpose: 'Business Notifications', description: D } });
+  assert.equal(r.body.decision, 'approved');
+  seedWallet(cloud, projectOf('efua'), 20);
+  cloud.provider.mode = 'http400';
+  await call('POST', '/customer/sms/send', { token: efua, headers: { 'Idempotency-Key': ikey() }, body: { senderId: 'EFUAFAB', message: 'New prints in store.', recipients: ['0241113344'] }, env: { SMS_PROVIDER: 'arkesel', ARKESEL_API_KEY: 'k' } });
+  await drainBackground();
+  cloud.provider.mode = 'ok';
+  const list = await call('GET', '/customer/sender-ids', { token: efua });
+  assert.equal(list.body.senderIds[0].providerStatus, 'rejected');
+  assert.equal(Number(walletOf(projectOf('efua')).availableUnits), 20, 'units returned');
+  const n = await call('GET', '/customer/notifications', { token: efua });
+  assert.ok(n.body.notifications.some((x: { title: string }) => /not accepted by our provider/.test(x.title)));
+  // An admin who confirmed with the provider can override it.
+  const fix = await call('POST', '/admin/sender-ids/EFUAFAB/assignments/' + projectOf('efua') + '/provider-status', { token: await h.token('root', 'root@ops.example'), body: { status: 'verified' } });
+  assert.equal(fix.status, 200, JSON.stringify(fix.body));
+  assert.equal(fix.body.assignment.providerStatus, 'verified');
+});
+
+await step('the admin queue shows the customer\'s purpose, description and why it needs review', async () => {
+  const yaa = await h.signUp('yaa', 'yaa@example.com', 'Yaa Logistics');
+  const D = 'We send parcel tracking updates and delivery confirmations to customers across Kumasi.';
+  const r = await call('POST', '/customer/sender-ids', { token: yaa, body: { value: 'G00GLEYAA', purpose: 'Transactional & Alerts', description: D } });
+  assert.equal(r.status, 400, 'look-alike of a brand at the start is refused');
+  const rv = await call('POST', '/customer/sender-ids', { token: yaa, body: { value: 'DHLYAA', purpose: 'Transactional & Alerts', description: D } });
+  assert.equal(rv.body.decision, 'review');
+  const q = await call('GET', '/admin/sender-ids/queue', { token: await h.token('root', 'root@ops.example') });
+  const row = q.body.pendingValues.find((v: { value: string }) => v.value === 'DHLYAA');
+  assert.equal(row.description, D);
+  assert.equal(row.purpose, 'Transactional & Alerts');
+  assert.equal(row.autoCheck.verdict, 'review');
+  assert.ok(!q.body.pendingAssignments.some((a: { senderId: string }) => a.senderId === 'DHLYAA'), 'not listed twice');
+});
+
+await step('auto-approval can be switched off: every request then waits for an admin', async () => {
+  const root = await h.token('root', 'root@ops.example');
+  const cur = (await call('GET', '/admin/settings', { token: root })).body.settings.sms;
+  await call('PUT', '/admin/settings/sms', { token: root, body: { ...cur, senderIdAutoApproval: false } });
+  const ato = await h.signUp('ato', 'ato@example.com', 'Ato Farms');
+  const r = await call('POST', '/customer/sender-ids', { token: ato, body: { value: 'ATOFARMS', purpose: 'Business Notifications', description: 'We send harvest updates and order delivery times to customers who buy from our farm.' } });
+  assert.equal(r.body.decision, 'review');
+  assert.equal(r.body.senderId.status, 'pending');
+  await call('PUT', '/admin/settings/sms', { token: root, body: { ...cur, senderIdAutoApproval: true } });
 });
 
 finish('Features suite');

@@ -27,7 +27,7 @@ export const RECORD_STATUS: Record<RecordStatus, { label: string; tone: BadgeTon
 
 export const SENDER_ID_STATUS: Record<SenderIdStatus, { label: string; tone: BadgeTone }> = {
   approved: { label: 'Approved', tone: 'success' },
-  pending: { label: 'Pending approval', tone: 'warning' },
+  pending: { label: 'In review', tone: 'warning' },
   rejected: { label: 'Not approved', tone: 'danger' },
   revoked: { label: 'Inactive', tone: 'neutral' },
 };
@@ -38,4 +38,12 @@ export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; tone: BadgeT
   failed: { label: 'Failed', tone: 'danger' },
   abandoned: { label: 'Not completed', tone: 'neutral' },
   refunded: { label: 'Refunded', tone: 'purple' },
+};
+
+/** Our SMS provider's verification of an approved Sender ID (starts on first send). */
+export const SENDER_ID_PROVIDER_STATUS: Record<'not_sent' | 'pending' | 'verified' | 'rejected', { label: string; tone: BadgeTone; hint: string }> = {
+  not_sent: { label: 'Send first message', tone: 'info', hint: 'Our provider verifies it with the networks when you send your first message.' },
+  pending: { label: 'Provider verifying', tone: 'warning', hint: 'Our provider is verifying it with the networks. Early messages may arrive with a delay.' },
+  verified: { label: 'Verified by provider', tone: 'success', hint: 'Messages from this Sender ID are being delivered.' },
+  rejected: { label: 'Refused by provider', tone: 'danger', hint: 'Our provider did not accept it. Contact support or request another Sender ID.' },
 };

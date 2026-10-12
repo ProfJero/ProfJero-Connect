@@ -133,9 +133,19 @@ export function SmsSection(props: SectionProps<SmsSettings>) {
         <Field label="Max recipients per customer send" htmlFor="s-max" hint="Between 1 and 10,000. Larger lists are rejected before any units are reserved. Big sends are delivered in the background.">
           <NumberInput id="s-max" min={1} max={10000} disabled={ro} value={v.maxRecipientsPerSend} onChange={(n) => draft.set('maxRecipientsPerSend', n ?? 1)} />
         </Field>
-        <Field label="Sender ID review time (shown to customers)" htmlFor="s-sla" hint={<>Completes the sentence “usually takes <em>…</em>”.</>}>
+        <Field label="Manual review time (shown to customers)" htmlFor="s-sla" hint={<>Completes the sentence “usually takes <em>…</em>”.</>}>
           <input id="s-sla" required maxLength={80} disabled={ro} value={v.senderIdReviewSla} onChange={(e) => draft.set('senderIdReviewSla', e.target.value)} className={inputCls} />
         </Field>
+        <div className="md:col-span-2">
+          <Toggle
+            id="s-auto"
+            label="Approve Sender IDs automatically"
+            description="Names that pass the automatic check (format, government and brand names, look-alikes, generic words, description) are approved instantly. Anything doubtful still comes to you. Our SMS provider verifies each name with the networks on its first send."
+            checked={v.senderIdAutoApproval}
+            disabled={ro}
+            onChange={(b) => draft.set('senderIdAutoApproval', b)}
+          />
+        </div>
         <div className="md:col-span-2">
           <SaveBar dirty={draft.dirty} saving={props.saving} onReset={draft.reset} message={message} disabled={ro} />
         </div>
@@ -199,7 +209,7 @@ export function NotificationsSection(props: SectionProps<NotificationSettings>) 
           />
         </Field>
         <div className="divide-y divide-slate-100">
-          <Toggle id="n-sid" label="New Sender ID request" description="So it can be registered with the provider quickly." checked={v.emailOnSenderIdRequest} disabled={ro} onChange={(b) => draft.set('emailOnSenderIdRequest', b)} />
+          <Toggle id="n-sid" label="Sender ID needs review" description="When the automatic check holds a request back for you." checked={v.emailOnSenderIdRequest} disabled={ro} onChange={(b) => draft.set('emailOnSenderIdRequest', b)} />
           <Toggle id="n-cust" label="New customer signup" checked={v.emailOnNewCustomer} disabled={ro} onChange={(b) => draft.set('emailOnNewCustomer', b)} />
           <Toggle id="n-pay" label="Customer payment received" checked={v.emailOnPaymentReceived} disabled={ro} onChange={(b) => draft.set('emailOnPaymentReceived', b)} />
           <Toggle id="n-prov" label="Provider balance low" description="Checked every 15 minutes." checked={v.emailOnProviderLowBalance} disabled={ro} onChange={(b) => draft.set('emailOnProviderLowBalance', b)} />

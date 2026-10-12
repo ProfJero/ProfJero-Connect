@@ -8,7 +8,9 @@ import {
   listSenderIds,
   updateAssignmentStatus,
   updateSenderIdStatus,
+  assignmentId,
 } from '../repositories/senderIds';
+import { firestoreUpdateDoc } from '../lib/firestore';
 import { notifyProject } from './notifications';
 import type { Env } from '../types/env';
 import type {
@@ -119,7 +121,7 @@ async function notifyAssignmentDecision(
       ...base,
       severity: 'success',
       title: `Sender ID "${v}" approved`,
-      body: `Your Sender ID "${v}" is approved and ready to use. You can now select it when sending SMS.`,
+      body: `Your Sender ID "${v}" is approved and ready to use. Our SMS provider verifies it with the networks when you send your first message, so send one now to start verification.`,
     });
   } else if (assignment.status === 'rejected') {
     await notifyProject(env, {
@@ -433,4 +435,116 @@ export async function assertSenderIdAllowed(
   if (assignment.status === 'revoked') {
     throw new Error(`Sender ID "${value}" access has been revoked.`);
   }
+}
+// ---------- Automatic screening (customer requests) ----------
+
+export const AUTO_APPROVER = 'system:auto-check';
+
+/**
+ * Decide a fresh customer request using the automatic screen. Only names
+ * that pass every check and aren't already used by another project are
+ * approved without a person; everything else stays pending for an admin.
+ */
+export async function autoDecideSenderId(
+  env: Env,
+  projectId: string,
+  value: string,
+  verdict: 'approve' | 'review',
+  enabled: boolean,
+): Promise<'approved' | 'review'> {
+  if (!enabled || verdict !== 'approve') return 'review';
+  const existing = await getSenderId(env, value);
+  // Another project asked for (or owns) this exact name: a person decides.
+  if (!existing || existing.requestedByProjectId !== projectId || existing.status !== 'pending') return 'review';
+  await approveSenderIdValue(env, value, AUTO_APPROVER);
+  return 'approved';
+}
+
+// ---------- Provider verification (happens on first send) ----------
+
+/**
+ * Called when a batch finishes. Our provider verifies a Sender ID with the
+ * networks when it is first used, so:
+ *  - first accepted message → providerStatus "pending" (returns true so the
+ *    batch is flagged and its first delivery receipt can confirm it);
+ *  - every message refused for a sender reason → "rejected", customer told.
+ * One assignment read per finished batch; nothing once verified.
+ */
+export async function noteSenderIdUse(
+  env: Env,
+  batch: { projectId: string; senderId: string | null; id: string },
+  outcome: { submittedCount: number; failedCount: number; senderErrors: number },
+): Promise<boolean> {
+  if (!batch.senderId) return false;
+  const a = await getAssignment(env, batch.projectId, batch.senderId);
+  if (!a || a.status !== 'approved' || a.providerStatus === 'verified') return false;
+  const now = new Date().toISOString();
+  if (outcome.submittedCount > 0) {
+    if (a.providerStatus !== 'pending') {
+      await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(batch.projectId, batch.senderId), {
+        providerStatus: 'pending',
+        providerFirstSentAt: now,
+        providerNote: null,
+      });
+    }
+    return true;
+  }
+  if (outcome.failedCount > 0 && outcome.senderErrors === outcome.failedCount && a.providerStatus !== 'rejected') {
+    await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(batch.projectId, batch.senderId), {
+      providerStatus: 'rejected',
+      providerNote: 'Our SMS provider did not accept this Sender ID.',
+    });
+    await notifyProject(env, {
+      projectId: batch.projectId,
+      id: `sender_id_provider_rejected__${batch.projectId}__${batch.senderId}`,
+      type: 'sender_id',
+      severity: 'error',
+      title: `Sender ID "${batch.senderId}" was not accepted by our provider`,
+      body: `Our SMS provider, which verifies Sender IDs with the mobile networks, did not accept "${batch.senderId}". Units for the failed messages were returned. Contact support or request a different Sender ID.`,
+      link: '/messaging/sender-ids',
+      email: true,
+    });
+  }
+  return false;
+}
+
+/** A message from a flagged batch was delivered: the provider has verified the Sender ID. */
+export async function markSenderIdVerified(env: Env, projectId: string, value: string): Promise<void> {
+  const a = await getAssignment(env, projectId, value);
+  if (!a || a.providerStatus === 'verified') return;
+  await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(projectId, value), {
+    providerStatus: 'verified',
+    providerVerifiedAt: new Date().toISOString(),
+    providerNote: null,
+  });
+  await notifyProject(env, {
+    projectId,
+    id: `sender_id_verified__${projectId}__${value}`,
+    type: 'sender_id',
+    severity: 'success',
+    title: `Sender ID "${value}" verified by our provider`,
+    body: `Messages from "${value}" are being delivered — our SMS provider has verified it with the networks.`,
+    link: '/messaging/sender-ids',
+  });
+}
+
+/** Admin override after confirming with the provider. */
+export async function setSenderIdProviderStatus(
+  env: Env,
+  projectId: string,
+  value: string,
+  status: 'verified' | 'rejected' | 'pending',
+  note: string | null,
+): Promise<SenderIdAssignment> {
+  const a = await getAssignment(env, projectId, value);
+  if (!a) throw new Error(`No assignment for project "${projectId}" and Sender ID "${value}".`);
+  if (status === 'verified') {
+    await markSenderIdVerified(env, projectId, value);
+  } else {
+    await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(projectId, value), {
+      providerStatus: status,
+      providerNote: note,
+    });
+  }
+  return (await getAssignment(env, projectId, value))!;
 }

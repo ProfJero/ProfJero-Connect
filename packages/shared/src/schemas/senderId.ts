@@ -61,6 +61,26 @@ export const SenderIdAssignmentSchema = z.object({
   /** Set when a customer requested it from the customer platform. */
   purpose: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
+  /** How the automatic screen judged the request. */
+  autoCheck: z
+    .object({
+      verdict: z.enum(['approve', 'review', 'reject']),
+      codes: z.array(z.string()),
+      messages: z.array(z.string()),
+      matchesOrganisation: z.boolean(),
+      checkedAt: z.string(),
+    })
+    .nullable()
+    .optional(),
+  /**
+   * Our SMS provider verifies a Sender ID with the networks when it is
+   * first used. not_sent → pending (first message submitted) → verified
+   * (a message from it was delivered) or rejected (provider refused it).
+   */
+  providerStatus: z.enum(['not_sent', 'pending', 'verified', 'rejected']).optional(),
+  providerFirstSentAt: z.string().nullable().optional(),
+  providerVerifiedAt: z.string().nullable().optional(),
+  providerNote: z.string().nullable().optional(),
 });
 export type SenderIdAssignment = z.infer<typeof SenderIdAssignmentSchema>;
 
@@ -87,6 +107,10 @@ export const PendingQueueSchema = z.object({
   pendingValues: z.array(
     SenderIdSchema.extend({
       requestedByProjectName: z.string(),
+      /** From the requester's assignment (customer-platform requests). */
+      purpose: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+      autoCheck: SenderIdAssignmentSchema.shape.autoCheck,
     }),
   ),
   pendingAssignments: z.array(

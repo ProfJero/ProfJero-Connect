@@ -47,7 +47,7 @@ for (let i = 0; i < CUSTOMERS; i++) {
   const token = await h.signUp(uid, `${uid}@example.com`, `Load ${i}`);
   const pid = String(cloud.get(`customers/${uid}`)!.projectId);
   const sender = `LOAD${i}`.slice(0, 11);
-  await call('POST', '/customer/sender-ids', { token, body: { value: sender, purpose: 'Business Notifications', description: 'Load testing.' } });
+  await call('POST', '/customer/sender-ids', { token, body: { value: sender, purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' } });
   await approveSenderIdValue(h.env, sender, 'root');
   seedWallet(cloud, pid, 1_000);
   customers.push({ token, pid, sender });

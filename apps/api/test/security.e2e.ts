@@ -44,7 +44,7 @@ const ikey = (p = 'k') => `${p}-${Date.now()}-${++keySeq}-xxxx`;
 async function readyCustomer(uid: string, org: string, sender: string, units: number) {
   const token = await h.signUp(uid, `${uid}@example.com`, org);
   const pid = projectOf(uid);
-  const r = await call('POST', '/customer/sender-ids', { token, body: { value: sender, purpose: 'Business Notifications', description: 'Order updates for our customers.' } });
+  const r = await call('POST', '/customer/sender-ids', { token, body: { value: sender, purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' } });
   assert.ok([201, 200].includes(r.status), `sender id request: ${r.status} ${JSON.stringify(r.body)}`);
   await approveSenderIdValue(h.env, sender, 'root');
   seedWallet(cloud, pid, units);
@@ -610,9 +610,11 @@ await step('a suspended project cannot send, from any surface', async () => {
 });
 
 await step('a pending or rejected Sender ID cannot be used', async () => {
-  const r = await call('POST', '/customer/sender-ids', { token: alice.token, body: { value: 'ALICENEW', purpose: 'Business Notifications', description: 'Order updates for our customers.' } });
+  // Starts with a protected brand → held for an admin, not auto-approved.
+  const r = await call('POST', '/customer/sender-ids', { token: alice.token, body: { value: 'MTNALICE', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' } });
   assert.ok(r.status < 300);
-  const s = await send(alice.token, 'ALICENEW', ['+233241000600']);
+  assert.equal(r.body.decision, 'review');
+  const s = await send(alice.token, 'MTNALICE', ['+233241000600']);
   assert.equal(s.status, 400);
   assert.match(s.body.error.message, /awaiting approval/i);
 });
@@ -805,7 +807,7 @@ await step('Sender ID requests and API key creation are capped', async () => {
   const jo = await h.signUp('jo', 'jo@example.com', 'Jo Org');
   const s: number[] = [];
   for (let i = 0; i < 11; i++) {
-    s.push((await call('POST', '/customer/sender-ids', { token: jo, body: { value: `JOBRAND${i}`.slice(0, 11), purpose: 'Business Notifications', description: 'Order updates for our customers.' } })).status);
+    s.push((await call('POST', '/customer/sender-ids', { token: jo, body: { value: `JOBRAND${i}`.slice(0, 11), purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' } })).status);
   }
   assert.equal(s.filter((x) => x === 429).length, 1, s.join(','));
 });

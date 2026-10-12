@@ -21,6 +21,10 @@
     "./networks": {
       "types": "./src/lib/networks.ts",
       "default": "./src/lib/networks.ts"
+    },
+    "./sender-id-check": {
+      "types": "./src/lib/senderIdCheck.ts",
+      "default": "./src/lib/senderIdCheck.ts"
     }
   },
   "scripts": {

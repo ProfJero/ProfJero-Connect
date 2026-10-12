@@ -47,6 +47,11 @@ function parseAssignment(
     notes: (data.notes as string | null) ?? null,
     purpose: (data.purpose as string | null) ?? null,
     description: (data.description as string | null) ?? null,
+    autoCheck: (data.autoCheck as SenderIdAssignment['autoCheck']) ?? null,
+    providerStatus: (data.providerStatus as SenderIdAssignment['providerStatus']) ?? 'not_sent',
+    providerFirstSentAt: (data.providerFirstSentAt as string | null) ?? null,
+    providerVerifiedAt: (data.providerVerifiedAt as string | null) ?? null,
+    providerNote: (data.providerNote as string | null) ?? null,
   };
 }
 

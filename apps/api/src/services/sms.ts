@@ -1,3 +1,4 @@
+import { noteSenderIdUse } from './senderIds';
 import { applyLedgerEntries, ensureWallet } from './wallet';
 import {
   createBatchWithRecords,
@@ -382,7 +383,14 @@ async function finalizeBatch(env: Env, batch: SmsBatch, records: SmsRecord[]): P
       : submittedCount === 0 && failedCount > 0 && unknownCount === 0
         ? 'failed'
         : 'partial';
+  // Sender ID verification by our provider starts with the first send.
+  const senderErrors = records.filter((r) => r.status === 'failed' && /sender/i.test(r.providerError ?? '')).length;
+  const senderProviderPending = await noteSenderIdUse(env, batch, { submittedCount, failedCount, senderErrors }).catch((err) => {
+    console.error('[sms] sender ID provider status update failed:', err);
+    return false;
+  });
   const finalBatch = await updateBatch(env, batch.id, {
+    ...(senderProviderPending ? { senderProviderPending: true } : {}),
     status,
     submittedCount,
     failedCount,

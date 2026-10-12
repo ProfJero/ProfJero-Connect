@@ -46,7 +46,7 @@ test.describe('customer app', () => {
     await page.goto(`${CUSTOMER_URL}/messaging/sender-ids/request`);
     await page.getByLabel(/Sender ID/i).first().fill('JBAKERY');
     await page.getByLabel(/purpose/i).selectOption({ index: 1 });
-    await page.getByLabel(/description|how will you use/i).fill('Order ready notifications for customers.');
+    await page.getByLabel(/description|how will you use/i).fill('We send order confirmations, delivery updates and receipts to customers who buy from our shop.');
     await page.getByRole('button', { name: /submit|request/i }).last().click();
     await expect(page.getByText(/JBAKERY/).first()).toBeVisible();
     await fetch(`${API}/__test/approve?value=JBAKERY`);
@@ -113,7 +113,7 @@ test.describe('customer app', () => {
     await page.goto(`${CUSTOMER_URL}/messaging/sender-ids/request`);
     await page.getByLabel(/Sender ID/i).first().fill('PTOUCH');
     await page.getByLabel(/purpose/i).selectOption({ index: 1 });
-    await page.getByLabel(/description|how will you use/i).fill('Customer updates and reminders.');
+    await page.getByLabel(/description|how will you use/i).fill('We send order confirmations, delivery updates and receipts to customers who buy from our shop.');
     await page.getByRole('button', { name: /submit|request/i }).last().click();
     await expect(page.getByText(/PTOUCH/).first()).toBeVisible();
     await fetch(`${API}/__test/approve?value=PTOUCH`);
@@ -165,7 +165,7 @@ test.describe('customer app', () => {
     await page.goto(`${CUSTOMER_URL}/messaging/sender-ids/request`);
     await page.getByLabel(/Sender ID/i).first().fill('BBAKERY');
     await page.getByLabel(/purpose/i).selectOption({ index: 1 });
-    await page.getByLabel(/description|how will you use/i).fill('Birthday wishes for customers.');
+    await page.getByLabel(/description|how will you use/i).fill('We send birthday wishes and special offers to customers who signed up at our bakery.');
     await page.getByRole('button', { name: /submit|request/i }).last().click();
     await expect(page.getByText(/BBAKERY/).first()).toBeVisible();
     await fetch(`${API}/__test/approve?value=BBAKERY`);

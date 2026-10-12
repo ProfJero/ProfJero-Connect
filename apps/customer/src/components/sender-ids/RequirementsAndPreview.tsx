@@ -2,7 +2,7 @@ import { ShieldCheck, Check, Eye, Info } from 'lucide-react';
 import { usePlatformConfig } from '../../lib/account';
 
 const baseRequirements = [
-  { title: 'Maximum 11 characters', description: 'Letters, numbers and spaces only — spaces count toward the limit.' },
+  { title: '3 to 11 characters', description: 'Letters, numbers and spaces — spaces count. At least one letter.' },
   { title: 'Must represent your business or organisation', description: 'Use a name that clearly identifies who the message is from.' },
   { title: 'Cannot impersonate another organisation', description: 'Names of banks, telcos, government agencies or other brands you don\'t own are rejected.' },
 ];
@@ -11,7 +11,8 @@ export function RequirementsCard() {
   const { senderIdReviewSla } = usePlatformConfig();
   const senderIdRequirements = [
     ...baseRequirements,
-    { title: 'Approval is required before use', description: `Each request is registered with the networks; this usually takes ${senderIdReviewSla}.` },
+    { title: 'Instant check, quick review if needed', description: `Clean names are approved immediately. Names that need a closer look are reviewed by our team, usually within ${senderIdReviewSla}.` },
+    { title: 'Verified by our SMS provider', description: 'Our provider verifies the Sender ID with the mobile networks when you send your first message from it.' },
   ];
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs p-5 sm:p-6">
@@ -69,7 +70,7 @@ export function PreviewCard({ senderId }: { senderId: string }) {
           <Info className="w-2.5 h-2.5" strokeWidth={2.5} />
         </div>
         <p className="text-xs text-blue-900/80 dark:text-blue-200/80 leading-snug">
-          This is a preview. Your actual Sender ID will be confirmed after approval.
+          This is a preview. Our SMS provider confirms the Sender ID with the networks on your first message.
         </p>
       </div>
     </div>

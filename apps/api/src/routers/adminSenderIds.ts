@@ -16,6 +16,7 @@ import {
   rejectAssignment,
   rejectSenderIdValue,
   revokeAssignment,
+  setSenderIdProviderStatus,
 } from '../services/senderIds';
 import {
   listPendingAssignments,
@@ -61,15 +62,24 @@ adminSenderIdsRouter.get('/queue', async (c) => {
 
   const names = new Map(projects.map((p) => [p.id, p.name]));
 
-  const enrichedValues = pendingValues.map((s) => ({
-    ...s,
-    requestedByProjectName: s.requestedByProjectId
-      ? names.get(s.requestedByProjectId) ?? '(unknown project)'
-      : '(unknown project)',
-  }));
+  // The customer's purpose/description live on their assignment.
+  const requesterAssignment = new Map(pendingAssignments.map((a) => [`${a.projectId}__${a.senderId}`, a]));
+  const enrichedValues = pendingValues.map((s) => {
+    const a = s.requestedByProjectId ? requesterAssignment.get(`${s.requestedByProjectId}__${s.value}`) : undefined;
+    return {
+      ...s,
+      requestedByProjectName: s.requestedByProjectId
+        ? names.get(s.requestedByProjectId) ?? '(unknown project)'
+        : '(unknown project)',
+      purpose: a?.purpose ?? null,
+      description: a?.description ?? null,
+      autoCheck: a?.autoCheck ?? null,
+    };
+  });
 
+  const pendingValueKeys = new Set(pendingValues.map((v) => `${v.requestedByProjectId}__${v.value}`));
   const enrichedAssignments = pendingAssignments
-    .filter((a) => names.has(a.projectId))
+    .filter((a) => names.has(a.projectId) && !pendingValueKeys.has(`${a.projectId}__${a.senderId}`))
     .map((a) => ({
       ...a,
       projectName: names.get(a.projectId) ?? '(unknown project)',
@@ -225,6 +235,28 @@ adminSenderIdsRouter.post(
       throw new HTTPException(400, {
         message: err instanceof Error ? err.message : 'Revoke failed.',
       });
+    }
+  },
+);
+// --- POST /admin/sender-ids/:value/assignments/:projectId/provider-status ---
+// Record what our SMS provider decided (after checking with them), when
+// the automatic tracking can't tell — e.g. no delivery receipts yet.
+adminSenderIdsRouter.post(
+  '/:value/assignments/:projectId/provider-status',
+  requireRole('super_admin', 'admin'),
+  async (c) => {
+    const value = parseValue(c.req.param('value'));
+    const projectId = c.req.param('projectId');
+    const body = (await c.req.json().catch(() => ({}))) as { status?: unknown; note?: unknown };
+    if (body.status !== 'verified' && body.status !== 'rejected' && body.status !== 'pending') {
+      throw new HTTPException(400, { message: 'status must be verified, rejected or pending.' });
+    }
+    const note = typeof body.note === 'string' && body.note.trim() ? body.note.trim().slice(0, 300) : null;
+    try {
+      const assignment = await setSenderIdProviderStatus(c.env, projectId, value, body.status, note);
+      return c.json({ assignment });
+    } catch (err) {
+      throw new HTTPException(400, { message: err instanceof Error ? err.message : 'Update failed.' });
     }
   },
 );

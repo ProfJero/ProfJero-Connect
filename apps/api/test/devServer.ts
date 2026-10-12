@@ -124,7 +124,7 @@ for (const b of cloud.dataProvider.bundles) {
 const seedTok = await mint('seedcust', 'kofi@example.com');
 await call('POST', '/customer/register', seedTok, { displayName: 'Kofi Boateng', organisationName: 'Boateng Pharmacy', acceptedTerms: true });
 await call('POST', '/customer/sender-ids', await mint('seedcust', 'kofi@example.com'), {
-  value: 'BOATENG', purpose: 'Transactional & Alerts', description: 'Prescription ready alerts.',
+  value: 'BOATENG', purpose: 'Transactional & Alerts', description: 'We text patients when their prescriptions are ready for pickup at our pharmacy branches.',
 });
 
 // ---------- HTTP ----------

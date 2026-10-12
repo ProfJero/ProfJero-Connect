@@ -243,23 +243,47 @@ await step('ledger text is scrubbed of provider names', async () => {
 
 // ---------- sender IDs (CP6) ----------
 
-await step('sender ID request is pending and blocks sending', async () => {
+await step('a clean Sender ID is approved instantly by the automatic check', async () => {
   const r = await call('POST', '/customer/sender-ids', {
     token,
-    body: { value: 'alicebake', purpose: 'Business Notifications', description: 'Order updates for our customers.' },
+    body: { value: 'alicebake', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' },
   });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   assert.equal(r.body.senderId.value, 'ALICEBAKE');
-  assert.equal(r.body.senderId.status, 'pending');
+  assert.equal(r.body.decision, 'approved');
+  assert.equal(r.body.senderId.status, 'approved');
+  assert.equal(r.body.senderId.providerStatus, 'not_sent', 'provider verifies on first send');
   const dup = await call('POST', '/customer/sender-ids', {
     token,
-    body: { value: 'ALICEBAKE', purpose: 'Business Notifications', description: 'Order updates for our customers.' },
+    body: { value: 'ALICEBAKE', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' },
   });
   assert.equal(dup.status, 409);
+  const n = await call('GET', '/customer/notifications', { token });
+  assert.ok(n.body.notifications.some((x: any) => x.title === 'Sender ID "ALICEBAKE" approved' && /first message/.test(x.body)));
+});
+
+await step('government, brand and generic names are refused with the reason; nothing is stored', async () => {
+  for (const [value, re] of [['GHPOLICE', /government/], ['ECOBANK', /protected brand/], ['INFO', /Too generic/], ['WINNERS', /scams/]] as const) {
+    const r = await call('POST', '/customer/sender-ids', { token, body: { value, purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' } });
+    assert.equal(r.status, 400, value);
+    assert.match(r.body.error.message, re, value);
+    assert.equal(cloud.get(`senderIds/${value}`), null, `${value} not stored`);
+  }
+  const short = await call('POST', '/customer/sender-ids', { token, body: { value: 'ALICESHOP', purpose: 'Business Notifications', description: 'Order updates.' } });
+  assert.equal(short.status, 400);
+  assert.match(short.body.error.message, /50 characters/);
+});
+
+await step('a look-alike waits for an admin and blocks sending until decided', async () => {
+  const r = await call('POST', '/customer/sender-ids', { token, body: { value: 'PAYSTAK', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' } });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal(r.body.decision, 'review');
+  assert.equal(r.body.senderId.status, 'pending');
+  assert.ok(r.body.senderId.checks.some((m: string) => /PAYSTACK/.test(m)));
   const send = await call('POST', '/customer/sms/send', {
     token,
     headers: { 'Idempotency-Key': 'send-pending-01' },
-    body: { senderId: 'ALICEBAKE', message: 'hi', recipients: ['0241234567'] },
+    body: { senderId: 'PAYSTAK', message: 'hi', recipients: ['0241234567'] },
   });
   assert.equal(send.status, 400);
   assert.match(send.body.error.message, /awaiting approval/);
@@ -277,14 +301,15 @@ await step('customer projects (incl. legacy CP1 shape) are visible to the admin 
   cloud.docs.delete('projects/legacycp1');
 });
 
-await step('admin approval notifies the customer by app and email', async () => {
-  await approveSenderIdValue(env, 'ALICEBAKE', 'admin-1');
+await step('admin approval of a reviewed name notifies the customer by app and email', async () => {
+  await approveSenderIdValue(env, 'PAYSTAK', 'admin-1');
   const s = await call('GET', '/customer/sender-ids', { token });
-  assert.equal(s.body.senderIds[0].status, 'approved');
-  assert.equal(s.body.senderIds[0].purpose, 'Business Notifications');
+  const row = s.body.senderIds.find((x: any) => x.value === 'PAYSTAK');
+  assert.equal(row.status, 'approved');
+  assert.equal(row.purpose, 'Business Notifications');
   const n = await call('GET', '/customer/notifications', { token });
-  assert.ok(n.body.notifications.some((x: any) => x.title === 'Sender ID "ALICEBAKE" approved'));
-  assert.ok(cloud.emails.some((e) => e.subject === 'Sender ID "ALICEBAKE" approved'));
+  assert.ok(n.body.notifications.some((x: any) => x.title === 'Sender ID "PAYSTAK" approved'));
+  assert.ok(cloud.emails.some((e) => e.subject === 'Sender ID "PAYSTAK" approved'));
 });
 
 // ---------- contacts + groups ----------

@@ -51,7 +51,7 @@ export function PendingQueueSection({ queue, onChanged }: Props) {
         {queue.pendingValues.length > 0 && (
           <QueueCard
             title={`Pending Value Requests (${queue.pendingValues.length})`}
-            subtitle="New Sender IDs waiting for you to register with Arkesel and approve."
+            subtitle="Held back by the automatic check (or auto-approval is off). Our provider verifies approved names on their first send."
           >
             {queue.pendingValues.map((v) => (
               <QueueRow
@@ -59,6 +59,9 @@ export function PendingQueueSection({ queue, onChanged }: Props) {
                 primary={v.value}
                 secondary={`Requested by ${v.requestedByProjectName}`}
                 when={v.requestedAt}
+                purpose={v.purpose ?? null}
+                description={v.description ?? null}
+                checks={v.autoCheck?.messages ?? []}
                 busy={busyKey === `value:${v.value}`}
                 onApprove={() =>
                   runAction(`value:${v.value}`, () =>
@@ -77,7 +80,7 @@ export function PendingQueueSection({ queue, onChanged }: Props) {
         {queue.pendingAssignments.length > 0 && (
           <QueueCard
             title={`Pending Assignment Requests (${queue.pendingAssignments.length})`}
-            subtitle="Values already registered with Arkesel, waiting for you to grant access to another project."
+            subtitle="A name another project already uses or requested. Check this project is entitled to it before granting access."
           >
             {queue.pendingAssignments.map((a) => (
               <QueueRow
@@ -85,6 +88,9 @@ export function PendingQueueSection({ queue, onChanged }: Props) {
                 primary={a.senderId}
                 secondary={`Grant access to ${a.projectName}`}
                 when={a.requestedAt}
+                purpose={a.purpose ?? null}
+                description={a.description ?? null}
+                checks={a.autoCheck?.messages ?? []}
                 busy={busyKey === `assignment:${a.projectId}:${a.senderId}`}
                 onApprove={() =>
                   runAction(`assignment:${a.projectId}:${a.senderId}`, () =>
@@ -169,6 +175,9 @@ function QueueRow({
   primary,
   secondary,
   when,
+  purpose,
+  description,
+  checks,
   busy,
   onApprove,
   onReject,
@@ -176,13 +185,16 @@ function QueueRow({
   primary: string;
   secondary: string;
   when: string;
+  purpose: string | null;
+  description: string | null;
+  checks: string[];
   busy: boolean;
   onApprove: () => void;
   onReject: () => void;
 }) {
   const { date, time } = splitDateTime(when);
   return (
-    <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+    <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start gap-3">
       <div className="flex-1 min-w-0">
         <div className="font-mono text-xs font-semibold text-slate-900 truncate">
           {primary}
@@ -193,6 +205,21 @@ function QueueRow({
         <div className="text-[10px] text-slate-500 mt-0.5">
           {date} {time}
         </div>
+        {(purpose || description) && (
+          <div className="mt-2 rounded-lg bg-slate-50 border border-slate-100 p-2.5">
+            {purpose && <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{purpose}</div>}
+            {description && <p className="text-[11px] text-slate-700 mt-0.5 leading-relaxed whitespace-pre-line break-words">{description}</p>}
+          </div>
+        )}
+        {checks.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {checks.map((m) => (
+              <li key={m} className="flex items-start gap-1.5 text-[11px] text-amber-800">
+                <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" strokeWidth={2} /> {m}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <button

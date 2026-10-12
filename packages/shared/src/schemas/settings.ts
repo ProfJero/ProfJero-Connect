@@ -31,6 +31,11 @@ export const SmsSettingsSchema = z.object({
   maxRecipientsPerSend: z.number().int().min(1).max(10000),
   /** Shown to customers when they request a Sender ID. */
   senderIdReviewSla: z.string().trim().min(1).max(80),
+  /**
+   * Approve Sender IDs that pass the automatic screen immediately.
+   * Off = every request waits for an admin.
+   */
+  senderIdAutoApproval: z.boolean().default(true),
 });
 export type SmsSettings = z.infer<typeof SmsSettingsSchema>;
 
@@ -98,6 +103,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
     defaultLowBalanceThreshold: null,
     maxRecipientsPerSend: 1000,
     senderIdReviewSla: 'up to 1 business day',
+    senderIdAutoApproval: true,
   },
   payments: {
     customerTopupsEnabled: true,
