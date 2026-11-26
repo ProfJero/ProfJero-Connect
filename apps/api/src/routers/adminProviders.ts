@@ -1,0 +1,567 @@
+import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import {
+  ProviderIdSchema,
+  ProviderListResponseSchema,
+  ProviderRequestListResponseSchema,
+  ProviderResponseSchema,
+  UpdateProviderInputSchema,
+  SetBundleAvailabilityInputSchema,
+  SetBundlePriceInputSchema,
+  UpdateBundleInputSchema,
+  SetGlobalMarkupInputSchema,
+  DEFAULT_DATA_MARKUP_PERCENT,
+  DATA_PRICE_LIST_UPDATED,
+  dataProfit,
+  type FeeModel,
+} from '@profjero/shared';
+import { getSettings } from '../services/settings';
+import { requireRole } from '../middleware/roles';
+import {
+  createProvider,
+  getProviderRecord,
+  listProviderRecords,
+  toPublicProvider,
+  updateProvider,
+} from '../repositories/providers';
+import { listRecentProviderRequests } from '../repositories/providerRequests';
+import { fetchBalance } from '../providers/arkeselClient';
+import { elitedata, EliteDataError } from '../providers/elitedataClient';
+import { syncBundlesFromProvider } from '../services/dataService';
+import {
+  getBundle,
+  listAllBundles,
+  setBundleAvailability,
+  setBundleSellPrice,
+  updateBundleFields,
+  deleteBundle,
+  applyGlobalMarkup,
+  getDataMarkupPercent,
+  setDataMarkupPercent,
+} from '../repositories/dataBundles';
+import type { AuthVariables, Env } from '../types/env';
+import { DATA_PROVIDER_ID, ensureDataProvider } from '../services/providerBalance';
+import type { Context } from 'hono';
+import type { DataOrder, DataOrderStatus } from '@profjero/shared';
+import { listAllOrders } from '../repositories/dataOrders';
+import {
+  DATA_ORDER_STATUSES,
+  GUEST_PROJECT_ID,
+  markDataOrderDelivered,
+  refreshDataOrder,
+  refundDataOrderByAdmin,
+  retryDataOrder,
+} from '../services/dataOrders';
+import { firestoreBatchGet } from '../lib/firestore';
+import { DomainError } from '../lib/domainError';
+
+export const adminProvidersRouter = new Hono<{
+  Bindings: Env;
+  Variables: AuthVariables;
+}>();
+
+function parseId(raw: string): string {
+  const parsed = ProviderIdSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new HTTPException(400, { message: `Invalid provider ID.` });
+  }
+  return parsed.data;
+}
+
+/**
+ * Wrap provider errors in a 502 so the admin UI can show a consistent
+ * "provider unreachable" message. EliteData-specific errors carry the
+ * upstream status and message.
+ */
+function providerErrorResponse(err: unknown): never {
+  if (err instanceof EliteDataError) {
+    console.error(`[admin/data] EliteData ${err.status}: ${err.providerMessage}`);
+    throw new HTTPException(502, {
+      message: `EliteData rejected the request: ${err.providerMessage}`,
+    });
+  }
+  console.error('[admin/data] unexpected error:', err);
+  throw new HTTPException(500, {
+    message: err instanceof Error ? err.message : 'Unexpected error.',
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Standard provider routes (admin CRUD + Arkesel balance + request log)
+// ─────────────────────────────────────────────────────────────────────
+
+// --- GET /admin/providers ---
+adminProvidersRouter.get('/', async (c) => {
+  let records = await listProviderRecords(c.env);
+  // The data provider is configured by its API key; give it a record the
+  // first time so it shows up next to the SMS provider.
+  if (c.env.ELITEDATA_API_KEY && !records.some((r) => r.id === DATA_PROVIDER_ID)) {
+    await ensureDataProvider(c.env, c.get('admin')?.uid ?? 'system');
+    records = await listProviderRecords(c.env);
+  }
+  const providers = records.map(toPublicProvider);
+  return c.json(
+    ProviderListResponseSchema.parse({
+      providers,
+      count: providers.length,
+    }),
+  );
+});
+
+// --- POST /admin/providers/bootstrap ---
+// Idempotent. Creates sms_gw_01 for Arkesel if it doesn't exist. Admin
+// then configures costPerUnitGhs via PUT.
+adminProvidersRouter.post(
+  '/bootstrap',
+  requireRole('super_admin'),
+  async (c) => {
+    if (c.env.ELITEDATA_API_KEY) await ensureDataProvider(c.env, c.get('admin').uid);
+    const existing = await getProviderRecord(c.env, 'sms_gw_01');
+    if (existing) {
+      return c.json(
+        ProviderResponseSchema.parse({
+          provider: toPublicProvider(existing),
+        }),
+      );
+    }
+    const admin = c.get('admin');
+    const record = await createProvider(
+      c.env,
+      {
+        id: 'sms_gw_01',
+        service: 'sms',
+        label: 'SMS Gateway 01',
+        driver: 'arkesel',
+        status: 'active',
+      },
+      admin.uid,
+    );
+    return c.json(
+      ProviderResponseSchema.parse({ provider: toPublicProvider(record) }),
+      201,
+    );
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// Data bundle admin routes (EliteData driver)
+//
+// These live under /data/* so they don't collide with the wildcard
+// /:providerId routes below. Hono matches in registration order, and
+// "/data/balance" would otherwise be interpreted as providerId="data"
+// with an unmatched sub-path.
+// ─────────────────────────────────────────────────────────────────────
+
+// --- GET /admin/providers/data/balance ---
+// Fetches the current EliteData wallet balance. Doesn't require a
+// providers/data_gw_01 record — the driver talks directly to EliteData.
+adminProvidersRouter.get(
+  '/data/balance',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    if (!c.env.ELITEDATA_API_KEY) {
+      throw new HTTPException(500, {
+        message: 'ELITEDATA_API_KEY is not configured.',
+      });
+    }
+    try {
+      const balance = await elitedata.getBalance(c.env);
+      return c.json({ ok: true, balance });
+    } catch (err) {
+      providerErrorResponse(err);
+    }
+  },
+);
+
+// --- POST /admin/providers/data/sync ---
+// Pulls the current bundle catalog from EliteData and upserts into
+// Firestore. Existing bundles keep their admin curation flag. New
+// bundles default to hidden.
+adminProvidersRouter.post(
+  '/data/sync',
+  requireRole('super_admin', 'admin'),
+  async (c) => {
+    if (!c.env.ELITEDATA_API_KEY) {
+      throw new HTTPException(500, {
+        message: 'ELITEDATA_API_KEY is not configured.',
+      });
+    }
+    try {
+      const summary = await syncBundlesFromProvider(c.env);
+      return c.json({ ok: true, summary });
+    } catch (err) {
+      providerErrorResponse(err);
+    }
+  },
+);
+
+// --- GET /admin/providers/data/bundles ---
+// Returns the local synced catalog, including admin-only fields
+// (providerCostGhs, markupPercent, availableToCustomers, active).
+adminProvidersRouter.get(
+  '/data/bundles',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const [bundles, markupPercent, fees] = await Promise.all([
+      listAllBundles(c.env),
+      getDataMarkupPercent(c.env, DEFAULT_DATA_MARKUP_PERCENT),
+      feeModel(c.env),
+    ]);
+    return c.json({
+      ok: true,
+      bundles: bundles.map((b) => {
+        const p = dataProfit({ priceGhs: b.sellPriceGhs, providerCostGhs: b.providerCostGhs, fees });
+        return { ...b, chargedGhs: p.chargedGhs, totalCostGhs: p.totalCostGhs, gatewayFeeGhs: p.gatewayFeeGhs, profitGhs: p.profitGhs, profitPercent: p.profitPercent };
+      }),
+      count: bundles.length,
+      markupPercent,
+      fees,
+      priceListUpdated: DATA_PRICE_LIST_UPDATED,
+    });
+  },
+);
+
+// --- PUT /admin/providers/data/bundles/:bundleId/availability ---
+// Toggle whether a bundle is shown to customers. Body: { available: boolean }.
+adminProvidersRouter.put(
+  '/data/bundles/:bundleId/availability',
+  requireRole('super_admin', 'admin'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const body = await c.req.json().catch(() => null);
+    const parsed = SetBundleAvailabilityInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) {
+      throw new HTTPException(404, { message: 'Bundle not found.' });
+    }
+    await setBundleAvailability(c.env, bundleId, parsed.data.available);
+    return c.json({ ok: true, bundleId, available: parsed.data.available });
+  },
+);
+
+// --- PUT /admin/providers/data/bundles/:bundleId/price ---
+// Override the auto-computed sell price. Body: { sellPriceGhs: number }.
+adminProvidersRouter.put(
+  '/data/bundles/:bundleId/price',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const body = await c.req.json().catch(() => null);
+    const parsed = SetBundlePriceInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) {
+      throw new HTTPException(404, { message: 'Bundle not found.' });
+    }
+    await setBundleSellPrice(c.env, bundleId, parsed.data.sellPriceGhs);
+    return c.json({
+      ok: true,
+      bundleId,
+      sellPriceGhs: parsed.data.sellPriceGhs,
+    });
+  },
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// Data orders (customer purchases)
+// ─────────────────────────────────────────────────────────────────────
+
+const ORDER_ID_RE = /^pjd_[a-f0-9]{24}$/;
+function orderIdParam(raw: string): string {
+  if (!ORDER_ID_RE.test(raw)) throw new HTTPException(404, { message: 'Order not found.' });
+  return raw;
+}
+/**
+ * One short, plain-language line for the operator about what is wrong
+ * (or null). Raw provider text stays available in `providerError`.
+ */
+export function orderIssue(o: DataOrder): string | null {
+  if (o.refundError) return 'Refund failed at the payment gateway — refund it from the gateway dashboard.';
+  const e = o.providerError ?? '';
+  if (/amount mismatch/i.test(e)) return 'Amount paid does not match the order. Not delivered.';
+  if (/^(outcome unknown|no reply from provider)/i.test(e)) return 'Provider reply was unclear. Checking automatically.';
+  if (/did not confirm/i.test(e)) return 'Network reported a failure. Confirm on the provider, then refund.';
+  if (/wallet balance too low/i.test(e)) return 'Provider wallet too low — customer refunded.';
+  if (/no longer offered/i.test(e)) return 'Bundle no longer offered — customer refunded.';
+  if (/account problem/i.test(e)) return 'Provider account problem — check the API key.';
+  if (/^(network|provider) (refused|reported)/i.test(e)) return 'Network could not deliver — customer refunded.';
+  if (o.needsReview) return 'Needs a quick check.';
+  if (e) return e.length > 90 ? `${e.slice(0, 87)}…` : e;
+  return null;
+}
+
+function toAdminOrder(o: DataOrder, names: Map<string, string>, fees: Partial<FeeModel>) {
+  const amountGhs = (o.amountPesewas ?? Math.round(o.sellPriceGhs * 100)) / 100;
+  const charged = o.chargePesewas ?? o.amountPesewas ?? Math.round(o.sellPriceGhs * 100);
+  const profit = dataProfit({ priceGhs: amountGhs, providerCostGhs: o.providerCostGhs, chargedPesewas: charged, fees });
+  return {
+    ...o,
+    projectName: o.guest || o.projectId === GUEST_PROJECT_ID ? 'Guest' : names.get(o.projectId) ?? null,
+    amountGhs,
+    chargedGhs: charged / 100,
+    serviceChargeGhs: profit.serviceChargeGhs,
+    gatewayFeeGhs: profit.gatewayFeeGhs,
+    totalCostGhs: profit.totalCostGhs,
+    profitGhs: profit.profitGhs,
+    /** Kept for older admin builds: same as profitGhs. */
+    marginGhs: profit.profitGhs,
+    issue: orderIssue(o),
+    checkoutUrl: undefined,
+    accessCode: undefined,
+  };
+}
+async function feeModel(env: Env): Promise<Partial<FeeModel>> {
+  const { payments } = await getSettings(env);
+  return {
+    gatewayFeePercent: payments.gatewayFeePercent,
+    providerDepositFeePercent: payments.providerDepositFeePercent,
+    serviceChargePercent: payments.serviceChargePercent,
+  };
+}
+async function projectNames(env: Env, ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return new Map();
+  const docs = await firestoreBatchGet(env, 'projects', unique);
+  return new Map(docs.map((d) => [d.id, String(d.data.name ?? '')]));
+}
+
+// --- GET /admin/providers/data/orders?status=&review=1&limit=&before= ---
+adminProvidersRouter.get('/data/orders', requireRole('super_admin', 'admin', 'finance', 'support', 'viewer'), async (c) => {
+  const status = c.req.query('status');
+  if (status && !DATA_ORDER_STATUSES.includes(status as DataOrderStatus)) {
+    throw new HTTPException(400, { message: 'Unknown status.' });
+  }
+  const limit = Math.min(Math.max(Number(c.req.query('limit') ?? 50) || 50, 1), 200);
+  const { orders, nextCursor } = await listAllOrders(c.env, {
+    status: (status as DataOrderStatus) || undefined,
+    needsReview: c.req.query('review') === '1',
+    limit,
+    before: c.req.query('before') || undefined,
+  });
+  const [names, fees] = await Promise.all([projectNames(c.env, orders.map((o) => o.projectId)), feeModel(c.env)]);
+  return c.json({ orders: orders.map((o) => toAdminOrder(o, names, fees)), nextCursor });
+});
+
+async function orderAction(c: Context<{ Bindings: Env; Variables: AuthVariables }>, action: (env: Env, id: string) => Promise<DataOrder>) {
+  const id = orderIdParam(c.req.param('orderId') ?? '');
+  try {
+    const order = await action(c.env, id);
+    const [names, fees] = await Promise.all([projectNames(c.env, [order.projectId]), feeModel(c.env)]);
+    return c.json({ order: toAdminOrder(order, names, fees) });
+  } catch (err) {
+    if (err instanceof DomainError) throw new HTTPException(err.status as 400, { message: err.message });
+    throw err;
+  }
+}
+
+// Check the gateway / provider for the latest status.
+adminProvidersRouter.post('/data/orders/:orderId/refresh', requireRole('super_admin', 'admin', 'finance', 'support'), (c) =>
+  orderAction(c, refreshDataOrder),
+);
+// Re-submit after an unknown outcome (operator confirmed it wasn't delivered).
+adminProvidersRouter.post('/data/orders/:orderId/retry', requireRole('super_admin', 'admin'), (c) =>
+  orderAction(c, retryDataOrder),
+);
+// Refund the customer in full.
+adminProvidersRouter.post('/data/orders/:orderId/refund', requireRole('super_admin', 'admin', 'finance'), (c) =>
+  orderAction(c, refundDataOrderByAdmin),
+);
+// Operator confirmed with the provider that it was delivered.
+adminProvidersRouter.post('/data/orders/:orderId/mark-delivered', requireRole('super_admin', 'admin'), (c) =>
+  orderAction(c, markDataOrderDelivered),
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// Wildcard provider routes — MUST come after the /data/* block above
+// so that literal paths win over /:providerId.
+// ─────────────────────────────────────────────────────────────────────
+
+// --- GET /admin/providers/:providerId ---
+adminProvidersRouter.get('/:providerId', async (c) => {
+  const id = parseId(c.req.param('providerId'));
+  const record = await getProviderRecord(c.env, id);
+  if (!record) throw new HTTPException(404, { message: 'Provider not found.' });
+  return c.json(
+    ProviderResponseSchema.parse({ provider: toPublicProvider(record) }),
+  );
+});
+
+// --- PUT /admin/providers/:providerId ---
+adminProvidersRouter.put(
+  '/:providerId',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const id = parseId(c.req.param('providerId'));
+    const body = await c.req.json().catch(() => null);
+    if (body === null) {
+      throw new HTTPException(400, { message: 'Body must be valid JSON.' });
+    }
+    const parsed = UpdateProviderInputSchema.safeParse(body);
+    if (!parsed.success) {
+      const detail = parsed.error.issues
+        .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+        .join('; ');
+      throw new HTTPException(400, { message: `Validation failed — ${detail}` });
+    }
+    const existing = await getProviderRecord(c.env, id);
+    if (!existing) throw new HTTPException(404, { message: 'Provider not found.' });
+
+    const admin = c.get('admin');
+    const record = await updateProvider(c.env, id, parsed.data, admin.uid);
+    return c.json(
+      ProviderResponseSchema.parse({ provider: toPublicProvider(record) }),
+    );
+  },
+);
+
+// --- POST /admin/providers/:providerId/refresh-balance ---
+adminProvidersRouter.post(
+  '/:providerId/refresh-balance',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const id = parseId(c.req.param('providerId'));
+    const record = await getProviderRecord(c.env, id);
+    if (!record) throw new HTTPException(404, { message: 'Provider not found.' });
+
+    // Only the Arkesel driver is wired through this endpoint today.
+    // EliteData has its own /data/balance route above because its balance
+    // shape (wallet GHS) doesn't map to the smsCredits field on the
+    // provider record.
+    if (record.driver === 'elitedata') {
+      try {
+        const bal = await elitedata.getBalance(c.env);
+        const updated = await updateProvider(
+          c.env,
+          id,
+          { mainBalanceGhs: Math.max(0, bal.balance), balanceCheckedAt: new Date().toISOString() },
+          c.get('admin').uid,
+        );
+        return c.json(ProviderResponseSchema.parse({ provider: toPublicProvider(updated) }));
+      } catch (err) {
+        providerErrorResponse(err);
+      }
+    }
+    if (record.driver !== 'arkesel') {
+      throw new HTTPException(400, { message: 'Balance checks are not available for this provider.' });
+    }
+    if (!c.env.ARKESEL_API_KEY) {
+      throw new HTTPException(500, {
+        message: 'ARKESEL_API_KEY is not configured.',
+      });
+    }
+
+    const balance = await fetchBalance(c.env, id);
+    if (!balance) {
+      throw new HTTPException(502, {
+        message: 'Could not fetch balance from the provider.',
+      });
+    }
+
+    const admin = c.get('admin');
+    const updated = await updateProvider(
+      c.env,
+      id,
+      {
+        credits: balance.smsCredits,
+        mainBalanceGhs: balance.mainBalanceGhs,
+        balanceCheckedAt: new Date().toISOString(),
+      },
+      admin.uid,
+    );
+
+    return c.json(
+      ProviderResponseSchema.parse({ provider: toPublicProvider(updated) }),
+    );
+  },
+);
+
+// --- GET /admin/providers/:providerId/requests ---
+adminProvidersRouter.get('/:providerId/requests', async (c) => {
+  const id = parseId(c.req.param('providerId'));
+  const record = await getProviderRecord(c.env, id);
+  if (!record) throw new HTTPException(404, { message: 'Provider not found.' });
+
+  const limitRaw = c.req.query('limit');
+  const limit = limitRaw
+    ? Math.min(Math.max(parseInt(limitRaw, 10) || 50, 1), 200)
+    : 50;
+
+  const requests = await listRecentProviderRequests(c.env, id, limit);
+  return c.json(
+    ProviderRequestListResponseSchema.parse({
+      requests,
+      count: requests.length,
+    }),
+  );
+});
+
+// --- PATCH /admin/providers/data/bundles/:bundleId ---
+// Full partial update: any of label, sellPriceGhs, displayOrder,
+// availableToCustomers, active.
+adminProvidersRouter.patch(
+  '/data/bundles/:bundleId',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const body = await c.req.json().catch(() => null);
+    const parsed = UpdateBundleInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) throw new HTTPException(404, { message: 'Bundle not found.' });
+    await updateBundleFields(c.env, bundleId, parsed.data);
+    return c.json({ ok: true, bundleId });
+  },
+);
+
+// --- DELETE /admin/providers/data/bundles/:bundleId ---
+// Removes the bundle from our local catalog. If EliteData still offers it,
+// the next sync re-adds it (as hidden, since new bundles default to hidden).
+adminProvidersRouter.delete(
+  '/data/bundles/:bundleId',
+  requireRole('super_admin', 'admin'),
+  async (c) => {
+    const bundleId = c.req.param('bundleId');
+    const existing = await getBundle(c.env, bundleId);
+    if (!existing) throw new HTTPException(404, { message: 'Bundle not found.' });
+    await deleteBundle(c.env, bundleId);
+    return c.json({ ok: true, bundleId });
+  },
+);
+
+// --- PUT /admin/providers/data/markup ---
+// Set a global markup percent and recompute every active bundle's sell
+// price from providerCostGhs. Manually-overridden prices are overwritten
+// — this is the "reset to standard pricing" action.
+adminProvidersRouter.put(
+  '/data/markup',
+  requireRole('super_admin', 'admin', 'finance'),
+  async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const parsed = SetGlobalMarkupInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new HTTPException(400, {
+        message: `Validation failed — ${parsed.error.issues[0]?.message ?? 'invalid body'}`,
+      });
+    }
+    const result = await applyGlobalMarkup(c.env, parsed.data.markupPercent);
+    await setDataMarkupPercent(c.env, parsed.data.markupPercent, c.get('admin').uid);
+    return c.json({
+      ok: true,
+      markupPercent: parsed.data.markupPercent,
+      updated: result.updated,
+    });
+  },
+);

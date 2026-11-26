@@ -1,0 +1,330 @@
+import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
+import { z } from 'zod';
+import {
+  CustomerSendSmsRequestSchema,
+  getSegmentInfo,
+  type SmsBatch,
+  type SmsRecord,
+} from '@profjero/shared';
+import { scrubProviderNames } from '../../lib/scrub';
+import { DomainError } from '../../lib/domainError';
+import {
+  getBatch,
+  listBatchesForProject,
+  listRecordsForBatch,
+  listBatchesSince,
+} from '../../repositories/sms';
+import { sendSmsBatch } from '../../services/sms';
+import { composeSend } from '../../services/compose';
+import {
+  paginateByCreatedAt,
+  parseBody,
+  parseLimit,
+  requireIdempotencyKey,
+  scopedId,
+} from './helpers';
+import { durableLimit } from '../../lib/rateLimit';
+import { getSettings } from '../../services/settings';
+import type { AuthVariables, Env } from '../../types/env';
+
+const router = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
+
+/**
+ * Customer-safe batch projection. `source` tells the dashboard apart from
+ * API-key sends without exposing key IDs.
+ */
+function toCustomerBatch(b: SmsBatch) {
+  return {
+    id: b.id,
+    source: b.apiKeyId ? ('api' as const) : ('dashboard' as const),
+    senderId: b.senderId,
+    message: b.message,
+    messageEncoding: b.messageEncoding,
+    messageSegments: b.messageSegments,
+    status: b.status,
+    totalRecipients: b.totalRecipients,
+    totalUnitsReserved: b.totalUnitsReserved,
+    totalUnitsCharged: b.totalUnitsCharged,
+    totalUnitsReleased: b.totalUnitsReleased,
+    submittedCount: b.submittedCount,
+    deliveredCount: b.deliveredCount,
+    failedCount: b.failedCount,
+    unknownCount: b.unknownCount,
+    createdAt: b.createdAt,
+    completedAt: b.completedAt,
+  };
+}
+
+function toCustomerRecord(r: SmsRecord) {
+  return {
+    id: r.id,
+    recipient: r.recipient,
+    status: r.status,
+    unitsCharged: r.unitsCharged,
+    unitsReleased: r.unitsReleased,
+    error: scrubProviderNames(r.providerError),
+    updatedAt: r.updatedAt,
+  };
+}
+
+/**
+ * A batch left in `queued` never reserved units or reached the network —
+ * typically a send refused for insufficient balance (services/sms.ts keeps
+ * it so a retry with the same key can resume). It isn't a message the
+ * customer sent, so history and stats leave it out.
+ */
+function wasAttempted(b: SmsBatch): boolean {
+  return b.status !== 'queued';
+}
+
+/**
+ * POST /customer/sms/send  (Idempotency-Key required)
+ *
+ * Same reserve → provider → confirm/release flow as POST /v1/sms/send
+ * (services/sms.ts), with recipients merged from typed numbers, contacts
+ * and groups. The batch ID is derived from the project + key, so a retry
+ * returns the original batch and never charges twice.
+ */
+router.post('/sms/send', async (c) => {
+  const customer = c.get('customer')!;
+  const projectId = c.get('projectId')!;
+  const key = requireIdempotencyKey(c);
+  const body = await parseBody(c, CustomerSendSmsRequestSchema);
+  const batchId = await scopedId('cs_', projectId, key);
+
+  // Replay before doing any work — the original request may have expanded
+  // groups whose membership has since changed.
+  const existing = await getBatch(c.env, batchId);
+  if (existing) {
+    // Same key must mean the same request (api.md §7).
+    if (existing.message !== body.message || existing.senderId !== body.senderId) {
+      throw new HTTPException(409, { message: 'This Idempotency-Key was already used for a different message.' });
+    }
+    const records = await listRecordsForBatch(c.env, batchId);
+    return c.json(
+      { batch: toCustomerBatch(existing), records: records.map(toCustomerRecord) },
+      200,
+    );
+  }
+
+  const settings = await getSettings(c.env);
+  const MAX_RECIPIENTS = settings.sms.maxRecipientsPerSend;
+  await durableLimit(c.env, `send:${projectId}`, settings.security.customerSendsPerMinute, 60, 'sends');
+
+  const composed = await composeSend(c.env, projectId, {
+    message: body.message,
+    recipients: body.recipients,
+    contactIds: body.contactIds,
+    groupIds: body.groupIds,
+    maxRecipients: MAX_RECIPIENTS,
+  });
+
+  try {
+    const result = await sendSmsBatch(c.env, {
+      projectId,
+      apiKeyId: null,
+      senderId: body.senderId,
+      message: body.message,
+      recipients: composed.recipients,
+      personalized: composed.personalized,
+      idempotencyKey: batchId,
+      actor: `customer:${customer.uid}`,
+    }, { background: (work) => c.executionCtx.waitUntil(work) });
+    return c.json(
+      {
+        batch: toCustomerBatch(result.batch),
+        records: result.records.map(toCustomerRecord),
+      },
+      result.replayed ? 200 : 201,
+    );
+  } catch (err) {
+    if (err instanceof DomainError) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('Insufficient available units')) {
+      throw new HTTPException(402, {
+        message: "You don't have enough units for this send. Top up your wallet and try again.",
+      });
+    }
+    throw err;
+  }
+});
+
+/**
+ * POST /customer/sms/preview — what a send would do, without sending:
+ * recipient count, exact units (personalised messages differ per person),
+ * and a few rendered samples. Errors (missing variables, too many
+ * recipients) come back exactly as the send would return them.
+ */
+router.post('/sms/preview', async (c) => {
+  const projectId = c.get('projectId')!;
+  const body = await parseBody(c, CustomerSendSmsRequestSchema.innerType().extend({ senderId: z.string().max(11).optional() }));
+  const settings = await getSettings(c.env);
+  const composed = await composeSend(c.env, projectId, {
+    message: body.message,
+    recipients: body.recipients,
+    contactIds: body.contactIds,
+    groupIds: body.groupIds,
+    maxRecipients: settings.sms.maxRecipientsPerSend,
+  });
+  const texts = composed.recipients.map((r) => composed.personalized?.get(r) ?? body.message);
+  const units = texts.reduce((sum, t) => sum + getSegmentInfo(t).segmentCount, 0);
+  return c.json({
+    recipients: composed.recipients.length,
+    units,
+    personalized: !!composed.personalized,
+    variables: composed.variables,
+    samples: composed.recipients.slice(0, 3).map((phone, i) => ({ phone: `+${phone}`, message: texts[i], segments: getSegmentInfo(texts[i]).segmentCount })),
+  });
+});
+
+/**
+ * GET /customer/sms/batches?limit=&before=&status=&senderId=&source=&q=
+ * Send history, newest first.
+ */
+router.get('/sms/batches', async (c) => {
+  const projectId = c.get('projectId')!;
+    const limit = parseLimit(c.req.query('limit'));
+    const before = c.req.query('before');
+    const status = c.req.query('status');
+    const senderId = c.req.query('senderId');
+    const source = c.req.query('source');
+    const q = (c.req.query('q') ?? '').trim().toLowerCase();
+
+    // Fetch limit × 3 so the client-side `source` and `q` filters have room
+    // to work without re-querying Firestore per page. `status` and `senderId`
+    // could be pushed server-side too, but keeping them here keeps the query
+    // on the single composite index (projectId, createdAt). The trade-off:
+    // a heavily-filtered page may return fewer than `limit` rows; the user
+    // can "Load more" for older matches.
+    const { batches: rawBatches, nextCursor: repoNextCursor } =
+      await listBatchesForProject(c.env, projectId, {
+        limit: Math.min(limit * 3, 200),
+        before,
+      });
+
+    const filtered = rawBatches
+      .filter(wasAttempted)
+      .map(toCustomerBatch)
+      .filter(
+        (b) =>
+          (!status || b.status === status) &&
+          (!senderId || b.senderId === senderId) &&
+          (!source || b.source === source) &&
+          (!q || b.message.toLowerCase().includes(q) || b.id.toLowerCase().includes(q)),
+      );
+
+    const page = filtered.slice(0, limit);
+    // Repo returned a full over-fetch window → there may be more history.
+    // Otherwise we've exhausted the range.
+    const nextCursor = page.length === limit ? repoNextCursor : null;
+
+    return c.json({ batches: page, count: page.length, nextCursor });
+  });
+
+/** GET /customer/sms/batches/:id — batch + per-recipient status. */
+router.get('/sms/batches/:id', async (c) => {
+  const batch = await getBatch(c.env, c.req.param('id'));
+  if (!batch || batch.projectId !== c.get('projectId')) {
+    throw new HTTPException(404, { message: 'Message not found.' });
+  }
+  const records = await listRecordsForBatch(c.env, batch.id);
+  records.sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }));
+  return c.json({
+    batch: toCustomerBatch(batch),
+    records: records.map(toCustomerRecord),
+  });
+});
+
+/**
+ * GET /customer/sms/stats?days=30
+ *
+ * Aggregates for the dashboard, messaging overview and API page, computed
+ * from the tenant's batches. Includes the preceding period of equal
+ * length so the UI can show honest deltas, and a per-day series.
+ */
+router.get('/sms/stats', async (c) => {
+  const projectId = c.get('projectId')!;
+  const days = Math.min(Math.max(parseInt(c.req.query('days') ?? '30', 10) || 30, 1), 365);
+  const now = Date.now();
+  const start = new Date(now - days * 86400_000);
+  start.setUTCHours(0, 0, 0, 0);
+  const prevStart = new Date(start.getTime() - days * 86400_000);
+
+    // Stats needs the whole window, not a page. Query only batches created
+    // since `prevStart` (the earlier of the two comparison windows), so the
+    // read cost is bounded by the requested range instead of all-time history.
+    const batches = (await listBatchesSince(c.env, projectId, prevStart.toISOString()))
+      .filter(wasAttempted)
+      .map(toCustomerBatch);
+
+  type Totals = {
+    batches: number;
+    messages: number;
+    unitsUsed: number;
+    submitted: number;
+    delivered: number;
+    failed: number;
+    pending: number;
+  };
+  const empty = (): Totals => ({
+    batches: 0,
+    messages: 0,
+    unitsUsed: 0,
+    submitted: 0,
+    delivered: 0,
+    failed: 0,
+    pending: 0,
+  });
+  const add = (t: Totals, b: ReturnType<typeof toCustomerBatch>) => {
+    t.batches += 1;
+    t.messages += b.totalRecipients;
+    t.unitsUsed += b.totalUnitsCharged;
+    t.submitted += b.submittedCount;
+    t.delivered += b.deliveredCount;
+    t.failed += b.failedCount;
+    t.pending += b.unknownCount;
+  };
+
+  const current = empty();
+  const previous = empty();
+  const bySource = { api: empty(), dashboard: empty() };
+  const bySender = new Map<string, number>();
+  const series = new Map<string, { date: string; messages: number; units: number; failed: number }>();
+  for (let i = 0; i <= days; i++) {
+    const d = new Date(start.getTime() + i * 86400_000).toISOString().slice(0, 10);
+    series.set(d, { date: d, messages: 0, units: 0, failed: 0 });
+  }
+
+  for (const b of batches) {
+    const t = new Date(b.createdAt).getTime();
+    if (t >= start.getTime()) {
+      add(current, b);
+      add(bySource[b.source], b);
+      if (b.senderId) bySender.set(b.senderId, (bySender.get(b.senderId) ?? 0) + b.totalRecipients);
+      const day = series.get(b.createdAt.slice(0, 10));
+      if (day) {
+        day.messages += b.totalRecipients;
+        day.units += b.totalUnitsCharged;
+        day.failed += b.failedCount;
+      }
+    } else if (t >= prevStart.getTime()) {
+      add(previous, b);
+    }
+  }
+
+  return c.json({
+    days,
+    current,
+    previous,
+    bySource,
+    topSenderIds: [...bySender.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([senderId, messages]) => ({ senderId, messages })),
+    series: [...series.values()],
+    lifetime: { batches: batches.length },
+  });
+});
+
+export { router as customerSmsRouter };

@@ -1,0 +1,550 @@
+import {
+  createAssignment,
+  createSenderId,
+  getAssignment,
+  getSenderId,
+  listAssignmentsForValue,
+  listPendingAssignments,
+  listSenderIds,
+  updateAssignmentStatus,
+  updateSenderIdStatus,
+  assignmentId,
+} from '../repositories/senderIds';
+import { firestoreUpdateDoc } from '../lib/firestore';
+import { notifyProject } from './notifications';
+import type { Env } from '../types/env';
+import type {
+  SenderId,
+  SenderIdAssignment,
+  SenderIdWithAssignments,
+} from '@profjero/shared';
+
+// ---------- Client-facing: request a Sender ID for a project ----------
+
+export interface RequestResult {
+  senderId: SenderId;
+  assignment: SenderIdAssignment;
+  /** True when the value already existed and was already approved. The
+   *  caller's request is pending on the assignment only. */
+  valueAlreadyApproved: boolean;
+  /** True when the value is newly created (never seen before). */
+  valueIsNew: boolean;
+}
+
+export async function requestSenderId(
+  env: Env,
+  projectId: string,
+  value: string,
+): Promise<RequestResult> {
+  // 1. Assignment already exists?
+  const existingAssignment = await getAssignment(env, projectId, value);
+  if (existingAssignment) {
+    throw new Error(
+      `This project has already requested "${value}" (status: ${existingAssignment.status}).`,
+    );
+  }
+
+  // 2. Value exists?
+  const existingValue = await getSenderId(env, value);
+
+  if (existingValue) {
+    if (existingValue.status === 'rejected') {
+      throw new Error(
+        `Sender ID "${value}" was previously rejected: ${existingValue.rejectionReason ?? 'no reason given'}.`,
+      );
+    }
+
+    // Value is pending or approved. Create the assignment as pending.
+    // If the value is pending, the admin will approve both at once.
+    // If it's approved, they'll approve just the assignment.
+    const assignment = await createAssignment(
+      env,
+      projectId,
+      value,
+      'pending',
+      null,
+    );
+
+    return {
+      senderId: existingValue,
+      assignment,
+      valueAlreadyApproved: existingValue.status === 'approved',
+      valueIsNew: false,
+    };
+  }
+
+  // 3. Brand new value. Create as pending, and the first assignment pending.
+  const senderId = await createSenderId(env, value, {
+    status: 'pending',
+    requestedByProjectId: projectId,
+    adminUid: null,
+  });
+  const assignment = await createAssignment(
+    env,
+    projectId,
+    value,
+    'pending',
+    null,
+  );
+
+  return {
+    senderId,
+    assignment,
+    valueAlreadyApproved: false,
+    valueIsNew: true,
+  };
+}
+
+
+// ---------- Customer notifications on decisions ----------
+
+/**
+ * Tell the project's owner about a decision on their Sender ID request.
+ * The ID includes decidedAt so approve → revoke → re-approve each notify
+ * once, while a retried admin click doesn't.
+ */
+async function notifyAssignmentDecision(
+  env: Env,
+  assignment: SenderIdAssignment,
+  reason: string | null = null,
+): Promise<void> {
+  const v = assignment.senderId;
+  const base = {
+    projectId: assignment.projectId,
+    id: `sender_id__${assignment.projectId}__${v}__${assignment.status}__${assignment.decidedAt ?? ''}`,
+    type: 'sender_id' as const,
+    link: '/messaging/sender-ids',
+    email: true,
+  };
+  if (assignment.status === 'approved') {
+    await notifyProject(env, {
+      ...base,
+      severity: 'success',
+      title: `Sender ID "${v}" approved`,
+      body: `Your Sender ID "${v}" is approved and ready to use. Our SMS provider verifies it with the networks when you send your first message, so send one now to start verification.`,
+    });
+  } else if (assignment.status === 'rejected') {
+    await notifyProject(env, {
+      ...base,
+      severity: 'error',
+      title: `Sender ID "${v}" was not approved`,
+      body: `Your request for Sender ID "${v}" was not approved.${reason ? ` Reason: ${reason}.` : ''} You can submit a different Sender ID from your dashboard.`,
+    });
+  } else if (assignment.status === 'revoked') {
+    await notifyProject(env, {
+      ...base,
+      severity: 'warning',
+      title: `Sender ID "${v}" is no longer active`,
+      body: `Access to Sender ID "${v}" has been withdrawn.${reason ? ` Reason: ${reason}.` : ''} Contact support if you think this is a mistake.`,
+    });
+  }
+}
+
+// ---------- Admin: approve / reject a value ----------
+
+export async function approveSenderIdValue(
+  env: Env,
+  value: string,
+  adminUid: string,
+): Promise<SenderIdWithAssignments> {
+  const existing = await getSenderId(env, value);
+  if (!existing) throw new Error(`Sender ID "${value}" not found.`);
+  if (existing.status === 'approved') {
+    // Idempotent — return current state.
+    return getSenderIdWithAssignments(env, value);
+  }
+  if (existing.status === 'rejected') {
+    throw new Error(
+      `Sender ID "${value}" was previously rejected and cannot be re-approved directly.`,
+    );
+  }
+
+  // Approve the value.
+  await updateSenderIdStatus(env, value, 'approved', adminUid, null);
+
+  // Auto-approve the first-requester's assignment if it's still pending.
+  if (existing.requestedByProjectId) {
+    const firstAssignment = await getAssignment(
+      env,
+      existing.requestedByProjectId,
+      value,
+    );
+    if (firstAssignment && firstAssignment.status === 'pending') {
+      const approved = await updateAssignmentStatus(
+        env,
+        existing.requestedByProjectId,
+        value,
+        'approved',
+        adminUid,
+        'Auto-approved with value',
+      );
+      await notifyAssignmentDecision(env, approved);
+    }
+  }
+
+  return getSenderIdWithAssignments(env, value);
+}
+
+export async function rejectSenderIdValue(
+  env: Env,
+  value: string,
+  adminUid: string,
+  reason: string,
+): Promise<SenderIdWithAssignments> {
+  const existing = await getSenderId(env, value);
+  if (!existing) throw new Error(`Sender ID "${value}" not found.`);
+
+  // Reject the value.
+  await updateSenderIdStatus(env, value, 'rejected', adminUid, reason);
+
+  // Cascade: reject every pending assignment for this value.
+  const assignments = await listAssignmentsForValue(env, value);
+  for (const a of assignments) {
+    if (a.status === 'pending') {
+      const rejected = await updateAssignmentStatus(
+        env,
+        a.projectId,
+        value,
+        'rejected',
+        adminUid,
+        `Value rejected: ${reason}`,
+      );
+      await notifyAssignmentDecision(env, rejected, reason);
+    }
+  }
+
+  return getSenderIdWithAssignments(env, value);
+}
+
+// ---------- Admin: approve / reject / revoke an assignment ----------
+
+export async function approveAssignment(
+  env: Env,
+  projectId: string,
+  value: string,
+  adminUid: string,
+): Promise<SenderIdAssignment> {
+  const senderId = await getSenderId(env, value);
+  if (!senderId) throw new Error(`Sender ID "${value}" not found.`);
+  if (senderId.status !== 'approved') {
+    throw new Error(
+      `Cannot approve assignment: value "${value}" is currently ${senderId.status}.`,
+    );
+  }
+
+  const assignment = await getAssignment(env, projectId, value);
+  if (!assignment) {
+    throw new Error(
+      `No assignment for project "${projectId}" and Sender ID "${value}".`,
+    );
+  }
+  if (assignment.status === 'approved') return assignment;
+
+  const approved = await updateAssignmentStatus(
+    env,
+    projectId,
+    value,
+    'approved',
+    adminUid,
+  );
+  await notifyAssignmentDecision(env, approved);
+  return approved;
+}
+
+export async function rejectAssignment(
+  env: Env,
+  projectId: string,
+  value: string,
+  adminUid: string,
+  notes: string | null,
+): Promise<SenderIdAssignment> {
+  const assignment = await getAssignment(env, projectId, value);
+  if (!assignment) {
+    throw new Error(
+      `No assignment for project "${projectId}" and Sender ID "${value}".`,
+    );
+  }
+  const updated = await updateAssignmentStatus(
+    env,
+    projectId,
+    value,
+    'rejected',
+    adminUid,
+    notes,
+  );
+  await notifyAssignmentDecision(env, updated, notes);
+  return updated;
+}
+
+export async function revokeAssignment(
+  env: Env,
+  projectId: string,
+  value: string,
+  adminUid: string,
+  notes: string | null,
+): Promise<SenderIdAssignment> {
+  const assignment = await getAssignment(env, projectId, value);
+  if (!assignment) {
+    throw new Error(
+      `No assignment for project "${projectId}" and Sender ID "${value}".`,
+    );
+  }
+  const updated = await updateAssignmentStatus(
+    env,
+    projectId,
+    value,
+    'revoked',
+    adminUid,
+    notes,
+  );
+  await notifyAssignmentDecision(env, updated, notes);
+  return updated;
+}
+
+// ---------- Admin: fast-path direct creation ----------
+
+export async function adminCreateSenderId(
+  env: Env,
+  value: string,
+  projectId: string,
+  adminUid: string,
+  autoApprove: boolean,
+  notes: string | null,
+): Promise<{ senderId: SenderId; assignment: SenderIdAssignment }> {
+  let senderId = await getSenderId(env, value);
+
+  if (!senderId) {
+    senderId = await createSenderId(env, value, {
+      status: autoApprove ? 'approved' : 'pending',
+      requestedByProjectId: projectId,
+      adminUid,
+    });
+  } else if (autoApprove && senderId.status !== 'approved') {
+    if (senderId.status === 'rejected') {
+      throw new Error(
+        `Sender ID "${value}" was previously rejected. Remove the rejection first.`,
+      );
+    }
+    senderId = await updateSenderIdStatus(env, value, 'approved', adminUid, null);
+  }
+
+  const existingAssignment = await getAssignment(env, projectId, value);
+  if (existingAssignment) {
+    throw new Error(
+      `Project already has an assignment for "${value}" (status: ${existingAssignment.status}).`,
+    );
+  }
+
+  const assignment = await createAssignment(
+    env,
+    projectId,
+    value,
+    autoApprove ? 'approved' : 'pending',
+    adminUid,
+    notes,
+  );
+
+  return { senderId, assignment };
+}
+
+// ---------- Read helpers ----------
+
+export async function getSenderIdWithAssignments(
+  env: Env,
+  value: string,
+): Promise<SenderIdWithAssignments> {
+  const senderId = await getSenderId(env, value);
+  if (!senderId) throw new Error(`Sender ID "${value}" not found.`);
+
+  const assignments = await listAssignmentsForValue(env, value);
+  const { projectNameMap } = await import('../repositories/senderIds');
+  const names = await projectNameMap(env);
+
+  return {
+    ...senderId,
+    assignments: assignments.map((a) => ({
+      ...a,
+      projectName: names.get(a.projectId) ?? '(unknown project)',
+    })),
+  };
+}
+
+export async function listAllSenderIds(
+  env: Env,
+): Promise<SenderIdWithAssignments[]> {
+  const senderIds = await listSenderIds(env);
+  const { projectNameMap } = await import('../repositories/senderIds');
+  const names = await projectNameMap(env);
+
+  const out: SenderIdWithAssignments[] = [];
+  for (const s of senderIds) {
+    const assignments = await listAssignmentsForValue(env, s.value);
+    out.push({
+      ...s,
+      assignments: assignments.map((a) => ({
+        ...a,
+        projectName: names.get(a.projectId) ?? '(unknown project)',
+      })),
+    });
+  }
+  return out;
+}
+
+// ---------- Enforcement hook (called by sms service) ----------
+
+/**
+ * Throw if the project cannot send using this Sender ID. Called before any
+ * wallet reservation happens. Errors are user-safe messages.
+ */
+export async function assertSenderIdAllowed(
+  env: Env,
+  projectId: string,
+  value: string,
+): Promise<void> {
+  const senderId = await getSenderId(env, value);
+  if (!senderId) {
+    throw new Error(
+      `Sender ID "${value}" is not registered in ProfJero SMS. Request it from your dashboard.`,
+    );
+  }
+  if (senderId.status === 'pending') {
+    throw new Error(
+      `Sender ID "${value}" is awaiting approval. You'll be notified once it's ready.`,
+    );
+  }
+  if (senderId.status === 'rejected') {
+    throw new Error(
+      `Sender ID "${value}" was rejected: ${senderId.rejectionReason ?? 'no reason given'}.`,
+    );
+  }
+
+  const assignment = await getAssignment(env, projectId, value);
+  if (!assignment) {
+    throw new Error(
+      `Sender ID "${value}" is not assigned to this project. Request it from your dashboard.`,
+    );
+  }
+  if (assignment.status === 'pending') {
+    throw new Error(
+      `Your request for Sender ID "${value}" is awaiting approval.`,
+    );
+  }
+  if (assignment.status === 'rejected') {
+    throw new Error(`Sender ID "${value}" was rejected for this project.`);
+  }
+  if (assignment.status === 'revoked') {
+    throw new Error(`Sender ID "${value}" access has been revoked.`);
+  }
+}
+// ---------- Automatic screening (customer requests) ----------
+
+export const AUTO_APPROVER = 'system:auto-check';
+
+/**
+ * Decide a fresh customer request using the automatic screen. Only names
+ * that pass every check and aren't already used by another project are
+ * approved without a person; everything else stays pending for an admin.
+ */
+export async function autoDecideSenderId(
+  env: Env,
+  projectId: string,
+  value: string,
+  verdict: 'approve' | 'review',
+  enabled: boolean,
+): Promise<'approved' | 'review'> {
+  if (!enabled || verdict !== 'approve') return 'review';
+  const existing = await getSenderId(env, value);
+  // Another project asked for (or owns) this exact name: a person decides.
+  if (!existing || existing.requestedByProjectId !== projectId || existing.status !== 'pending') return 'review';
+  await approveSenderIdValue(env, value, AUTO_APPROVER);
+  return 'approved';
+}
+
+// ---------- Provider verification (happens on first send) ----------
+
+/**
+ * Called when a batch finishes. Our provider verifies a Sender ID with the
+ * networks when it is first used, so:
+ *  - first accepted message → providerStatus "pending" (returns true so the
+ *    batch is flagged and its first delivery receipt can confirm it);
+ *  - every message refused for a sender reason → "rejected", customer told.
+ * One assignment read per finished batch; nothing once verified.
+ */
+export async function noteSenderIdUse(
+  env: Env,
+  batch: { projectId: string; senderId: string | null; id: string },
+  outcome: { submittedCount: number; failedCount: number; senderErrors: number },
+): Promise<boolean> {
+  if (!batch.senderId) return false;
+  const a = await getAssignment(env, batch.projectId, batch.senderId);
+  if (!a || a.status !== 'approved' || a.providerStatus === 'verified') return false;
+  const now = new Date().toISOString();
+  if (outcome.submittedCount > 0) {
+    if (a.providerStatus !== 'pending') {
+      await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(batch.projectId, batch.senderId), {
+        providerStatus: 'pending',
+        providerFirstSentAt: now,
+        providerNote: null,
+      });
+    }
+    return true;
+  }
+  if (outcome.failedCount > 0 && outcome.senderErrors === outcome.failedCount && a.providerStatus !== 'rejected') {
+    await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(batch.projectId, batch.senderId), {
+      providerStatus: 'rejected',
+      providerNote: 'Our SMS provider did not accept this Sender ID.',
+    });
+    await notifyProject(env, {
+      projectId: batch.projectId,
+      id: `sender_id_provider_rejected__${batch.projectId}__${batch.senderId}`,
+      type: 'sender_id',
+      severity: 'error',
+      title: `Sender ID "${batch.senderId}" was not accepted by our provider`,
+      body: `Our SMS provider, which verifies Sender IDs with the mobile networks, did not accept "${batch.senderId}". Units for the failed messages were returned. Contact support or request a different Sender ID.`,
+      link: '/messaging/sender-ids',
+      email: true,
+    });
+  }
+  return false;
+}
+
+/** A message from a flagged batch was delivered: the provider has verified the Sender ID. */
+export async function markSenderIdVerified(env: Env, projectId: string, value: string): Promise<void> {
+  const a = await getAssignment(env, projectId, value);
+  if (!a || a.providerStatus === 'verified') return;
+  await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(projectId, value), {
+    providerStatus: 'verified',
+    providerVerifiedAt: new Date().toISOString(),
+    providerNote: null,
+  });
+  await notifyProject(env, {
+    projectId,
+    id: `sender_id_verified__${projectId}__${value}`,
+    type: 'sender_id',
+    severity: 'success',
+    title: `Sender ID "${value}" verified by our provider`,
+    body: `Messages from "${value}" are being delivered — our SMS provider has verified it with the networks.`,
+    link: '/messaging/sender-ids',
+  });
+}
+
+/** Admin override after confirming with the provider. */
+export async function setSenderIdProviderStatus(
+  env: Env,
+  projectId: string,
+  value: string,
+  status: 'verified' | 'rejected' | 'pending',
+  note: string | null,
+): Promise<SenderIdAssignment> {
+  const a = await getAssignment(env, projectId, value);
+  if (!a) throw new Error(`No assignment for project "${projectId}" and Sender ID "${value}".`);
+  if (status === 'verified') {
+    await markSenderIdVerified(env, projectId, value);
+  } else {
+    await firestoreUpdateDoc(env, 'senderIdAssignments', assignmentId(projectId, value), {
+      providerStatus: status,
+      providerNote: note,
+    });
+  }
+  return (await getAssignment(env, projectId, value))!;
+}
