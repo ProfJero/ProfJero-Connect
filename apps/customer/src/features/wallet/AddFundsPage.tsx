@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, ArrowRight, Info, Check, Package, ShieldCheck, Receipt } from 'lucide-react';
 import {
   PaymentMethodSelector,
@@ -9,6 +9,7 @@ import { RecentPayments } from '../../components/add-funds/RecentPayments';
 import { ErrorState, Notice, SkeletonRows, Spinner } from '../../components/ui/States';
 import { inputClass } from '../../components/ui/buttons';
 import { api, errorMessage, newIdempotencyKey } from '../../lib/api';
+import { openCheckout } from '../../lib/paystack';
 import { useApi } from '../../lib/useApi';
 import { usePlatformConfig, useWallet } from '../../lib/account';
 import { formatGhs } from '../../lib/format';
@@ -67,6 +68,7 @@ export function AddFundsPage() {
         ? { name: 'Custom amount', units: custom.units, price: custom.price }
         : null;
 
+  const navigate = useNavigate();
   const handleContinue = async () => {
     if (!summary || !active) return;
     const intent = JSON.stringify([active.kind === 'package' ? active.pkg.id : summary.units, method]);
@@ -76,14 +78,19 @@ export function AddFundsPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await api.post<{ payment: CustomerPayment; checkoutUrl: string }>(
+      const res = await api.post<{ payment: CustomerPayment; checkoutUrl: string; accessCode?: string | null }>(
         '/customer/payments',
         active.kind === 'package'
           ? { packageId: active.pkg.id, method }
           : { units: summary.units, method },
         { idempotencyKey: keyRef.current.key },
       );
-      window.location.assign(res.checkoutUrl);
+      const outcome = await openCheckout(res.accessCode, res.checkoutUrl);
+      if (outcome === 'paid') {
+        navigate(`/wallet/add-funds/complete?reference=${encodeURIComponent(res.payment.reference)}`);
+      } else if (outcome === 'closed') {
+        setSubmitting(false);
+      }
     } catch (err) {
       setError(errorMessage(err));
       setSubmitting(false);

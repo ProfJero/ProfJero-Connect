@@ -34,6 +34,9 @@ import { BatchDetailPage } from './features/messaging/BatchDetailPage';
 import { BuyDataPage } from './features/data/BuyDataPage';
 import { DataOrderPage } from './features/data/DataOrderPage';
 import { DataOrdersPage } from './features/data/DataOrdersPage';
+import { TrackOrderPage } from './features/data/TrackOrderPage';
+import { GuestLayout } from './components/guest/GuestLayout';
+import { GuestShop } from './components/guest/GuestShop';
 
 export default function App() {
   return (
@@ -51,6 +54,14 @@ export default function App() {
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/auth/link" element={<EmailLinkPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+            {/* Data without an account */}
+            <Route element={<GuestLayout />}>
+              <Route path="/data" element={<GuestShop />} />
+              <Route path="/data/complete" element={<DataOrderPage guest />} />
+              <Route path="/data/orders/:orderId" element={<DataOrderPage guest />} />
+              <Route path="/data/track" element={<TrackOrderPage />} />
+            </Route>
 
             {/* Protected */}
             <Route element={<ProtectedRoute />}>

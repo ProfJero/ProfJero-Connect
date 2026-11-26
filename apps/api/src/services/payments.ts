@@ -11,6 +11,7 @@ import {
   verifyTransaction,
 } from '../providers/paystackClient';
 import { DomainError } from '../lib/domainError';
+import { gatewayAmountPesewas } from '@profjero/shared';
 import { notifyProject } from './notifications';
 import type { Env } from '../types/env';
 import type { Payment } from '@profjero/shared';
@@ -36,11 +37,14 @@ export interface InitiateArgs {
   reference?: string;
   /** Gateway checkout channels to offer (e.g. ['mobile_money']). */
   channels?: string[];
+  /** Customer checkouts: added to the gateway amount only. */
+  serviceChargePercent?: number;
 }
 
 export interface InitiateResult {
   payment: Payment;
   authorizationUrl: string;
+  accessCode: string | null;
 }
 
 export async function initiatePayment(
@@ -63,7 +67,7 @@ export async function initiatePayment(
       if (!samePurchase) {
         throw new DomainError('This Idempotency-Key was already used for a different purchase.', 409);
       }
-      return { payment: existing, authorizationUrl: existing.authorizationUrl };
+      return { payment: existing, authorizationUrl: existing.authorizationUrl, accessCode: existing.accessCode };
     }
   }
 
@@ -105,10 +109,11 @@ export async function initiatePayment(
   }
 
   const reference = args.reference ?? newReference();
+  const chargePesewas = gatewayAmountPesewas(amountPesewas, args.serviceChargePercent ?? 0);
 
   const init = await initializeTransaction(env, {
     email: args.customerEmail,
-    amountPesewas,
+    amountPesewas: chargePesewas,
     reference,
     currency: 'GHS',
     callbackUrl: args.callbackUrl,
@@ -126,6 +131,7 @@ export async function initiatePayment(
     packageId,
     units,
     amountPesewas,
+    ...(chargePesewas !== amountPesewas ? { chargePesewas } : {}),
     currency: 'GHS',
     customerEmail: args.customerEmail,
     authorizationUrl: init.authorizationUrl,
@@ -133,7 +139,7 @@ export async function initiatePayment(
     createdBy: args.createdBy,
   });
 
-  return { payment, authorizationUrl: init.authorizationUrl };
+  return { payment, authorizationUrl: init.authorizationUrl, accessCode: init.accessCode || null };
 }
 
 /**
@@ -295,9 +301,10 @@ export async function verifyAndSettlePayment(
   }
 
   // Guard against a mismatched amount (shouldn't happen, but cheap to check).
-  if (result.amountPesewas !== payment.amountPesewas) {
+  const expected = payment.chargePesewas ?? payment.amountPesewas;
+  if (result.amountPesewas !== expected) {
     throw new DomainError(
-      `Paystack amount mismatch: expected ${payment.amountPesewas}, got ${result.amountPesewas}.`,
+      `Paystack amount mismatch: expected ${expected}, got ${result.amountPesewas}.`,
       502,
     );
   }

@@ -24,6 +24,11 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
+    // Data can be bought without an account: send visitors to the open shop.
+    if (location.pathname === '/services/data' || location.pathname.startsWith('/services/data/')) {
+      const rest = location.pathname.slice('/services/data'.length).replace(/^\/orders$/, '/track');
+      return <Navigate to={`/data${rest}${location.search}`} replace />;
+    }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

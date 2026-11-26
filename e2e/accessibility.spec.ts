@@ -21,7 +21,7 @@ test.describe('accessibility (axe, WCAG 2.1 A/AA)', () => {
   test('customer screens', async ({ page }) => {
     test.setTimeout(180_000);
     const found: string[] = [];
-    for (const path of ['/login', '/signup', '/forgot-password', '/developers']) {
+    for (const path of ['/login', '/signup', '/forgot-password', '/developers', '/data', '/data/track']) {
       await page.goto(`${CUSTOMER_URL}${path}`);
       found.push(...await axeViolations(page, `customer ${path}`));
     }

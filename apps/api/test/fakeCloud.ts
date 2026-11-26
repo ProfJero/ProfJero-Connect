@@ -40,11 +40,18 @@ export interface FakeCloud {
    * a network error (outcome unknown). orders: provider order id → status.
    */
   dataProvider: {
-    mode: 'processing' | 'delivered' | 'reject' | 'http503' | 'network';
+    /**
+     * live: accepts like the real API does — numeric id, no bundleSize /
+     * pricePaid / recipientNumber / createdAt. lostReply: accepts the order
+     * but the reply never arrives (503 after recording it).
+     */
+    mode: 'processing' | 'delivered' | 'reject' | 'http503' | 'network' | 'live' | 'lostReply' | 'noFunds';
     bundles: Array<{ bundleId: string; network: string; size: string; price: number; label: string }>;
     orders: Map<string, { status: string; clientReference: string }>;
     purchases: Array<{ bundleId: string; recipientNumber: string; clientReference: string }>;
   };
+  /** Amount (pesewas) each checkout was initialised with at the gateway, by reference. */
+  gatewayAmounts: Map<string, number>;
   /** Gateway refunds requested (transaction references). refundMode 'error' makes them fail. */
   refunds: string[];
   refundMode: 'ok' | 'error';
@@ -379,12 +386,24 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
         if (dataProvider.mode === 'network') throw new TypeError('fetch failed: ECONNRESET');
         if (dataProvider.mode === 'http503') return json({ success: false, message: 'Service Unavailable' }, 503);
         if (dataProvider.mode === 'reject') return json({ success: false, message: 'Insufficient wallet balance' }, 400);
+        if (dataProvider.mode === 'noFunds') return json({ success: false, message: 'Insufficient funds' }, 402);
         dataProvider.purchases.push(body);
+        if (dataProvider.mode === 'live' || dataProvider.mode === 'lostReply') {
+          const numericId = 90000 + ++autoId;
+          dataProvider.orders.set(String(numericId), { status: 'PROCESSING', clientReference: body.clientReference });
+          if (dataProvider.mode === 'lostReply') return json({ success: false, message: 'Gateway Timeout' }, 504);
+          return json({ success: true, order: { id: numericId, clientReference: body.clientReference, status: 'PROCESSING' } });
+        }
         const id = `ed_${++autoId}`;
         const status = dataProvider.mode === 'delivered' ? 'delivered' : 'processing';
         dataProvider.orders.set(id, { status, clientReference: body.clientReference });
         const b = dataProvider.bundles.find((x) => x.bundleId === body.bundleId);
         return json({ success: true, order: { id, clientReference: body.clientReference, bundleSize: b?.size ?? '?', pricePaid: b?.price ?? 0, recipientNumber: body.recipientNumber, status, createdAt: new Date().toISOString() } });
+      }
+      if (url.pathname === '/api/v1/orders' && !url.searchParams.has('id')) {
+        const recent = [...dataProvider.orders.entries()].slice(-10).reverse()
+          .map(([id, o]) => ({ id: /^\d+$/.test(id) ? Number(id) : id, clientReference: o.clientReference, status: o.status }));
+        return json({ success: true, orders: recent });
       }
       if (url.pathname === '/api/v1/orders') {
         const id = url.searchParams.get('id') ?? '';
@@ -430,6 +449,7 @@ export function createFakeCloud(opts: { projectId: string; certPem: string; kid:
     claims,
     emails,
     gatewayStatus,
+    gatewayAmounts,
     authUsers,
     provider,
     dataProvider,

@@ -248,9 +248,9 @@ test.describe('customer app', () => {
     await expect(page.getByRole('tab', { name: /Telecel/ })).toHaveAttribute('aria-selected', 'true');
     // Pick an MTN bundle for a Telecel number → warning, pay blocked until confirmed.
     await page.getByRole('tab', { name: /^MTN/ }).click();
-    await page.getByRole('radio', { name: /^1GB for GH₵4\.40/ }).click();
+    await page.getByRole('radio', { name: /^1GB for GH₵4\.60/ }).click();
     await expect(page.getByText(/looks like a Telecel number/)).toBeVisible();
-    const pay = page.getByRole('button', { name: 'Pay GH₵4.40' });
+    const pay = page.getByRole('button', { name: 'Pay GH₵4.60' });
     await expect(pay).toBeDisabled();
     // Switch to the right number instead.
     await page.getByLabel('Phone number').fill('0241234567');
@@ -281,20 +281,67 @@ test.describe('customer app', () => {
     const feed = page.locator('section', { has: page.getByRole('heading', { name: 'Account overview' }) });
     await expect(feed.getByText('MTN 1GB data').first()).toBeVisible();
     await expect(feed.getByText('1 bundle')).toBeVisible();
-    await expect(feed.getByText('Data GH₵4.40', { exact: true })).toBeVisible();
+    await expect(feed.getByText('Data GH₵4.60', { exact: true })).toBeVisible();
   });
 
-  test('data orders: operators see customer purchases with cost and margin', async ({ page }) => {
+  test('data orders: operators see purchases with cost, real profit and a plain status', async ({ page }) => {
     // Runs after the purchase above (same backend).
     await adminLogin(page);
     await page.goto(`${ADMIN_URL}/providers/data/orders`);
     await expect(page.getByRole('heading', { level: 1, name: 'Data Orders' })).toBeVisible();
     await page.getByRole('tab', { name: 'All' }).click();
-    await expect(page.getByText('MTN 1GB Data').first()).toBeVisible();
-    await expect(page.getByText('Delivered').first()).toBeVisible();
-    await expect(page.getByText(/cost GH₵4\.00/).first()).toBeVisible();
+    const table = page.getByRole('region', { name: 'Data orders' });
+    await expect(table.getByText('Delivered').first()).toBeVisible();
+    await expect(table.getByText(/cost GH₵4\.10/).first()).toBeVisible();
+    await expect(page.getByText('Real profit').first()).toBeVisible();
+    // Details open on demand; no raw provider JSON in the status column.
+    await table.getByRole('button', { name: /Details/ }).first().click();
+    await expect(table.getByText('Customer paid (with service charge)')).toBeVisible();
+    await expect(table.getByText(/invalid_type|"code"/)).toHaveCount(0);
     await page.getByRole('tab', { name: 'Needs attention' }).click();
     await expect(page.getByText('Nothing needs attention')).toBeVisible();
+  });
+
+  test('buy data without an account: in-page payment, pending, then track by number', async ({ page }) => {
+    // Stand-in for the payment gateway's in-page window: "pays" at once.
+    await page.route('https://js.paystack.co/**', (route) =>
+      route.fulfill({
+        contentType: 'application/javascript',
+        body: `window.PaystackPop = function () {};
+          window.PaystackPop.prototype.resumeTransaction = function (code, cb) {
+            window.__paystackCode = code;
+            fetch('${API}/__test/paid').then(function () { setTimeout(function () { cb.onSuccess({ reference: code }); }, 50); });
+          };`,
+      }),
+    );
+    await page.goto(`${CUSTOMER_URL}/data`);
+    await expect(page.getByRole('heading', { name: 'Buy data' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Sign in/ })).toBeVisible();
+    await page.getByLabel('Phone number').fill('0245556677');
+    await page.getByRole('radio', { name: /^1GB for GH₵4\.60/ }).click();
+    await page.getByLabel(/Email for your receipt/).fill('guest.buyer@example.com');
+    await page.getByRole('button', { name: 'Pay GH₵4.60' }).click();
+    await page.waitForURL(/\/data\/orders\/pjd_/);
+    await expect(page.getByRole('heading', { name: /Data delivered|Order received — pending/ })).toBeVisible({ timeout: 15_000 });
+    expect(await page.evaluate(() => (window as unknown as { __paystackCode?: string }).__paystackCode)).toMatch(/^ac_pjd_/);
+    // Never a service charge or fee in our pages.
+    await expect(page.getByText(/service charge|GH₵4\.69/i)).toHaveCount(0);
+    const orderId = page.url().split('/').pop()!;
+
+    await page.getByRole('link', { name: 'Track order' }).first().click();
+    await page.getByLabel('Order ID or phone number').fill('024 555 6677');
+    await page.getByRole('button', { name: 'Track' }).click();
+    await expect(page.getByRole('link', { name: /MTN 1GB/ })).toBeVisible();
+    await page.getByLabel('Order ID or phone number').fill(orderId);
+    await page.getByRole('button', { name: 'Track' }).click();
+    await page.waitForURL(new RegExp(`/data/orders/${orderId}`));
+  });
+
+  test('signed-out visitors to the in-app data shop land in the open shop', async ({ page }) => {
+    await page.goto(`${CUSTOMER_URL}/services/data`);
+    await page.waitForURL(/\/data$/);
+    await page.goto(`${CUSTOMER_URL}/login`);
+    await expect(page.getByRole('link', { name: /Just buying data\?/ })).toBeVisible();
   });
 
   test('password sign-up waits for the email to be confirmed, then opens the account', async ({ page }) => {

@@ -17,6 +17,8 @@ interface Bundle {
   guestPriceGhs?: number | null;
   availableToCustomers: boolean;
   active: boolean;
+  /** After gateway and provider top-up fees. */
+  profitGhs?: number;
 }
 
 const ghs = (n: number) => `GH₵${n.toFixed(2)}`;
@@ -139,13 +141,13 @@ export function DataPricingPanel() {
         <div className="px-5 py-3 border-b border-slate-100 text-sm font-bold text-slate-900">Prices by network</div>
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Data prices">
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 text-slate-500 text-left">
+            <thead className="bg-slate-50 text-slate-700 text-left">
               <tr>
                 <th scope="col" className="px-5 py-2.5 font-semibold">Bundle</th>
                 <th scope="col" className="px-4 py-2.5 font-semibold text-right">Our cost</th>
                 <th scope="col" className="px-4 py-2.5 font-semibold text-right">We sell</th>
                 <th scope="col" className="px-4 py-2.5 font-semibold text-right">Provider retail</th>
-                <th scope="col" className="px-4 py-2.5 font-semibold text-right">Margin</th>
+                <th scope="col" className="px-4 py-2.5 font-semibold text-right">Profit / sale</th>
                 <th scope="col" className="px-4 py-2.5 font-semibold">On sale</th>
               </tr>
             </thead>
@@ -158,7 +160,7 @@ export function DataPricingPanel() {
                     <td className="px-4 py-2.5 text-right tabular-nums">{ghs(b.providerCostGhs)}</td>
                     <td className={cn('px-4 py-2.5 text-right tabular-nums font-semibold', over ? 'text-rose-700' : 'text-slate-900')}>{ghs(b.sellPriceGhs)}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-slate-500">{b.guestPriceGhs != null ? ghs(b.guestPriceGhs) : '—'}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-emerald-700">{ghs(b.sellPriceGhs - b.providerCostGhs)}</td>
+                    <td className={cn('px-4 py-2.5 text-right tabular-nums', (b.profitGhs ?? b.sellPriceGhs - b.providerCostGhs) > 0 ? 'text-emerald-700' : 'text-rose-700')}>{ghs(b.profitGhs ?? b.sellPriceGhs - b.providerCostGhs)}</td>
                     <td className="px-4 py-2.5">{b.availableToCustomers ? 'Yes' : <span className="text-slate-500">Hidden</span>}</td>
                   </tr>
                 );

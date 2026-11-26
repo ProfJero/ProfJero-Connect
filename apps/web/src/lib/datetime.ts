@@ -35,3 +35,9 @@ export function timeAgo(iso: string | null | undefined): string {
   if (d < 7) return `${d} day${d === 1 ? '' : 's'} ago`;
   return DATE_FMT.format(new Date(iso));
 }
+
+/** "Nov 26, 2026, 10:05 AM" (or "—"). */
+export function formatDateTime(iso: string | null | undefined): string {
+  const { date, time } = splitDateTime(iso);
+  return time ? `${date}, ${time}` : date;
+}

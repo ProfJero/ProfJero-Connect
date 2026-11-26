@@ -1,6 +1,6 @@
 # ProfJero Connect — Testing & Security Report
 
-_Last run: 2026-10-12, branch `claude/nifty-babbage-1reeo5`._
+_Last run: 2026-11-26, branch `claude/happy-tesla-dc2hre`._
 
 This covers both platforms (admin `apps/web`, customer `apps/customer`) and
 the shared API (`apps/api`). Every suite runs locally without any Firebase,
@@ -17,12 +17,12 @@ Windows CMD and macOS/Linux use the same commands, from the repo root.
 | Lint | `npm run lint --workspace=web` and `--workspace=customer` | — |
 | API: customer journey (30 checks) | `npm run test:customer --workspace=@profjero/api` | `openssl` on PATH (Git for Windows has one) |
 | API: security & reliability (61 checks) | `npm run test:security --workspace=@profjero/api` | `openssl` |
-| API: new features (36 checks) | `npm run test:features --workspace=@profjero/api` | `openssl` |
-| API: data bundles (18 checks) | `npm run test:data --workspace=@profjero/api` | `openssl` |
+| API: new features (37 checks) | `npm run test:features --workspace=@profjero/api` | `openssl` |
+| API: data bundles (28 checks) | `npm run test:data --workspace=@profjero/api` | `openssl` |
 | API: all four suites | `npm test --workspace=@profjero/api` | `openssl` |
 | Load test | `npm run test:load --workspace=@profjero/api` (options: `-- --customers=50 --rounds=40`) | `openssl` |
 | Firestore rules (6 tests) | `cd firebase`, `npm install`, `npm test` | Java 11+ (for the emulator) |
-| Browser: UI, accessibility, mobile (31 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
+| Browser: UI, accessibility, mobile (33 tests) | `npm run test:e2e` | `npx playwright install chromium` once |
 | Local API for manual testing | `npm run dev:fake --workspace=@profjero/api` | `openssl` |
 
 `npm run test:e2e` starts the fake-cloud API on :8787, the admin app on
@@ -54,6 +54,37 @@ any password works because Firebase Auth is answered inside the browser.
 | 18 | Accessibility | 🟡 | `e2e/accessibility.spec.ts` (axe, WCAG 2.1 A/AA) | ✅ 46 screens, 0 serious/critical |
 | 19 | Mobile | 🟠 | `e2e/mobile.spec.ts` (Pixel 7) | ✅ 2/2 (now incl. Monitoring, Campaigns, API docs) |
 | 20 | Monitoring & recovery | 🔴 | security suite §Monitoring & recovery | ✅ 7/7 |
+
+## Guest data, automatic status, fees (2026-11-26)
+
+API checks added (data suite 18 → 28, features 36 → 37):
+- the provider's live purchase reply (numeric id, missing fields) is read
+  as accepted → Pending, not "outcome unknown";
+- provider webhook: wrong/missing token → 401; a "REJECTED" event the
+  provider's API doesn't confirm never refunds; a confirmed one does; a
+  "DELIVERED" event is applied; unknown orders and bad JSON are handled;
+- a lost reply is found on the provider by our reference and cleared;
+  admin Resend refuses to buy twice;
+- provider wallet empty (402) → refunded, plain admin status;
+- real profit = price + 2% − 1.98% − (API price + 3%) (MTN 1GB = GH₵0.37);
+  no costs or fees in any customer response;
+- guest checkout with and without email, delivery email, tracking by ID and
+  phone (paid only, nothing private), guest orders invisible to accounts,
+  per-IP rate limit, idempotent replays;
+- the gateway is charged price + 2% while the app shows the price
+  (data and SMS top-ups); webhooks compare against the charged amount;
+- Sender IDs keep their letter case; other cases count as the same name.
+
+Browser tests added: guest purchase through the in-page payment window →
+Pending/Delivered → track by number and by order ID; signed-out visitors
+to the in-app shop land in the open shop; admin Data Orders shows plain
+status, real profit and Details with no raw JSON; `/data` and
+`/data/track` pass axe and fit a phone screen.
+
+Dependencies: Hono upgraded to 4.13.22 (middleware-bypass advisories).
+Remaining: `zod` < 4.6.6 advisory (memory use on oversized collections) —
+the fix is a major upgrade (zod 3 → 4); request bodies are already
+size-capped by the platform, so it is left for a planned upgrade.
 
 ## Sender IDs, verified sign-ups, overview (2026-10-12)
 

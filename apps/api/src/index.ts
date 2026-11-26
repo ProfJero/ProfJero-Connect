@@ -11,6 +11,7 @@ import { customerRouter } from './routers/customer';
 import { isAllowedOrigin } from './lib/origins';
 import { recordRequest } from './lib/monitor';
 import { monitorPublicRouter } from './routers/monitorPublic';
+import { publicDataRouter } from './routers/publicData';
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -54,6 +55,7 @@ app.route('/admin', adminRouter);
 app.route('/customer', customerRouter);
 app.route('/webhooks', webhooksRouter);
 app.route('/monitor', monitorPublicRouter);
+app.route('/public', publicDataRouter);
 app.route('/', healthRouter);
 
 // ---- Default export ----

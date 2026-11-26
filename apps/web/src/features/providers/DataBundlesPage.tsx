@@ -21,13 +21,31 @@ import { EditBundleModal, type EditableBundle } from './EditBundleModal';
 
 interface DataBundle extends EditableBundle {
   syncedAt: string;
+  /** Real profit per sale after the gateway fee and the provider top-up fee. */
+  profitGhs?: number;
+  profitPercent?: number;
+  chargedGhs?: number;
+  totalCostGhs?: number;
+  gatewayFeeGhs?: number;
 }
 
 interface BundlesResponse {
   ok: true;
   bundles: DataBundle[];
   count: number;
+  markupPercent?: number;
+  fees?: { serviceChargePercent?: number; gatewayFeePercent?: number; providerDepositFeePercent?: number };
+  priceListUpdated?: string;
 }
+
+const NETWORKS = ['MTN', 'Telecel', 'AirtelTigo'] as const;
+const netKey = (n: string): string => {
+  const k = n.toUpperCase().replace(/[^A-Z]/g, '');
+  if (k.startsWith('MTN')) return 'MTN';
+  if (k.startsWith('TELECEL') || k.startsWith('VODAFONE')) return 'Telecel';
+  if (k.startsWith('AIRTEL') || k.startsWith('TIGO') || k === 'AT') return 'AirtelTigo';
+  return n;
+};
 
 interface SyncResponse {
   ok: true;
@@ -46,6 +64,8 @@ export function DataBundlesPage() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<VisibilityFilter>('all');
+  const [network, setNetwork] = useState<string>('all');
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<DataBundle | null>(null);
   const [markupModal, setMarkupModal] = useState(false);
@@ -96,7 +116,7 @@ export function DataBundlesPage() {
   };
 
   const deleteBundle = async (bundle: DataBundle) => {
-    if (!window.confirm(`Remove "${bundle.label}" from our catalog?\n\nThe next sync will re-add it (hidden) if EliteData still offers it.`)) {
+    if (!window.confirm(`Remove "${bundle.label}" from our catalog?\n\nThe next sync will re-add it (hidden) if the provider still offers it.`)) {
       return;
     }
     markBusy(bundle.id, true);
@@ -112,11 +132,37 @@ export function DataBundlesPage() {
     }
   };
 
-  const allBundles = data?.bundles ?? [];
+  const allBundles = useMemo(() => data?.bundles ?? [], [data]);
+
+  /** Put every active bundle of one network on sale (or take them all off). */
+  const setNetworkOnSale = async (net: string, available: boolean) => {
+    const targets = allBundles.filter((b) => netKey(b.network) === net && b.active && b.availableToCustomers !== available);
+    if (targets.length === 0) {
+      setSyncMsg(`All active ${net} bundles are already ${available ? 'on sale' : 'hidden'}.`);
+      return;
+    }
+    if (!window.confirm(`${available ? 'Put' : 'Take'} ${targets.length} ${net} bundle${targets.length === 1 ? '' : 's'} ${available ? 'on sale' : 'off sale'}?`)) return;
+    setBulkBusy(net);
+    let failed = 0;
+    for (const b of targets) {
+      try {
+        await apiFetch(`/admin/providers/data/bundles/${encodeURIComponent(b.id)}/availability`, {
+          method: 'PUT',
+          body: JSON.stringify({ available }),
+        });
+      } catch {
+        failed++;
+      }
+    }
+    setBulkBusy(null);
+    setSyncMsg(`${net}: ${targets.length - failed} bundle${targets.length - failed === 1 ? '' : 's'} ${available ? 'now on sale' : 'hidden'}${failed ? `, ${failed} failed` : ''}.`);
+    await reload();
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allBundles.filter((b) => {
+      if (network !== 'all' && netKey(b.network) !== network) return false;
       if (filter === 'visible' && !b.availableToCustomers) return false;
       if (filter === 'hidden' && (b.availableToCustomers || !b.active)) return false;
       if (filter === 'disabled' && b.active) return false;
@@ -126,7 +172,7 @@ export function DataBundlesPage() {
       }
       return true;
     });
-  }, [allBundles, search, filter]);
+  }, [allBundles, search, filter, network]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -145,8 +191,9 @@ export function DataBundlesPage() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
               Data Bundles
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {allBundles.length} synced · {availableCount} visible to customers
+            <p className="text-xs text-slate-600 mt-0.5">
+              {allBundles.length} synced · {availableCount} on sale
+              {data?.priceListUpdated && <> · price list of {data.priceListUpdated}</>}
             </p>
           </div>
         </div>
@@ -187,6 +234,44 @@ export function DataBundlesPage() {
         </div>
       )}
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {NETWORKS.map((net) => {
+          const items = allBundles.filter((b) => netKey(b.network) === net && b.active);
+          const onSale = items.filter((b) => b.availableToCustomers).length;
+          return (
+            <Card key={net} className="p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-bold text-slate-900">{net}</div>
+                <div className="text-[11px] text-slate-600">{items.length === 0 ? 'No bundles synced' : `${onSale} of ${items.length} on sale`}</div>
+              </div>
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  disabled={bulkBusy !== null}
+                  onClick={() => setNetworkOnSale(net, onSale < items.length)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold border transition disabled:opacity-60',
+                    onSale < items.length ? 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700' : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-50',
+                  )}
+                >
+                  {bulkBusy === net && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {onSale < items.length ? 'Put all on sale' : 'Hide all'}
+                </button>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+
+      {data?.fees && (
+        <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-[11px] text-slate-700 leading-relaxed">
+          <strong className="text-slate-900">Profit</strong> is what you keep per sale: customer pays the price
+          {data.fees.serviceChargePercent ? <> + {data.fees.serviceChargePercent}% service charge (added on the payment page only)</> : null},
+          minus the {data.fees.gatewayFeePercent ?? 0}% payment gateway fee, minus the API price and the {data.fees.providerDepositFeePercent ?? 0}% fee for topping up the provider wallet.
+          Change these in Settings → Payments.
+        </div>
+      )}
+
       {error && (
         <Card className="p-5 text-sm text-rose-700 dark:text-rose-400">
           Couldn't load bundles: {error.message}
@@ -210,7 +295,17 @@ export function DataBundlesPage() {
               className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#1976d2] focus:border-[#1976d2]"
             />
           </div>
-          <div className="flex items-center gap-1 text-xs">
+          <div className="flex flex-wrap items-center gap-1 text-xs">
+            <label htmlFor="bundle-network" className="sr-only">Network</label>
+            <select
+              id="bundle-network"
+              value={network}
+              onChange={(e) => { setNetwork(e.target.value); setPage(1); }}
+              className="mr-1 px-2.5 py-1.5 rounded-md border border-slate-300 bg-white text-slate-800 font-semibold"
+            >
+              <option value="all">All networks</option>
+              {NETWORKS.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
             {(['all', 'visible', 'hidden', 'disabled'] as VisibilityFilter[]).map((f) => (
               <button
                 key={f}
@@ -222,13 +317,13 @@ export function DataBundlesPage() {
                   'px-3 py-1.5 rounded-md font-semibold transition-colors',
                   filter === f
                     ? 'bg-[#1976d2] text-white'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+                    : 'text-slate-700 hover:bg-slate-100',
                 )}
               >
                 {f === 'all'
                   ? `All (${allBundles.length})`
                   : f === 'visible'
-                    ? `Visible (${allBundles.filter((b) => b.availableToCustomers).length})`
+                    ? `On sale (${allBundles.filter((b) => b.availableToCustomers).length})`
                     : f === 'hidden'
                       ? `Hidden (${allBundles.filter((b) => !b.availableToCustomers && b.active).length})`
                       : `Disabled (${allBundles.filter((b) => !b.active).length})`}
@@ -260,49 +355,51 @@ export function DataBundlesPage() {
           <TableScroll>
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-50/60 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                <tr className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider bg-slate-50 border-b border-slate-200">
                   <th className="py-3 px-5 whitespace-nowrap">Bundle</th>
                   <th className="py-3 px-4 whitespace-nowrap">Network</th>
                   <th className="py-3 px-4 text-right whitespace-nowrap">Cost (API)</th>
                   <th className="py-3 px-4 text-right whitespace-nowrap">Sell</th>
-                  <th className="py-3 px-4 text-right whitespace-nowrap">Provider retail</th>
-                  <th className="py-3 px-4 text-right whitespace-nowrap">Margin</th>
-                  <th className="py-3 px-4 text-center whitespace-nowrap">Visible</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Provider guest</th>
+                  <th className="py-3 px-4 text-right whitespace-nowrap">Profit / sale</th>
+                  <th className="py-3 px-4 text-center whitespace-nowrap">On sale</th>
                   <th className="py-3 px-5 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {pageItems.map((b) => {
-                  const margin = b.sellPriceGhs - b.providerCostGhs;
-                  const pct =
-                    b.providerCostGhs > 0 ? (margin / b.providerCostGhs) * 100 : 0;
+                  const margin = b.profitGhs ?? b.sellPriceGhs - b.providerCostGhs;
+                  const pct = b.profitPercent ?? (b.sellPriceGhs > 0 ? (margin / b.sellPriceGhs) * 100 : 0);
                   const busy = busyIds.has(b.id);
                   return (
                     <tr
                       key={b.id}
                       className={cn(
-                        'transition-colors',
-                        !b.active
-                          ? 'opacity-50 hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
-                          : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40',
+                        'transition-colors hover:bg-slate-50',
+                        !b.active && 'opacity-60',
                       )}
                     >
                       <td className="py-3 px-5">
                         <div className="font-semibold text-slate-900 dark:text-slate-100">
                           {b.label}
                         </div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">
                           {b.id}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
-                        {b.network}
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500">
+                      <td className="py-3 px-4 text-slate-800">
+                        {netKey(b.network)}
+                        <div className="text-[10px] text-slate-600">
                           {b.size}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-right text-slate-700 dark:text-slate-300 tabular-nums">
+                      <td className="py-3 px-4 text-right text-slate-800 tabular-nums">
                         GHS {b.providerCostGhs.toFixed(2)}
+                        {b.totalCostGhs != null && (
+                          <div className="text-[10px] text-slate-600" title="Including the provider wallet top-up fee">
+                            {b.totalCostGhs.toFixed(2)} with fee
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
                         GHS {b.sellPriceGhs.toFixed(2)}
@@ -312,24 +409,25 @@ export function DataBundlesPage() {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right text-slate-500 dark:text-slate-400 tabular-nums">
+                      <td className="py-3 px-4 text-right text-slate-700 tabular-nums">
                         {b.guestPriceGhs != null ? `GHS ${b.guestPriceGhs.toFixed(2)}` : '—'}
                       </td>
                       <td className="py-3 px-4 text-right tabular-nums">
                         <span
                           className={cn(
                             'font-semibold',
-                            pct >= 20
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : pct >= 10
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-rose-600 dark:text-rose-400',
+                            margin <= 0
+                              ? 'text-rose-700'
+                              : pct >= 5
+                                ? 'text-emerald-700'
+                                : 'text-amber-700',
                           )}
+                          title={b.chargedGhs != null ? `Customer pays GHS ${b.chargedGhs.toFixed(2)} at checkout; gateway keeps GHS ${(b.gatewayFeeGhs ?? 0).toFixed(2)}; cost with top-up fee GHS ${(b.totalCostGhs ?? b.providerCostGhs).toFixed(2)}.` : undefined}
                         >
                           GHS {margin.toFixed(2)}
                         </span>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                          {pct.toFixed(1)}%
+                        <div className="text-[10px] text-slate-600 mt-0.5">
+                          {margin <= 0 ? 'loss' : `${pct.toFixed(1)}% of price`}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-center">
@@ -403,6 +501,7 @@ export function DataBundlesPage() {
 
       {markupModal && (
         <GlobalMarkupModal
+          initial={data?.markupPercent ?? 10}
           onClose={() => setMarkupModal(false)}
           onSaved={async () => {
             await reload();
@@ -415,13 +514,15 @@ export function DataBundlesPage() {
 }
 
 function GlobalMarkupModal({
+  initial,
   onClose,
   onSaved,
 }: {
+  initial: number;
   onClose: () => void;
   onSaved: () => Promise<void> | void;
 }) {
-  const [markup, setMarkup] = useState('25');
+  const [markup, setMarkup] = useState(String(initial));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);

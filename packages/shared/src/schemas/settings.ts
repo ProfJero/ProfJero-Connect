@@ -44,6 +44,16 @@ export const PaymentSettingsSchema = z.object({
   customerTopupsEnabled: z.boolean(),
   /** Shown on Add Funds while top-ups are disabled. */
   topupsDisabledMessage: z.string().trim().max(200).nullable(),
+  /**
+   * Added to the amount charged at the payment gateway for customer
+   * purchases (data bundles and SMS top-ups). Never shown in our apps:
+   * customers see the plain price; only the payment page shows the total.
+   */
+  serviceChargePercent: z.number().min(0).max(10).default(2),
+  /** Kept by the payment gateway per charge — used for profit reports only. */
+  gatewayFeePercent: z.number().min(0).max(10).default(1.98),
+  /** Fee for topping up the data provider wallet — used for profit reports only. */
+  providerDepositFeePercent: z.number().min(0).max(20).default(3),
 });
 export type PaymentSettings = z.infer<typeof PaymentSettingsSchema>;
 
@@ -108,6 +118,9 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   payments: {
     customerTopupsEnabled: true,
     topupsDisabledMessage: null,
+    serviceChargePercent: 2,
+    gatewayFeePercent: 1.98,
+    providerDepositFeePercent: 3,
   },
   notifications: {
     adminAlertEmails: [],

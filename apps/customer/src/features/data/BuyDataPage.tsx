@@ -1,10 +1,11 @@
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Check, Loader2, Lock, RotateCcw, ShieldCheck, User, Users, Wifi, Zap } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, Check, Loader2, Lock, Mail, RotateCcw, Search, ShieldCheck, User, Users, Wifi, Zap } from 'lucide-react';
 import { detectGhanaNetwork } from '@profjero/shared/networks';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { PaymentMethodSelector } from '../../components/add-funds/PaymentMethodSelector';
 import { api, errorMessage, newIdempotencyKey } from '../../lib/api';
+import { openCheckout, preloadCheckout } from '../../lib/paystack';
 import { useApi } from '../../lib/useApi';
 import { useProfile } from '../../lib/hooks';
 import { formatGhs, formatPhone } from '../../lib/format';
@@ -30,10 +31,19 @@ function isGhanaMobile(raw: string): boolean {
   return /^233[2-5]\d{8}$/.test(n);
 }
 
-export function BuyDataPage() {
+/**
+ * The data shop. Signed-in customers use it inside the app; `guest` is the
+ * same shop without an account (/data), where an email is optional and
+ * orders are tracked by order ID or phone number.
+ */
+export function BuyDataPage({ guest = false }: { guest?: boolean }) {
   const [params] = useSearchParams();
-  const catalog = useApi<DataCatalog>('/customer/data/bundles');
-  const profile = useProfile();
+  const navigate = useNavigate();
+  const apiBase = guest ? '/public/data' : '/customer/data';
+  const orderPath = (id: string) => (guest ? `/data/orders/${id}` : `/services/data/orders/${id}`);
+  const catalog = useApi<DataCatalog>(`${apiBase}/bundles`);
+  const [email, setEmail] = useState('');
+  const [closedNote, setClosedNote] = useState<string | null>(null);
 
   const [number, setNumber] = useState(params.get('number') ?? '');
   const [pickedNetwork, setPickedNetwork] = useState<string | null>(params.get('network'));
@@ -72,29 +82,35 @@ export function BuyDataPage() {
     if (!selectedBundle) setPickedNetwork(null);
   };
 
-  const canPay = Boolean(selectedBundle && validNumber && (!mismatch || portedOk) && catalog.data?.checkoutEnabled && !busy);
+  const emailOk = !guest || email.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canPay = Boolean(selectedBundle && validNumber && emailOk && (!mismatch || portedOk) && catalog.data?.checkoutEnabled && !busy);
 
   const pay = async () => {
     if (!selectedBundle || !canPay) return;
     setBusy(true);
     setError(null);
-    const sig = `${selectedBundle.id}|${normalizePhone(number)}`;
+    setClosedNote(null);
+    const sig = `${selectedBundle.id}|${normalizePhone(number)}|${guest ? email.trim().toLowerCase() : ''}`;
     const key = keyFor?.sig === sig ? keyFor.key : newIdempotencyKey('data');
     setKeyFor({ sig, key });
     try {
-      const res = await api.post<{ order: DataOrder; checkoutUrl: string }>(
-        '/customer/data/orders',
-        { bundleId: selectedBundle.id, recipientNumber: number, method },
+      const res = await api.post<{ order: DataOrder; checkoutUrl: string; accessCode?: string | null }>(
+        `${apiBase}/orders`,
+        { bundleId: selectedBundle.id, recipientNumber: number, method, ...(guest && email.trim() ? { email: email.trim() } : {}) },
         { idempotencyKey: key },
       );
-      window.location.assign(res.checkoutUrl);
+      const outcome = await openCheckout(res.accessCode, res.checkoutUrl);
+      if (outcome === 'paid') {
+        navigate(orderPath(res.order.id));
+      } else if (outcome === 'closed') {
+        setBusy(false);
+        setClosedNote('Payment window closed. Nothing was charged — you can pay whenever you are ready.');
+      }
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
     }
   };
-
-  const myPhone = profile.data?.customer.phone ?? null;
 
   return (
     <main className="px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 max-w-7xl w-full mx-auto">
@@ -103,8 +119,8 @@ export function BuyDataPage() {
         title="Buy data"
         subtitle="Send a data bundle to any MTN, Telecel or AirtelTigo number. Pay only for what you buy."
         actions={
-          <Link to="/services/data/orders" className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
-            My orders
+          <Link to={guest ? '/data/track' : '/services/data/orders'} className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+            {guest ? <><Search className="w-3.5 h-3.5" strokeWidth={2} /> Track an order</> : 'My orders'}
           </Link>
         }
       />
@@ -147,13 +163,9 @@ export function BuyDataPage() {
                     aria-describedby="data-number-hint"
                   />
                 </div>
-                {myPhone && isGhanaMobile(myPhone) && normalizePhone(myPhone) !== normalizePhone(number) && (
-                  <button type="button" onClick={() => onNumber(myPhone)} className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
-                    <User className="w-3.5 h-3.5" strokeWidth={2} /> My number
-                  </button>
-                )}
+                {!guest && <MyNumberButton current={number} onPick={onNumber} />}
               </div>
-              <ContactQuickPick onPick={onNumber} />
+              {!guest && <ContactQuickPick onPick={onNumber} />}
               <p id="data-number-hint" className="mt-2 text-[11px] min-h-4">
                 {number.trim() === '' ? (
                   <span className="text-slate-500 dark:text-slate-400">Local (024…) or international (+233…) format.</span>
@@ -172,7 +184,7 @@ export function BuyDataPage() {
 
             {/* Step 2 — what */}
             <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6">
-              <StepTitle n={2} title="Choose a bundle" hint="Prices include everything. No hidden fees." />
+              <StepTitle n={2} title="Choose a bundle" hint="Non-expiry bundles, delivered straight to the number." />
               <div role="tablist" aria-label="Network" className="mt-4 flex flex-wrap gap-2">
                 {networks.map((n) => {
                   const on = n === activeNetwork;
@@ -205,7 +217,7 @@ export function BuyDataPage() {
               ) : (
                 <div role="radiogroup" aria-label={`${activeNetwork} bundles`} className="mt-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                   {shown.map((b) => (
-                    <BundleCard key={b.id} bundle={b} selected={b.id === bundleId} onSelect={() => { setBundleId(b.id); setError(null); }} />
+                    <BundleCard key={b.id} bundle={b} selected={b.id === bundleId} onSelect={() => { setBundleId(b.id); setError(null); preloadCheckout(); }} />
                   ))}
                 </div>
               )}
@@ -213,6 +225,28 @@ export function BuyDataPage() {
 
             <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6">
               <PaymentMethodSelector selected={method} onSelect={setMethod} step={3} />
+              {guest && (
+                <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-800">
+                  <label htmlFor="data-email" className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <Mail className="w-3.5 h-3.5" strokeWidth={2} /> Email for your receipt <span className="font-normal text-slate-500 dark:text-slate-400">(optional)</span>
+                  </label>
+                  <input
+                    id="data-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={cn(inputClass, 'mt-2')}
+                    aria-describedby="data-email-hint"
+                    aria-invalid={!emailOk}
+                  />
+                  <p id="data-email-hint" className={cn('mt-1.5 text-[11px]', emailOk ? 'text-slate-500 dark:text-slate-400' : 'text-rose-600 dark:text-rose-400')}>
+                    {emailOk ? 'We’ll email you when it’s delivered. You can always track it with your order ID or phone number.' : 'Enter a valid email, or leave it empty.'}
+                  </p>
+                </div>
+              )}
             </section>
           </div>
 
@@ -246,6 +280,9 @@ export function BuyDataPage() {
               {error && (
                 <p role="alert" className="mt-3 text-[11px] text-rose-600 dark:text-rose-400">{error}</p>
               )}
+              {closedNote && !error && (
+                <p role="status" className="mt-3 text-[11px] text-slate-600 dark:text-slate-300">{closedNote}</p>
+              )}
 
               <button
                 type="button"
@@ -256,14 +293,14 @@ export function BuyDataPage() {
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" strokeWidth={2.5} />}
                 {selectedBundle ? `Pay ${formatGhs(selectedBundle.sellPriceGhs)}` : 'Choose a bundle'}
               </button>
-              <p className="mt-2 text-[10px] text-center text-slate-500 dark:text-slate-400">
-                You'll confirm the payment on a secure checkout page.
+              <p className="mt-2 text-[10px] text-center text-slate-500 dark:text-slate-400 inline-flex w-full items-center justify-center gap-1">
+                <ShieldCheck className="w-3 h-3" strokeWidth={2} /> Secure payment window opens right here.
               </p>
             </div>
 
             <ul className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-3">
               {[
-                { icon: Zap, text: 'Sent to the number seconds after you pay' },
+                { icon: Zap, text: 'Sent to the network as soon as you pay' },
                 { icon: RotateCcw, text: 'Full refund if it can’t be delivered' },
                 { icon: ShieldCheck, text: 'Secure mobile money and card payments' },
               ].map(({ icon: Icon, text }) => (
@@ -279,6 +316,18 @@ export function BuyDataPage() {
         </div>
       )}
     </main>
+  );
+}
+
+/** "My number" shortcut for signed-in customers with a phone on their profile. */
+function MyNumberButton({ current, onPick }: { current: string; onPick: (phone: string) => void }) {
+  const profile = useProfile();
+  const myPhone = profile.data?.customer.phone ?? null;
+  if (!myPhone || !isGhanaMobile(myPhone) || normalizePhone(myPhone) === normalizePhone(current)) return null;
+  return (
+    <button type="button" onClick={() => onPick(myPhone)} className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+      <User className="w-3.5 h-3.5" strokeWidth={2} /> My number
+    </button>
   );
 }
 

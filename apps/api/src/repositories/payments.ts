@@ -17,6 +17,7 @@ function parsePayment(id: string, data: Record<string, unknown>): Payment {
     packageId: (data.packageId as string | null) ?? null,
     units: Number(data.units ?? 0),
     amountPesewas: Number(data.amountPesewas ?? 0),
+    ...(data.chargePesewas !== undefined && data.chargePesewas !== null ? { chargePesewas: Number(data.chargePesewas) } : {}),
     currency: String(data.currency ?? 'GHS'),
     status: data.status as PaymentStatus,
     customerEmail: (data.customerEmail as string | null) ?? null,
@@ -62,6 +63,7 @@ export interface CreatePaymentArgs {
   packageId: string | null;
   units: number;
   amountPesewas: number;
+  chargePesewas?: number;
   currency: string;
   customerEmail: string;
   authorizationUrl: string;
@@ -83,6 +85,7 @@ export async function createPayment(
       packageId: args.packageId,
       units: args.units,
       amountPesewas: args.amountPesewas,
+      ...(args.chargePesewas !== undefined ? { chargePesewas: args.chargePesewas } : {}),
       currency: args.currency,
       status: 'pending',
       customerEmail: args.customerEmail,

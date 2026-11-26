@@ -50,7 +50,7 @@ router.post('/data/orders', async (c) => {
     await durableLimit(c.env, `dataorder:${projectId}`, 10, 60, 'checkout attempts');
   }
   const base = customerAppBaseUrl(c.req.header('Origin'), c.env.CUSTOMER_APP_URL);
-  const { order, checkoutUrl } = await startDataCheckout(c.env, {
+  const { order, checkoutUrl, accessCode } = await startDataCheckout(c.env, {
     orderId,
     projectId,
     customerUid: customer.uid,
@@ -59,8 +59,9 @@ router.post('/data/orders', async (c) => {
     recipientNumber: body.recipientNumber,
     callbackUrl: base ? `${base}/services/data/complete` : undefined,
     channels: body.method ? [body.method] : undefined,
+    serviceChargePercent: payments.serviceChargePercent,
   });
-  return c.json({ order: toCustomerOrder(order), checkoutUrl }, 201);
+  return c.json({ order: toCustomerOrder(order), checkoutUrl, accessCode }, 201);
 });
 
 /** GET /customer/data/orders?limit=&before= — newest first. */

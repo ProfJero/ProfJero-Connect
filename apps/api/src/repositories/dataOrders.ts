@@ -29,7 +29,7 @@ function parse(id: string, d: Record<string, unknown>): DataOrder {
     paymentReference: (d.paymentReference as string | null) ?? null,
     paymentStatus: (d.paymentStatus as DataPaymentStatus) ?? 'pending',
     orderStatus: (d.orderStatus as DataOrderStatus) ?? 'pending_payment',
-    providerOrderId: (d.providerOrderId as string | null) ?? null,
+    providerOrderId: d.providerOrderId === null || d.providerOrderId === undefined ? null : String(d.providerOrderId),
     providerReference: String(d.providerReference ?? ''),
     providerStatus: (d.providerStatus as string | null) ?? null,
     providerError: (d.providerError as string | null) ?? null,
@@ -38,6 +38,11 @@ function parse(id: string, d: Record<string, unknown>): DataOrder {
     providerSubmittedAt: (d.providerSubmittedAt as string | null) ?? null,
     completedAt: (d.completedAt as string | null) ?? null,
     amountPesewas: d.amountPesewas !== undefined ? Number(d.amountPesewas) : Math.round(Number(d.sellPriceGhs ?? 0) * 100),
+    chargePesewas: d.chargePesewas !== undefined && d.chargePesewas !== null ? Number(d.chargePesewas) : undefined,
+    serviceChargePesewas: d.serviceChargePesewas !== undefined && d.serviceChargePesewas !== null ? Number(d.serviceChargePesewas) : undefined,
+    accessCode: (d.accessCode as string | null) ?? null,
+    guest: d.guest === true,
+    providerCheckedAt: (d.providerCheckedAt as string | null) ?? null,
     checkoutUrl: (d.checkoutUrl as string | null) ?? null,
     customerEmail: (d.customerEmail as string | null) ?? null,
     needsReview: d.needsReview === true,
@@ -181,4 +186,35 @@ export async function listOrdersSince(env: Env, projectId: string, since: string
     { orderBy: { field: 'createdAt', direction: 'DESCENDING' }, limit },
   );
   return docs.map((d) => parse(d.id, d.data));
+}
+
+/** Orders for one provider order id (webhook lookup; single-field index). */
+export async function getOrderByProviderOrderId(env: Env, providerOrderId: string): Promise<DataOrder | null> {
+  const docs = await firestoreQuery(env, COLLECTION, [
+    { field: 'providerOrderId', op: 'EQUAL', value: providerOrderId },
+  ], { limit: 1 });
+  return docs.length > 0 ? parse(docs[0].id, docs[0].data) : null;
+}
+
+/**
+ * Recent orders to one number, newest first (order tracking).
+ * Uses the recipientNumber + createdAt index; falls back to an unordered
+ * equality query (sorted here) if the index isn't deployed yet.
+ */
+export async function listOrdersForRecipient(env: Env, recipientNumber: string, limit = 10): Promise<DataOrder[]> {
+  try {
+    const docs = await firestoreQuery(env, COLLECTION, [
+      { field: 'recipientNumber', op: 'EQUAL', value: recipientNumber },
+    ], { orderBy: { field: 'createdAt', direction: 'DESCENDING' }, limit });
+    return docs.map((d) => parse(d.id, d.data));
+  } catch (err) {
+    console.warn('[dataOrders] recipient index missing, using fallback:', err instanceof Error ? err.message : err);
+    const docs = await firestoreQuery(env, COLLECTION, [
+      { field: 'recipientNumber', op: 'EQUAL', value: recipientNumber },
+    ], { limit: 50 });
+    return docs
+      .map((d) => parse(d.id, d.data))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
 }

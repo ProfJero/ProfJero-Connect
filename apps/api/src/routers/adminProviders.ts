@@ -11,7 +11,11 @@ import {
   UpdateBundleInputSchema,
   SetGlobalMarkupInputSchema,
   DEFAULT_DATA_MARKUP_PERCENT,
+  DATA_PRICE_LIST_UPDATED,
+  dataProfit,
+  type FeeModel,
 } from '@profjero/shared';
+import { getSettings } from '../services/settings';
 import { requireRole } from '../middleware/roles';
 import {
   createProvider,
@@ -42,6 +46,7 @@ import type { DataOrder, DataOrderStatus } from '@profjero/shared';
 import { listAllOrders } from '../repositories/dataOrders';
 import {
   DATA_ORDER_STATUSES,
+  GUEST_PROJECT_ID,
   markDataOrderDelivered,
   refreshDataOrder,
   refundDataOrderByAdmin,
@@ -197,11 +202,22 @@ adminProvidersRouter.get(
   '/data/bundles',
   requireRole('super_admin', 'admin', 'finance'),
   async (c) => {
-    const [bundles, markupPercent] = await Promise.all([
+    const [bundles, markupPercent, fees] = await Promise.all([
       listAllBundles(c.env),
       getDataMarkupPercent(c.env, DEFAULT_DATA_MARKUP_PERCENT),
+      feeModel(c.env),
     ]);
-    return c.json({ ok: true, bundles, count: bundles.length, markupPercent });
+    return c.json({
+      ok: true,
+      bundles: bundles.map((b) => {
+        const p = dataProfit({ priceGhs: b.sellPriceGhs, providerCostGhs: b.providerCostGhs, fees });
+        return { ...b, chargedGhs: p.chargedGhs, totalCostGhs: p.totalCostGhs, gatewayFeeGhs: p.gatewayFeeGhs, profitGhs: p.profitGhs, profitPercent: p.profitPercent };
+      }),
+      count: bundles.length,
+      markupPercent,
+      fees,
+      priceListUpdated: DATA_PRICE_LIST_UPDATED,
+    });
   },
 );
 
@@ -264,14 +280,51 @@ function orderIdParam(raw: string): string {
   if (!ORDER_ID_RE.test(raw)) throw new HTTPException(404, { message: 'Order not found.' });
   return raw;
 }
-function toAdminOrder(o: DataOrder, names: Map<string, string>) {
+/**
+ * One short, plain-language line for the operator about what is wrong
+ * (or null). Raw provider text stays available in `providerError`.
+ */
+export function orderIssue(o: DataOrder): string | null {
+  if (o.refundError) return 'Refund failed at the payment gateway — refund it from the gateway dashboard.';
+  const e = o.providerError ?? '';
+  if (/amount mismatch/i.test(e)) return 'Amount paid does not match the order. Not delivered.';
+  if (/^(outcome unknown|no reply from provider)/i.test(e)) return 'Provider reply was unclear. Checking automatically.';
+  if (/did not confirm/i.test(e)) return 'Network reported a failure. Confirm on the provider, then refund.';
+  if (/wallet balance too low/i.test(e)) return 'Provider wallet too low — customer refunded.';
+  if (/no longer offered/i.test(e)) return 'Bundle no longer offered — customer refunded.';
+  if (/account problem/i.test(e)) return 'Provider account problem — check the API key.';
+  if (/^(network|provider) (refused|reported)/i.test(e)) return 'Network could not deliver — customer refunded.';
+  if (o.needsReview) return 'Needs a quick check.';
+  if (e) return e.length > 90 ? `${e.slice(0, 87)}…` : e;
+  return null;
+}
+
+function toAdminOrder(o: DataOrder, names: Map<string, string>, fees: Partial<FeeModel>) {
   const amountGhs = (o.amountPesewas ?? Math.round(o.sellPriceGhs * 100)) / 100;
+  const charged = o.chargePesewas ?? o.amountPesewas ?? Math.round(o.sellPriceGhs * 100);
+  const profit = dataProfit({ priceGhs: amountGhs, providerCostGhs: o.providerCostGhs, chargedPesewas: charged, fees });
   return {
     ...o,
-    projectName: names.get(o.projectId) ?? null,
+    projectName: o.guest || o.projectId === GUEST_PROJECT_ID ? 'Guest' : names.get(o.projectId) ?? null,
     amountGhs,
-    marginGhs: Math.round((amountGhs - o.providerCostGhs) * 100) / 100,
+    chargedGhs: charged / 100,
+    serviceChargeGhs: profit.serviceChargeGhs,
+    gatewayFeeGhs: profit.gatewayFeeGhs,
+    totalCostGhs: profit.totalCostGhs,
+    profitGhs: profit.profitGhs,
+    /** Kept for older admin builds: same as profitGhs. */
+    marginGhs: profit.profitGhs,
+    issue: orderIssue(o),
     checkoutUrl: undefined,
+    accessCode: undefined,
+  };
+}
+async function feeModel(env: Env): Promise<Partial<FeeModel>> {
+  const { payments } = await getSettings(env);
+  return {
+    gatewayFeePercent: payments.gatewayFeePercent,
+    providerDepositFeePercent: payments.providerDepositFeePercent,
+    serviceChargePercent: payments.serviceChargePercent,
   };
 }
 async function projectNames(env: Env, ids: string[]): Promise<Map<string, string>> {
@@ -294,16 +347,16 @@ adminProvidersRouter.get('/data/orders', requireRole('super_admin', 'admin', 'fi
     limit,
     before: c.req.query('before') || undefined,
   });
-  const names = await projectNames(c.env, orders.map((o) => o.projectId));
-  return c.json({ orders: orders.map((o) => toAdminOrder(o, names)), nextCursor });
+  const [names, fees] = await Promise.all([projectNames(c.env, orders.map((o) => o.projectId)), feeModel(c.env)]);
+  return c.json({ orders: orders.map((o) => toAdminOrder(o, names, fees)), nextCursor });
 });
 
 async function orderAction(c: Context<{ Bindings: Env; Variables: AuthVariables }>, action: (env: Env, id: string) => Promise<DataOrder>) {
   const id = orderIdParam(c.req.param('orderId') ?? '');
   try {
     const order = await action(c.env, id);
-    const names = await projectNames(c.env, [order.projectId]);
-    return c.json({ order: toAdminOrder(order, names) });
+    const [names, fees] = await Promise.all([projectNames(c.env, [order.projectId]), feeModel(c.env)]);
+    return c.json({ order: toAdminOrder(order, names, fees) });
   } catch (err) {
     if (err instanceof DomainError) throw new HTTPException(err.status as 400, { message: err.message });
     throw err;

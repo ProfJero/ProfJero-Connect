@@ -55,7 +55,8 @@ export function RequestForm({
 
   const handleSenderIdChange = (value: string) => {
     // Letters, digits, spaces, hyphens, underscores only (network rule).
-    const clean = value.toUpperCase().replace(/[^A-Z0-9 _-]/g, '');
+    // Letter case is kept exactly as typed ("MyShop" stays "MyShop").
+    const clean = value.replace(/[^A-Za-z0-9 _-]/g, '');
     setSenderId(clean);
     onSenderIdChange?.(clean);
   };
