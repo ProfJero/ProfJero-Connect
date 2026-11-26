@@ -173,9 +173,44 @@ export function PaymentsSection(props: SectionProps<PaymentSettings>) {
         <Field label="Message while top-ups are paused" htmlFor="p-msg">
           <input id="p-msg" maxLength={200} disabled={ro} value={v.topupsDisabledMessage ?? ''} onChange={(e) => draft.set('topupsDisabledMessage', e.target.value.trim() || null)} className={inputCls} placeholder="Top-ups are temporarily unavailable. Please try again later." />
         </Field>
+        <div className="pt-3 mt-1 border-t border-slate-100">
+          <h4 className="text-xs font-bold text-slate-900">Charges and fees</h4>
+          <p className="text-[11px] text-slate-600 mt-0.5">The service charge is added to what customers pay on the payment page only; prices in the apps never include it. The two fees are only used to work out your real profit.</p>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <PercentField id="p-svc" label="Service charge (customers)" hint="Data and SMS top-ups. 0 = off." max={10} value={v.serviceChargePercent ?? 2} disabled={ro} onChange={(n) => draft.set('serviceChargePercent', n)} />
+            <PercentField id="p-gw" label="Payment gateway fee" hint="Kept by the gateway per payment." max={10} value={v.gatewayFeePercent ?? 1.98} disabled={ro} onChange={(n) => draft.set('gatewayFeePercent', n)} />
+            <PercentField id="p-dep" label="Data provider top-up fee" hint="Charged when you fund the provider wallet." max={20} value={v.providerDepositFeePercent ?? 3} disabled={ro} onChange={(n) => draft.set('providerDepositFeePercent', n)} />
+          </div>
+        </div>
         <SaveBar dirty={draft.dirty} saving={props.saving} onReset={draft.reset} message={message} disabled={ro} />
       </form>
     </SectionCard>
+  );
+}
+
+function PercentField({ id, label, hint, value, max, disabled, onChange }: { id: string; label: string; hint: string; value: number; max: number; disabled: boolean; onChange: (n: number) => void }) {
+  return (
+    <Field label={label} htmlFor={id}>
+      <div className="relative">
+        <input
+          id={id}
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={max}
+          step={0.01}
+          disabled={disabled}
+          value={Number.isFinite(value) ? value : ''}
+          onChange={(e) => {
+            const n = parseFloat(e.target.value);
+            onChange(Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0);
+          }}
+          className={`${inputCls} pr-8 tabular-nums`}
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-600">%</span>
+      </div>
+      <p className="mt-1 text-[11px] text-slate-600">{hint}</p>
+    </Field>
   );
 }
 
