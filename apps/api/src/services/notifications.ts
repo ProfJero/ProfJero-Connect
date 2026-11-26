@@ -198,3 +198,34 @@ ${button}
 <p style="font-size:12px;color:#94a3b8;margin-top:16px">You can turn off email notifications in Settings → Notifications.</p>
 </td></tr></table></body></html>`;
 }
+
+/**
+ * Email one address directly (guest data orders: no account to notify).
+ * Best-effort, never throws.
+ */
+export async function emailAddress(
+  env: Env,
+  args: { to: string; title: string; body: string; link?: string | null },
+): Promise<void> {
+  try {
+    if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.to)) return;
+    const appUrl = env.CUSTOMER_APP_URL?.replace(/\/+$/, '') ?? null;
+    const href = appUrl && args.link ? `${appUrl}${args.link}` : appUrl;
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: env.EMAIL_FROM,
+        to: [args.to],
+        subject: args.title,
+        html: renderEmail({ name: '', title: args.title, body: args.body, href }),
+        text: `${args.title}\n\n${args.body}${href ? `\n\n${href}` : ''}`,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) console.error(`[notifications] Resend failed (${res.status}): ${await res.text()}`);
+  } catch (err) {
+    console.error('[notifications] emailAddress failed:', err);
+  }
+}

@@ -9,9 +9,11 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { detectGhanaNetwork, canonicalNetwork } from '@profjero/shared';
 import { reconcileDataOrders, mapProviderStatus } from '../src/services/dataOrders';
+import { dataProfit, gatewayAmountPesewas } from '@profjero/shared';
 import { PAYSTACK_SECRET, createHarness, finish, section, step } from './harness';
 
-const h = await createHarness();
+const WEBHOOK_SECRET = 'whsec_test_123';
+const h = await createHarness({ ELITEDATA_WEBHOOK_SECRET: WEBHOOK_SECRET });
 const { cloud, call } = h;
 await h.seedAdmin('root', 'super_admin');
 await h.seedAdmin('viewer', 'viewer');
@@ -25,7 +27,8 @@ h.reset();
 
 let seq = 0;
 const ikey = () => `data-${Date.now()}-${++seq}-xxxx`;
-const paidWebhook = (reference: string, amount: number, event = 'charge.success') => {
+/** Gateway webhook; by default for exactly what the checkout was initialised with. */
+const paidWebhook = (reference: string, amount: number = cloud.gatewayAmounts.get(reference) ?? 0, event = 'charge.success') => {
   const raw = JSON.stringify({ event, data: { reference, amount, currency: 'GHS', status: event === 'charge.success' ? 'success' : 'failed' } });
   return call('POST', '/webhooks/paystack', { raw, headers: { 'x-paystack-signature': createHmac('sha512', PAYSTACK_SECRET).update(raw).digest('hex') } });
 };
@@ -78,10 +81,11 @@ await step('admin sync imports bundles hidden; customers see only what the opera
   const raw = JSON.stringify(cat.body);
   assert.ok(!/providerCost|markup|elitedata/i.test(raw), 'no cost or provider name leaks');
   // The bundle list reports the provider's retail price (4.70); we pay
-  // the published API price (4.00) and add the 10% default markup.
-  assert.equal(cat.body.bundles.find((b: { id: string }) => b.id === 'mtn_1gb').sellPriceGhs, 4.4);
+  // the published API price (4.10) and add the 10% default markup
+  // (4.51, rounded up to the next 10 pesewas).
+  assert.equal(cat.body.bundles.find((b: { id: string }) => b.id === 'mtn_1gb').sellPriceGhs, 4.6);
   const stored = cloud.get('dataBundles/mtn_1gb')!;
-  assert.equal(stored.providerCostGhs, 4);
+  assert.equal(stored.providerCostGhs, 4.1);
   assert.equal(stored.providerListedPriceGhs, 4.7);
   assert.equal(stored.guestPriceGhs, 4.7);
   assert.equal(cloud.get('dataBundles/tel_2gb')!.providerCostGhs, 8, 'unlisted bundles use the API price');
@@ -94,18 +98,18 @@ await step('a sync keeps the admin\'s prices and markup; a cost change re-prices
   // Global markup applies to everything and is remembered for new bundles.
   const m = await call('PUT', '/admin/providers/data/markup', { token: root, body: { markupPercent: 15 } });
   assert.equal(m.status, 200, JSON.stringify(m.body));
-  assert.equal(cloud.get('dataBundles/mtn_1gb')!.sellPriceGhs, 4.6);
+  assert.equal(cloud.get('dataBundles/mtn_1gb')!.sellPriceGhs, 4.8);
   const list = await call('GET', '/admin/providers/data/bundles', { token: root });
   assert.equal(list.body.markupPercent, 15);
   cloud.dataProvider.bundles.push({ bundleId: 'mtn_10gb', network: 'MTN', size: '10GB', price: 47, label: 'MTN 10GB Data' });
   await call('POST', '/admin/providers/data/sync', { token: root, body: {} });
-  assert.equal(cloud.get('dataBundles/mtn_10gb')!.providerCostGhs, 40);
-  assert.equal(cloud.get('dataBundles/mtn_10gb')!.sellPriceGhs, 46, 'new bundle uses the saved markup');
+  assert.equal(cloud.get('dataBundles/mtn_10gb')!.providerCostGhs, 41);
+  assert.equal(cloud.get('dataBundles/mtn_10gb')!.sellPriceGhs, 47.2, 'new bundle uses the saved markup');
   // Back to the 10% the rest of this suite expects.
   await call('PUT', '/admin/providers/data/markup', { token: root, body: { markupPercent: 10 } });
   await call('PATCH', '/admin/providers/data/bundles/tel_2gb', { token: root, body: { sellPriceGhs: 8.8 } });
   cloud.dataProvider.bundles.pop();
-  assert.equal(cloud.get('dataBundles/mtn_1gb')!.sellPriceGhs, 4.4);
+  assert.equal(cloud.get('dataBundles/mtn_1gb')!.sellPriceGhs, 4.6);
 });
 
 await step('the data provider appears on the Providers page with its wallet balance', async () => {
@@ -123,13 +127,16 @@ await step('the data provider appears on the Providers page with its wallet bala
 section('Checkout');
 // =====================================================================
 
-await step('an order starts a checkout for exactly the bundle price; a retry reuses it', async () => {
+await step('the customer sees the bundle price; only the gateway charge includes the service charge; a retry reuses it', async () => {
   const key = ikey();
   const body = { bundleId: 'mtn_1gb', recipientNumber: '024 123 4567' };
   const a = await call('POST', '/customer/data/orders', { token: esi, headers: { 'Idempotency-Key': key }, body });
   assert.equal(a.status, 201, JSON.stringify(a.body));
   assert.match(a.body.order.id, /^pjd_[a-f0-9]{24}$/);
-  assert.equal(a.body.order.amountGhs, 4.4);
+  assert.equal(a.body.order.amountGhs, 4.6);
+  assert.equal(cloud.gatewayAmounts.get(a.body.order.id), 469, 'GH₵4.60 + 2% = GH₵4.69 at the gateway');
+  assert.ok(!/service|charge|469|4\.69/i.test(JSON.stringify(a.body.order)), 'the charge is never shown in our app');
+  assert.ok(a.body.accessCode, 'access code for the in-page payment window');
   assert.equal(a.body.order.recipientNumber, '233241234567');
   assert.equal(a.body.order.orderStatus, 'pending_payment');
   assert.ok(a.body.checkoutUrl.endsWith(a.body.order.id));
@@ -165,9 +172,9 @@ await step('payment webhook delivers the bundle once, even when the webhook repe
   cloud.dataProvider.mode = 'delivered';
   const { order } = await buy(esi, 'mtn_1gb', '0551234567');
   const before = cloud.dataProvider.purchases.length;
-  const w1 = await paidWebhook(order.id, 440);
+  const w1 = await paidWebhook(order.id);
   assert.equal(w1.body.orderStatus, 'delivered', JSON.stringify(w1.body));
-  await paidWebhook(order.id, 440);
+  await paidWebhook(order.id);
   await call('POST', `/customer/data/orders/${order.id}/refresh`, { token: esi });
   assert.equal(cloud.dataProvider.purchases.length, before + 1, 'bought exactly once');
   const p = cloud.dataProvider.purchases.at(-1)!;
@@ -208,7 +215,7 @@ await step('a wrong amount is never delivered — it is held for review', async 
 
 await step('a failed charge marks the order unpaid with a clear message', async () => {
   const { order } = await buy(esi);
-  await paidWebhook(order.id, 440, 'charge.failed');
+  await paidWebhook(order.id, undefined, 'charge.failed');
   const got = await call('GET', `/customer/data/orders/${order.id}`, { token: esi });
   assert.equal(got.body.order.paymentStatus, 'failed');
   assert.match(got.body.order.message, /Nothing was charged/);
@@ -222,7 +229,7 @@ await step('provider rejects the order → full automatic refund, customer told'
   cloud.dataProvider.mode = 'reject';
   const { order } = await buy(esi);
   const refundsBefore = cloud.refunds.length;
-  await paidWebhook(order.id, 440);
+  await paidWebhook(order.id);
   const got = await call('GET', `/customer/data/orders/${order.id}`, { token: esi });
   assert.equal(got.body.order.orderStatus, 'refunded');
   assert.ok(got.body.order.refundedAt);
@@ -240,7 +247,7 @@ await step('provider answer lost (503 / network) → held for review, never refu
     cloud.dataProvider.mode = mode;
     const { order } = await buy(ama);
     const refundsBefore = cloud.refunds.length;
-    await paidWebhook(order.id, 440);
+    await paidWebhook(order.id);
     const o = cloud.get(`dataOrders/${order.id}`)!;
     assert.equal(o.orderStatus, 'processing', mode);
     assert.equal(o.needsReview, true, mode);
@@ -248,7 +255,7 @@ await step('provider answer lost (503 / network) → held for review, never refu
     // A second webhook / refresh must not re-submit.
     cloud.dataProvider.mode = 'delivered';
     const purchases = cloud.dataProvider.purchases.length;
-    await paidWebhook(order.id, 440);
+    await paidWebhook(order.id);
     await call('POST', `/customer/data/orders/${order.id}/refresh`, { token: ama });
     assert.equal(cloud.dataProvider.purchases.length, purchases, `${mode}: not re-bought`);
   }
@@ -282,7 +289,7 @@ await step('a refund the gateway refuses stays visible for review', async () => 
   cloud.dataProvider.mode = 'reject';
   cloud.refundMode = 'error';
   const { order } = await buy(yaw);
-  await paidWebhook(order.id, 440);
+  await paidWebhook(order.id);
   const o = cloud.get(`dataOrders/${order.id}`)!;
   assert.equal(o.orderStatus, 'failed');
   assert.equal(o.needsReview, true);
@@ -291,6 +298,198 @@ await step('a refund the gateway refuses stays visible for review', async () => 
   cloud.refundMode = 'ok';
   const r = await call('POST', `/admin/providers/data/orders/${order.id}/refund`, { token: root, body: {} });
   assert.equal(r.body.order.orderStatus, 'refunded');
+});
+
+// =====================================================================
+section('Live provider replies and automatic status');
+// =====================================================================
+
+const efua = await h.signUp('efua', 'efua@example.com', 'Efua Fashion');
+const providerWebhook = (body: unknown, token: string | null = WEBHOOK_SECRET) =>
+  call('POST', `/webhooks/elitedata${token === null ? '' : `?token=${encodeURIComponent(token)}`}`, { raw: JSON.stringify(body) });
+
+await step('the live reply (numeric id, missing fields) is accepted: the order is pending, not "outcome unknown"', async () => {
+  cloud.dataProvider.mode = 'live';
+  const { order } = await buy(efua, 'mtn_1gb', '0241112222');
+  await paidWebhook(order.id);
+  const o = cloud.get(`dataOrders/${order.id}`)!;
+  assert.equal(o.orderStatus, 'processing');
+  assert.equal(o.needsReview, false, String(o.providerError));
+  assert.equal(o.providerError, null);
+  assert.match(String(o.providerOrderId), /^\d+$/, 'numeric id stored as text');
+  const got = await call('GET', `/customer/data/orders/${order.id}`, { token: efua });
+  assert.equal(got.body.order.paymentStatus, 'paid');
+  assert.equal(got.body.order.message, null, 'no alarming message while pending');
+});
+
+await step('provider webhook: a delivered event is confirmed with the provider and applied', async () => {
+  const { order } = await buy(efua, 'mtn_1gb', '0241113333');
+  await paidWebhook(order.id);
+  const pid = String(cloud.get(`dataOrders/${order.id}`)!.providerOrderId);
+  cloud.dataProvider.orders.get(pid)!.status = 'DELIVERED';
+  const w = await providerWebhook({ orderId: Number(pid), apiReference: 'API-XYZ', phone: '0241113333', network: 'MTN', size: '1GB', status: 'DELIVERED', price: 4.1, date: new Date().toISOString() });
+  assert.equal(w.status, 200, JSON.stringify(w.body));
+  assert.equal(w.body.orderStatus, 'delivered');
+  assert.equal(cloud.get(`dataOrders/${order.id}`)!.orderStatus, 'delivered');
+});
+
+await step('provider webhook: forged or unconfirmed failures never trigger a refund', async () => {
+  const { order } = await buy(efua, 'mtn_1gb', '0241114444');
+  await paidWebhook(order.id);
+  const pid = String(cloud.get(`dataOrders/${order.id}`)!.providerOrderId);
+  const refundsBefore = cloud.refunds.length;
+  assert.equal((await providerWebhook({ orderId: Number(pid), status: 'REJECTED' }, null)).status, 401, 'no token');
+  assert.equal((await providerWebhook({ orderId: Number(pid), status: 'REJECTED' }, 'wrong')).status, 401, 'wrong token');
+  // Valid token, but the provider's own API still says PROCESSING.
+  const w = await providerWebhook({ orderId: Number(pid), status: 'REJECTED' });
+  assert.equal(w.status, 200);
+  assert.equal(cloud.refunds.length, refundsBefore, 'not refunded on the webhook alone');
+  assert.equal(cloud.get(`dataOrders/${order.id}`)!.orderStatus, 'processing');
+  // When the provider confirms, it is refunded automatically.
+  cloud.dataProvider.orders.get(pid)!.status = 'REJECTED';
+  await providerWebhook({ orderId: Number(pid), status: 'REJECTED' });
+  assert.equal(cloud.get(`dataOrders/${order.id}`)!.orderStatus, 'refunded');
+  assert.equal(cloud.refunds.length, refundsBefore + 1);
+  const unknown = await providerWebhook({ orderId: 1, status: 'DELIVERED' });
+  assert.equal(unknown.status, 200);
+  assert.equal(unknown.body.matched, false);
+  assert.equal((await call('POST', '/webhooks/elitedata?token=' + WEBHOOK_SECRET, { raw: 'not json' })).status, 400);
+});
+
+await step('a lost reply is found on the provider by our reference and cleared automatically (no double purchase)', async () => {
+  cloud.dataProvider.mode = 'lostReply';
+  const { order } = await buy(efua, 'mtn_1gb', '0241115555');
+  await paidWebhook(order.id);
+  let o = cloud.get(`dataOrders/${order.id}`)!;
+  assert.equal(o.needsReview, true);
+  assert.equal(o.providerOrderId, null);
+  const purchases = cloud.dataProvider.purchases.length;
+  // Retry from admin must not buy again: the provider already has it.
+  cloud.dataProvider.mode = 'live';
+  const retry = await call('POST', `/admin/providers/data/orders/${order.id}/retry`, { token: root, body: {} });
+  assert.equal(retry.status, 409, JSON.stringify(retry.body));
+  assert.equal(cloud.dataProvider.purchases.length, purchases, 'not bought twice');
+  o = cloud.get(`dataOrders/${order.id}`)!;
+  assert.equal(o.needsReview, false, 'cleared once the provider confirmed it has the order');
+  assert.ok(o.providerOrderId);
+  // The 15-minute job then follows it to delivery.
+  cloud.dataProvider.orders.get(String(o.providerOrderId))!.status = 'Delivered';
+  cloud.put(`dataOrders/${order.id}`, { ...o, updatedAt: new Date(Date.now() - 10 * 60_000).toISOString() });
+  await reconcileDataOrders(h.env);
+  assert.equal(cloud.get(`dataOrders/${order.id}`)!.orderStatus, 'delivered');
+});
+
+await step('provider wallet empty (402) → refunded in full and the order says so to admins in plain words', async () => {
+  cloud.dataProvider.mode = 'noFunds';
+  const { order } = await buy(efua, 'mtn_1gb', '0241116666');
+  await paidWebhook(order.id);
+  assert.equal(cloud.get(`dataOrders/${order.id}`)!.orderStatus, 'refunded');
+  const list = await call('GET', '/admin/providers/data/orders?status=refunded', { token: root });
+  const row = list.body.orders.find((x: { id: string }) => x.id === order.id);
+  assert.match(row.issue, /wallet too low/i);
+  assert.ok(row.issue.length < 100, 'short, readable status');
+  cloud.dataProvider.mode = 'processing';
+});
+
+// =====================================================================
+section('Real profit');
+// =====================================================================
+
+await step('profit = price + 2% − 1.98% gateway fee − (API price + 3% top-up fee)', async () => {
+  assert.equal(gatewayAmountPesewas(460, 2), 469);
+  const p = dataProfit({ priceGhs: 4.6, providerCostGhs: 4.1 });
+  assert.equal(p.chargedGhs, 4.69);
+  assert.equal(p.gatewayFeeGhs, 0.09);
+  assert.equal(p.totalCostGhs, 4.22);
+  assert.equal(p.profitGhs, 0.37);
+  const list = await call('GET', '/admin/providers/data/bundles', { token: root });
+  const b = list.body.bundles.find((x: { id: string }) => x.id === 'mtn_1gb');
+  assert.equal(b.profitGhs, 0.37);
+  assert.equal(list.body.fees.gatewayFeePercent, 1.98);
+  const orders = await call('GET', '/admin/providers/data/orders?status=delivered', { token: root });
+  const d = orders.body.orders.find((x: { amountGhs: number; chargedGhs: number }) => x.chargedGhs === 4.69);
+  assert.ok(d, 'delivered order with the service charge');
+  assert.equal(d.profitGhs, 0.37);
+  const cat = await call('GET', '/public/data/bundles', {});
+  assert.ok(!/profit|fee|charge|cost/i.test(JSON.stringify(cat.body.bundles)), 'customers never see fees or costs');
+});
+
+// =====================================================================
+section('Buying without an account');
+// =====================================================================
+
+const guestBuy = (body: Record<string, unknown>, key = ikey(), ip = '10.9.0.1') =>
+  call('POST', '/public/data/orders', { headers: { 'Idempotency-Key': key, 'CF-Connecting-IP': ip }, body });
+
+await step('a guest can see bundles and buy without signing in; email is optional', async () => {
+  cloud.dataProvider.mode = 'live';
+  const cat = await call('GET', '/public/data/bundles', {});
+  assert.equal(cat.status, 200);
+  assert.ok(cat.body.bundles.length >= 3);
+  const a = await guestBuy({ bundleId: 'mtn_1gb', recipientNumber: '0249990001' });
+  assert.equal(a.status, 201, JSON.stringify(a.body));
+  assert.equal(a.body.order.amountGhs, 4.6);
+  assert.equal(cloud.gatewayAmounts.get(a.body.order.id), 469);
+  const stored = cloud.get(`dataOrders/${a.body.order.id}`)!;
+  assert.equal(stored.guest, true);
+  assert.equal(stored.projectId, 'guest');
+  assert.equal(stored.customerEmail, null);
+  await paidWebhook(a.body.order.id);
+  const got = await call('GET', `/public/data/orders/${a.body.order.id}`, {});
+  assert.equal(got.status, 200);
+  assert.equal(got.body.order.orderStatus, 'processing');
+  // With an email, the delivery email goes to it.
+  const b = await guestBuy({ bundleId: 'mtn_1gb', recipientNumber: '0249990002', email: 'Kwame@Example.com' });
+  assert.equal(b.status, 201, JSON.stringify(b.body));
+  assert.equal(cloud.get(`dataOrders/${b.body.order.id}`)!.customerEmail, 'kwame@example.com');
+  await paidWebhook(b.body.order.id);
+  const pid = String(cloud.get(`dataOrders/${b.body.order.id}`)!.providerOrderId);
+  cloud.dataProvider.orders.get(pid)!.status = 'DELIVERED';
+  const r = await call('POST', `/public/data/orders/${b.body.order.id}/refresh`, {});
+  assert.equal(r.body.order.orderStatus, 'delivered');
+  assert.ok(cloud.emails.some((e) => (Array.isArray(e.to) ? e.to : [e.to]).includes('kwame@example.com') && /delivered/i.test(e.subject)));
+  const bad = await guestBuy({ bundleId: 'mtn_1gb', recipientNumber: '0249990003', email: 'not-an-email' });
+  assert.equal(bad.status, 400);
+});
+
+await step('guests track orders by order ID or phone number — paid orders only, nothing private', async () => {
+  const byPhone = await call('GET', '/public/data/track?q=024%20999%200002', { headers: { 'CF-Connecting-IP': '10.9.0.2' } });
+  assert.equal(byPhone.status, 200, JSON.stringify(byPhone.body));
+  assert.equal(byPhone.body.orders.length, 1);
+  assert.equal(byPhone.body.orders[0].orderStatus, 'delivered');
+  const raw = JSON.stringify(byPhone.body);
+  assert.ok(!/email|kwame|provider|cost|charge|checkout|accessCode/i.test(raw), raw);
+  const id = byPhone.body.orders[0].id;
+  const byId = await call('GET', `/public/data/track?q=${id.toUpperCase()}`, { headers: { 'CF-Connecting-IP': '10.9.0.2' } });
+  assert.equal(byId.body.orders[0].id, id);
+  // An unpaid checkout to a number isn't listed.
+  await guestBuy({ bundleId: 'mtn_1gb', recipientNumber: '0249990004' });
+  assert.equal((await call('GET', '/public/data/track?q=0249990004', {})).body.orders.length, 0);
+  assert.equal((await call('GET', '/public/data/track?q=hello', {})).status, 400);
+  assert.equal((await call('GET', '/public/data/orders/pjd_nothere', {})).status, 404);
+  assert.equal((await call('GET', '/public/data/orders/..%2Fcustomers%2Fx', {})).status, 404);
+});
+
+await step('guest orders stay out of signed-in accounts; admins see them as Guest', async () => {
+  const mine = await call('GET', '/customer/data/orders', { token: efua });
+  assert.ok(mine.body.orders.every((o: { recipientNumber: string }) => !o.recipientNumber.startsWith('23324999')));
+  const all = await call('GET', '/admin/providers/data/orders', { token: root });
+  const g = all.body.orders.find((o: { recipientNumber: string }) => o.recipientNumber === '233249990002');
+  assert.equal(g.projectName, 'Guest');
+  assert.equal(g.accessCode, undefined, 'checkout secrets are not sent to the admin UI');
+});
+
+await step('guest checkouts are rate-limited per device and need an Idempotency-Key', async () => {
+  assert.equal((await call('POST', '/public/data/orders', { body: { bundleId: 'mtn_1gb', recipientNumber: '0241234567' } })).status, 400);
+  const statuses: number[] = [];
+  for (let i = 0; i < 10; i++) statuses.push((await guestBuy({ bundleId: 'mtn_1gb', recipientNumber: `02470000${10 + i}` }, ikey(), '10.9.9.9')).status);
+  assert.ok(statuses.includes(429), statuses.join(','));
+  // The same key is a replay, not a new checkout.
+  const key = ikey();
+  const a = await guestBuy({ bundleId: 'mtn_1gb', recipientNumber: '0247000099' }, key, '10.9.9.10');
+  const b = await guestBuy({ bundleId: 'mtn_1gb', recipientNumber: '0247000099' }, key, '10.9.9.10');
+  assert.equal(a.body.order.id, b.body.order.id);
+  cloud.dataProvider.mode = 'processing';
 });
 
 // =====================================================================

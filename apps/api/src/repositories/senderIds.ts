@@ -70,6 +70,24 @@ export async function getSenderId(
   return doc ? parseSenderId(doc.id, doc.data) : null;
 }
 
+/**
+ * Other spellings of the same name in a different letter case ("MyShop"
+ * vs "MYSHOP"). Older records have no valueKey and were stored in upper
+ * case, so the upper-case document is checked directly too.
+ */
+export async function findCaseVariants(env: Env, value: string): Promise<SenderId[]> {
+  const key = value.toUpperCase();
+  const [byKey, upper] = await Promise.all([
+    firestoreQuery(env, VALUES, [{ field: 'valueKey', op: 'EQUAL', value: key }], { limit: 10 }),
+    key !== value ? getSenderId(env, key) : Promise.resolve(null),
+  ]);
+  const found = new Map<string, SenderId>();
+  for (const d of byKey) found.set(d.id, parseSenderId(d.id, d.data));
+  if (upper) found.set(upper.value, upper);
+  found.delete(value);
+  return [...found.values()];
+}
+
 export async function listSenderIds(
   env: Env,
   status?: SenderIdValueStatus,
@@ -95,6 +113,8 @@ export async function createSenderId(
 
   const data = {
     value,
+    /** Case-insensitive key: "MyShop" and "MYSHOP" are the same name to the networks' users. */
+    valueKey: value.toUpperCase(),
     status: opts.status,
     requestedByProjectId: opts.requestedByProjectId,
     requestedAt: now,

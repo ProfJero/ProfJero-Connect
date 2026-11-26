@@ -9,6 +9,7 @@ import {
 import { firestoreUpdateDoc } from '../../lib/firestore';
 import {
   assignmentId,
+  findCaseVariants,
   getAssignment as getAssignmentForProject,
   getSenderId,
   listAssignmentsForProject,
@@ -80,13 +81,30 @@ router.post('/sender-ids', async (c) => {
   const projectId = c.get('projectId')!;
   const customer = c.get('customer')!;
   const input = await parseBody(c, CustomerRequestSenderIdSchema);
-  const value = input.value.toUpperCase();
+  // Kept exactly as typed: "MyShop" stays "MyShop".
+  const value = input.value;
 
   const check = checkSenderId(value, { organisationName: customer.organisationName, description: input.description });
   if (check.verdict === 'reject') {
     throw new HTTPException(400, { message: check.findings.filter((f) => f.verdict === 'reject').map((f) => f.message).join(' ') });
   }
   await durableLimit(c.env, `senderid:${projectId}`, 10, 86400, 'Sender ID requests today');
+
+  // The same name in another letter case counts as the same name.
+  const variants = await findCaseVariants(c.env, value);
+  const rejectedVariant = variants.find((v) => v.status === 'rejected');
+  if (rejectedVariant) {
+    throw new HTTPException(409, {
+      message: `Sender ID "${rejectedVariant.value}" was previously rejected${rejectedVariant.rejectionReason ? `: ${rejectedVariant.rejectionReason}` : ''}.`,
+    });
+  }
+  for (const v of variants) {
+    const mine = await getAssignmentForProject(c.env, projectId, v.value);
+    if (mine && mine.status !== 'revoked') {
+      throw new HTTPException(409, { message: `You already have the Sender ID "${v.value}" (status: ${mine.status}).` });
+    }
+  }
+  const variantElsewhere = variants.some((v) => v.requestedByProjectId !== projectId);
 
   let result;
   try {
@@ -114,12 +132,16 @@ router.post('/sender-ids', async (c) => {
   });
 
   const settings = await getSettings(c.env);
-  const decision = await autoDecideSenderId(c.env, projectId, value, check.verdict, settings.sms.senderIdAutoApproval);
+  const decision = variantElsewhere
+    ? 'review'
+    : await autoDecideSenderId(c.env, projectId, value, check.verdict, settings.sms.senderIdAutoApproval);
 
   if (decision === 'review') {
     const why = autoCheck.messages.length
       ? autoCheck.messages.join(' ')
-      : result.valueIsNew
+      : variantElsewhere
+        ? 'Another account already uses this name in a different letter case.'
+        : result.valueIsNew
         ? 'Automatic approval is switched off.'
         : 'Another account already uses or requested this name.';
     await notifyProject(c.env, {

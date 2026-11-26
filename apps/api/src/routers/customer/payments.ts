@@ -72,12 +72,14 @@ router.post('/payments', async (c) => {
     createdBy: `customer:${customer.uid}`,
     reference,
     channels: body.method ? [body.method] : undefined,
+    serviceChargePercent: paySettings.serviceChargePercent,
   });
 
   return c.json(
     {
       payment: toCustomerPayment(result.payment),
       checkoutUrl: result.authorizationUrl,
+      accessCode: result.accessCode,
     },
     201,
   );

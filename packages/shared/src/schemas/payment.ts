@@ -22,6 +22,11 @@ export const PaymentSchema = z.object({
   units: z.number().int().positive(),
   /** Amount in smallest currency unit (pesewas for GHS). */
   amountPesewas: z.number().int().positive(),
+  /**
+   * Charged at the gateway: amount + service charge (customer checkouts).
+   * Absent on older payments and admin-initiated ones (= amountPesewas).
+   */
+  chargePesewas: z.number().int().positive().optional(),
   currency: z.string(),
   status: PaymentStatusSchema,
   customerEmail: z.string().nullable(),

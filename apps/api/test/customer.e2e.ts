@@ -230,7 +230,10 @@ await step('a checkout abandoned for 30+ minutes is marked abandoned on re-check
 });
 
 await step('payment webhook credits wallet once, notifies and emails once', async () => {
-  const payload = JSON.stringify({ event: 'charge.success', data: { reference, status: 'success', amount: 2000, currency: 'GHS' } });
+  // The gateway charges the price + the 2% service charge (GH₵20.00 → 20.40);
+  // the customer only ever sees GH₵20.00 in the app.
+  assert.equal(cloud.gatewayAmounts.get(reference), 2040);
+  const payload = JSON.stringify({ event: 'charge.success', data: { reference, status: 'success', amount: 2040, currency: 'GHS' } });
   const sig = createHmac('sha512', PAYSTACK_SECRET).update(payload).digest('hex');
   for (let i = 0; i < 2; i++) {
     const r = await call('POST', '/webhooks/paystack', { raw: payload, headers: { 'x-paystack-signature': sig } });
@@ -259,16 +262,17 @@ await step('ledger text is scrubbed of provider names', async () => {
 await step('a clean Sender ID is approved instantly by the automatic check', async () => {
   const r = await call('POST', '/customer/sender-ids', {
     token,
-    body: { value: 'alicebake', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' },
+    body: { value: 'ALICEBAKE', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' },
   });
   assert.equal(r.status, 201, JSON.stringify(r.body));
   assert.equal(r.body.senderId.value, 'ALICEBAKE');
   assert.equal(r.body.decision, 'approved');
   assert.equal(r.body.senderId.status, 'approved');
   assert.equal(r.body.senderId.providerStatus, 'not_sent', 'provider verifies on first send');
+  // The same name in another letter case is the same Sender ID.
   const dup = await call('POST', '/customer/sender-ids', {
     token,
-    body: { value: 'ALICEBAKE', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' },
+    body: { value: 'alicebake', purpose: 'Business Notifications', description: 'We send order confirmations, delivery updates and receipts to customers who buy from our shop.' },
   });
   assert.equal(dup.status, 409);
   const n = await call('GET', '/customer/notifications', { token });

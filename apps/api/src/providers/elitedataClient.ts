@@ -5,6 +5,7 @@ import {
   EliteDataVerifyNumberResponseSchema,
   EliteDataOrderStatusResponseSchema,
   type EliteDataBundle,
+  type EliteDataOrder,
 } from '@profjero/shared';
 import type { Env } from '../types/env';
 
@@ -53,6 +54,7 @@ async function call<T>(
       'Content-Type': 'application/json',
     },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    signal: AbortSignal.timeout(25_000),
   });
 
   const text = await res.text();
@@ -87,14 +89,27 @@ export const elitedata = {
     return EliteDataBundleListResponseSchema.parse(res).bundles;
   },
 
+  /**
+   * Buy a bundle. Returns the provider's order (id may be null if the
+   * reply had none). A 2xx reply that says `success: false` is a refusal.
+   */
   async purchaseBundle(
     env: Env,
     args: { bundleId: string; recipientNumber: string; clientReference: string },
-  ) {
+  ): Promise<EliteDataOrder> {
     const res = await call<unknown>(env, 'POST', '/api/v1/purchase', {
       body: args,
     });
-    return EliteDataPurchaseResponseSchema.parse(res).order;
+    const parsed = EliteDataPurchaseResponseSchema.safeParse(res);
+    const body = parsed.success ? parsed.data : null;
+    if (body?.success === false) {
+      const msg = (res as { message?: string; error?: string } | null)?.message ?? (res as { error?: string } | null)?.error ?? 'Purchase refused';
+      throw new EliteDataError(422, String(msg));
+    }
+    const order = body?.order ?? body?.data ?? null;
+    // Accepted, but we couldn't read the order: treat as accepted and in
+    // progress, keyed by our own reference (status checks fall back to it).
+    return order ?? { id: null, clientReference: args.clientReference, status: 'PROCESSING' } as EliteDataOrder;
   },
 
   async verifyNumber(env: Env, number: string) {
@@ -104,10 +119,28 @@ export const elitedata = {
     return EliteDataVerifyNumberResponseSchema.parse(res);
   },
 
-  async getOrder(env: Env, orderId: string) {
-    const res = await call<unknown>(env, 'GET', '/api/v1/orders', {
-      query: { id: orderId },
-    });
-    return EliteDataOrderStatusResponseSchema.parse(res).order;
+  /** One order by the provider's id. Null when the provider doesn't know it. */
+  async getOrder(env: Env, orderId: string): Promise<EliteDataOrder | null> {
+    try {
+      const res = await call<unknown>(env, 'GET', '/api/v1/orders', { query: { id: orderId } });
+      const body = EliteDataOrderStatusResponseSchema.parse(res);
+      if (body.order) return body.order;
+      if (body.data && !Array.isArray(body.data)) return body.data;
+      const list = body.orders ?? (Array.isArray(body.data) ? body.data : []);
+      return list.find((o) => o.id === orderId || o.clientReference === orderId) ?? null;
+    } catch (err) {
+      if (err instanceof EliteDataError && err.status === 404) return null;
+      throw err;
+    }
+  },
+
+  /** The provider's most recent orders (it returns its latest 10). */
+  async listRecentOrders(env: Env): Promise<EliteDataOrder[]> {
+    const res = await call<unknown>(env, 'GET', '/api/v1/orders');
+    const body = EliteDataOrderStatusResponseSchema.parse(res);
+    if (body.orders) return body.orders;
+    if (Array.isArray(body.data)) return body.data;
+    if (body.data) return [body.data];
+    return body.order ? [body.order] : [];
   },
 };

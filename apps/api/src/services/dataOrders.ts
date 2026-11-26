@@ -1,13 +1,14 @@
-import type { CustomerDataOrder, DataOrder, DataOrderStatus } from '@profjero/shared';
+import { gatewayAmountPesewas, type CustomerDataOrder, type DataOrder, type DataOrderStatus, type EliteDataOrder, type EliteDataWebhook } from '@profjero/shared';
 import { elitedata, EliteDataError } from '../providers/elitedataClient';
 import { initializeTransaction, refundTransaction, verifyTransaction } from '../providers/paystackClient';
 import { getBundle } from '../repositories/dataBundles';
-import { getOrder, listOrdersPendingReconciliation, updateOrder } from '../repositories/dataOrders';
+import { getOrder, getOrderByProviderOrderId, getOrderByReference, listOrdersPendingReconciliation, updateOrder } from '../repositories/dataOrders';
 import { firestoreCreateDoc, runTransaction } from '../lib/firestore';
 import { DomainError } from '../lib/domainError';
 import { isValidNormalizedPhone, normalizePhone } from '../lib/phone';
 import { count } from '../lib/monitor';
-import { notifyProject } from './notifications';
+import { emailAddress, notifyProject, type NotifyArgs } from './notifications';
+import { notifyAdmins } from './adminNotify';
 import type { Env } from '../types/env';
 
 /**
@@ -33,6 +34,29 @@ import type { Env } from '../types/env';
  */
 
 const ORDER_PREFIX = 'pjd_';
+
+/** Orders bought without an account belong to this pseudo-project. */
+export const GUEST_PROJECT_ID = 'guest';
+
+/** Placeholder email for the gateway when a guest gives none (it requires one). */
+export function guestCheckoutEmail(env: Env, recipient: string): string {
+  const domain = (env.GUEST_EMAIL_DOMAIN ?? 'profjeroconnect.pages.dev').replace(/^@/, '');
+  return `buyer.${localNumber(recipient)}@${domain}`;
+}
+
+/**
+ * Tell the buyer: in-app for account holders, by email for guests who
+ * gave one. Best-effort (both helpers swallow errors).
+ */
+async function tellBuyer(env: Env, order: DataOrder, n: Omit<NotifyArgs, 'projectId'>): Promise<void> {
+  if (order.guest || order.projectId === GUEST_PROJECT_ID) {
+    if (n.email !== false && order.customerEmail) {
+      await emailAddress(env, { to: order.customerEmail, title: n.title, body: n.body, link: `/data/orders/${order.id}` });
+    }
+    return;
+  }
+  await notifyProject(env, { projectId: order.projectId, ...n });
+}
 
 export function isDataOrderReference(reference: string): boolean {
   return reference.startsWith(ORDER_PREFIX);
@@ -67,7 +91,7 @@ function customerMessage(o: DataOrder): string | null {
     case 'payment_confirmed':
     case 'processing':
       return o.needsReview
-        ? 'Payment received. We are confirming delivery with the network — this can take a little longer than usual.'
+        ? 'Payment received and your order is pending. We are confirming delivery with the network — this can take a little longer than usual.'
         : null;
     case 'failed':
       return o.refundError
@@ -90,13 +114,17 @@ export async function startDataCheckout(
     orderId: string;
     projectId: string;
     customerUid: string;
-    customerEmail: string;
+    /** Null for a guest who gave no email (a placeholder is sent to the gateway). */
+    customerEmail: string | null;
+    guest?: boolean;
     bundleId: string;
     recipientNumber: string;
     callbackUrl?: string;
     channels?: string[];
+    /** Added to the gateway amount only (see PaymentSettings.serviceChargePercent). */
+    serviceChargePercent?: number;
   },
-): Promise<{ order: DataOrder; checkoutUrl: string }> {
+): Promise<{ order: DataOrder; checkoutUrl: string; accessCode: string | null }> {
   if (!env.PAYSTACK_SECRET_KEY) throw new DomainError('Payments are not configured.', 500);
   const recipient = normalizePhone(args.recipientNumber);
   if (!recipient.startsWith('233') || recipient.length !== 12 || !isValidNormalizedPhone(recipient)) {
@@ -109,7 +137,7 @@ export async function startDataCheckout(
       throw new DomainError('This Idempotency-Key was already used for a different purchase.', 409);
     }
     if (!existing.checkoutUrl) throw new DomainError('This checkout could not be started. Please try again.', 409);
-    return { order: existing, checkoutUrl: existing.checkoutUrl };
+    return { order: existing, checkoutUrl: existing.checkoutUrl, accessCode: existing.accessCode ?? null };
   }
 
   const bundle = await getBundle(env, args.bundleId);
@@ -119,15 +147,26 @@ export async function startDataCheckout(
   }
   const amountPesewas = Math.round(bundle.sellPriceGhs * 100);
   if (amountPesewas < 100) throw new DomainError('This bundle cannot be bought online right now.', 409);
+  const chargePesewas = gatewayAmountPesewas(amountPesewas, args.serviceChargePercent ?? 0);
 
   const init = await initializeTransaction(env, {
-    email: args.customerEmail,
-    amountPesewas,
+    email: args.customerEmail ?? guestCheckoutEmail(env, recipient),
+    amountPesewas: chargePesewas,
     reference: args.orderId,
     currency: 'GHS',
     callbackUrl: args.callbackUrl,
     channels: args.channels,
-    metadata: { kind: 'data_order', orderId: args.orderId, projectId: args.projectId, bundle: bundle.label, recipient },
+    metadata: {
+      kind: 'data_order',
+      orderId: args.orderId,
+      projectId: args.projectId,
+      bundle: bundle.label,
+      recipient,
+      custom_fields: [
+        { display_name: 'Bundle', variable_name: 'bundle', value: bundle.label },
+        { display_name: 'Recipient', variable_name: 'recipient', value: localNumber(recipient) },
+      ],
+    },
   });
 
   const now = new Date().toISOString();
@@ -142,6 +181,11 @@ export async function startDataCheckout(
     providerCostGhs: bundle.providerCostGhs,
     sellPriceGhs: bundle.sellPriceGhs,
     amountPesewas,
+    chargePesewas,
+    serviceChargePesewas: chargePesewas - amountPesewas,
+    accessCode: init.accessCode || null,
+    guest: args.guest === true,
+    providerCheckedAt: null,
     paymentReference: args.orderId,
     paymentStatus: 'pending',
     orderStatus: 'pending_payment',
@@ -166,11 +210,11 @@ export async function startDataCheckout(
   } catch (err) {
     // A concurrent identical request created it first: return that one.
     const again = await getOrder(env, args.orderId);
-    if (again?.checkoutUrl) return { order: again, checkoutUrl: again.checkoutUrl };
+    if (again?.checkoutUrl) return { order: again, checkoutUrl: again.checkoutUrl, accessCode: again.accessCode ?? null };
     throw err;
   }
   count({ data_checkouts: 1 });
-  return { order: { id: args.orderId, ...order }, checkoutUrl: init.authorizationUrl };
+  return { order: { id: args.orderId, ...order }, checkoutUrl: init.authorizationUrl, accessCode: order.accessCode ?? null };
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -188,7 +232,8 @@ export async function confirmDataPayment(
 ): Promise<DataOrder> {
   const order = await getOrder(env, orderId);
   if (!order) throw new DomainError('Order not found.', 404);
-  const expected = order.amountPesewas ?? Math.round(order.sellPriceGhs * 100);
+  // The gateway charged price + service charge (older orders: price only).
+  const expected = order.chargePesewas ?? order.amountPesewas ?? Math.round(order.sellPriceGhs * 100);
 
   if (order.orderStatus === 'pending_payment') {
     if (paid.amountPesewas !== expected || paid.currency.toUpperCase() !== 'GHS') {
@@ -252,25 +297,40 @@ async function submitToProvider(env: Env, orderId: string, opts: { force?: boole
     });
     count({ data_prov_calls: 1, data_prov_ms: Date.now() - t0 });
     const status = mapProviderStatus(res.status);
+    // Accepted. If the reply had no order id we still know it by our own
+    // reference; the status checks look it up that way.
     await updateOrder(env, orderId, {
-      providerOrderId: res.id,
-      providerStatus: res.status,
+      providerOrderId: res.id ?? null,
+      providerStatus: res.status ?? 'PROCESSING',
       providerError: null,
+      providerCheckedAt: new Date().toISOString(),
     });
     if (status === 'delivered') return finishDelivered(env, orderId);
-    if (status === 'failed') return failAndRefund(env, orderId, `Provider reported "${res.status}" on submission.`);
+    if (status === 'failed') return failAndRefund(env, orderId, `Network refused the order (${res.status}).`);
     return (await getOrder(env, orderId))!;
   } catch (err) {
     count({ data_prov_calls: 1, data_prov_ms: Date.now() - t0, data_prov_err: 1 });
-    const message = err instanceof Error ? err.message : String(err);
+    const message = (err instanceof EliteDataError ? err.providerMessage : err instanceof Error ? err.message : String(err)).slice(0, 200);
     // A 4xx means the provider refused the request: nothing was bought.
     if (err instanceof EliteDataError && err.status >= 400 && err.status < 500 && err.status !== 408 && err.status !== 429) {
-      return failAndRefund(env, orderId, message);
+      if (err.status === 402) {
+        await notifyAdmins(env, 'emailOnProviderLowBalance', 'Data provider wallet is empty',
+          `A paid data order (${orderId}) could not be sent because the data provider wallet has too little balance. The customer is being refunded. Top up the provider wallet to keep selling.`);
+      }
+      return failAndRefund(env, orderId, providerRefusal(err.status, message));
     }
-    // Lost answer: it may have gone through. Hold for an operator.
-    await updateOrder(env, orderId, { needsReview: true, providerError: `Outcome unknown: ${message}` });
+    // Lost answer: it may have gone through. Hold; the status checks look
+    // it up on the provider by our reference and clear this by themselves.
+    await updateOrder(env, orderId, { needsReview: true, providerError: `No reply from provider: ${message}` });
     return (await getOrder(env, orderId))!;
   }
+}
+
+function providerRefusal(status: number, message: string): string {
+  if (status === 402) return 'Provider wallet balance too low.';
+  if (status === 404) return 'Bundle no longer offered by the provider.';
+  if (status === 401 || status === 403) return 'Provider account problem (API key or suspended account).';
+  return `Provider refused: ${message}`;
 }
 
 /** EliteData expects the local 0XXXXXXXXX format. */
@@ -280,8 +340,8 @@ function localNumber(normalized: string): string {
 
 export function mapProviderStatus(raw: string | null | undefined): 'delivered' | 'failed' | 'processing' {
   const s = (raw ?? '').toLowerCase();
+  if (/(undeliver|not deliver|fail|reject|cancel|revers|refund|invalid|error|declin)/.test(s)) return 'failed';
   if (/(deliver|success|complete|fulfil|sent)/.test(s)) return 'delivered';
-  if (/(fail|reject|cancel|revers|refund|invalid|error)/.test(s)) return 'failed';
   return 'processing';
 }
 
@@ -291,14 +351,14 @@ async function finishDelivered(env: Env, orderId: string): Promise<DataOrder> {
   const now = new Date().toISOString();
   await updateOrder(env, orderId, { orderStatus: 'delivered', completedAt: now, needsReview: false });
   count({ data_delivered: 1 });
-  await notifyProject(env, {
-    projectId: order.projectId,
+  await tellBuyer(env, order, {
     id: `data_delivered__${orderId}`,
     type: 'payment',
     severity: 'success',
     title: 'Data bundle delivered',
     body: `${order.bundleLabel} was delivered to ${displayNumber(order.recipientNumber)}.`,
     link: `/services/data/orders/${orderId}`,
+    email: order.guest ? true : undefined,
   });
   return (await getOrder(env, orderId))!;
 }
@@ -319,13 +379,12 @@ export async function refundOrder(env: Env, orderId: string): Promise<DataOrder>
   const res = await refundTransaction(env, order.paymentReference);
   if (!res.ok) {
     await updateOrder(env, orderId, { orderStatus: 'failed', needsReview: true, refundError: res.status.slice(0, 300) });
-    await notifyProject(env, {
-      projectId: order.projectId,
+    await tellBuyer(env, order, {
       id: `data_failed__${orderId}`,
       type: 'payment',
       severity: 'error',
       title: 'Data bundle not delivered',
-      body: `${order.bundleLabel} to ${displayNumber(order.recipientNumber)} could not be delivered. Our team is processing your refund of GH₵${((order.amountPesewas ?? 0) / 100).toFixed(2)}.`,
+      body: `${order.bundleLabel} to ${displayNumber(order.recipientNumber)} could not be delivered. Our team is processing your full refund.`,
       link: `/services/data/orders/${orderId}`,
     });
     return (await getOrder(env, orderId))!;
@@ -333,13 +392,12 @@ export async function refundOrder(env: Env, orderId: string): Promise<DataOrder>
   const now = new Date().toISOString();
   await updateOrder(env, orderId, { orderStatus: 'refunded', refundedAt: now, refundError: null, needsReview: false });
   count({ data_refunded: 1 });
-  await notifyProject(env, {
-    projectId: order.projectId,
+  await tellBuyer(env, order, {
     id: `data_refunded__${orderId}`,
     type: 'payment',
     severity: 'warning',
     title: 'Data bundle refunded',
-    body: `${order.bundleLabel} to ${displayNumber(order.recipientNumber)} could not be delivered, so GH₵${((order.amountPesewas ?? 0) / 100).toFixed(2)} was refunded in full.`,
+    body: `${order.bundleLabel} to ${displayNumber(order.recipientNumber)} could not be delivered, so your payment was refunded in full.`,
     link: `/services/data/orders/${orderId}`,
     email: true,
   });
@@ -355,11 +413,63 @@ function displayNumber(normalized: string): string {
 // Status checks
 // ─────────────────────────────────────────────────────────────────────
 
+/** Memo for one reconciliation run, so the provider's recent list is fetched once. */
+interface CheckCache {
+  recent?: EliteDataOrder[] | null;
+}
+
+/**
+ * Find our order on the provider. Uses its order id when we have one,
+ * otherwise our reference (clientReference), then its recent-orders list.
+ * Returns null when the provider can't be reached or doesn't know it.
+ */
+async function findOnProvider(env: Env, order: DataOrder, cache: CheckCache = {}): Promise<EliteDataOrder | null> {
+  if (order.providerOrderId) {
+    const byId = await elitedata.getOrder(env, order.providerOrderId);
+    if (byId) return byId;
+  }
+  const byRef = await elitedata.getOrder(env, order.providerReference).catch(() => null);
+  if (byRef && byRef.clientReference === order.providerReference) return byRef;
+  if (cache.recent === undefined) cache.recent = await elitedata.listRecentOrders(env).catch(() => null);
+  return cache.recent?.find((o) => o.clientReference === order.providerReference) ?? null;
+}
+
+/**
+ * Ask the provider about a submitted order and apply what it says.
+ * Clears an "unknown outcome" flag once the provider confirms it has the
+ * order. Returns the provider's mapped status, or null if it couldn't say.
+ */
+async function checkWithProvider(env: Env, order: DataOrder, cache: CheckCache = {}): Promise<'delivered' | 'failed' | 'processing' | null> {
+  let p: EliteDataOrder | null;
+  try {
+    p = await findOnProvider(env, order, cache);
+  } catch (err) {
+    console.error(`[data] status check for ${order.id} failed:`, err);
+    return null;
+  }
+  const now = new Date().toISOString();
+  if (!p) {
+    await updateOrder(env, order.id, { providerCheckedAt: now });
+    return null;
+  }
+  const status = mapProviderStatus(p.status);
+  await updateOrder(env, order.id, {
+    providerOrderId: order.providerOrderId ?? p.id ?? null,
+    providerStatus: p.status ?? order.providerStatus,
+    providerCheckedAt: now,
+    // The provider has it: no longer an unknown outcome.
+    ...(order.needsReview && !order.refundError && order.paymentStatus === 'paid' ? { needsReview: false, providerError: null } : {}),
+  });
+  if (status === 'delivered') await finishDelivered(env, order.id);
+  else if (status === 'failed') await failAndRefund(env, order.id, `Network reported "${p.status}".`);
+  return status;
+}
+
 /**
  * Bring one order up to date: confirm an unpaid checkout with the gateway,
  * or ask the provider about a submitted one. Safe to call repeatedly.
  */
-export async function refreshDataOrder(env: Env, orderId: string): Promise<DataOrder> {
+export async function refreshDataOrder(env: Env, orderId: string, cache: CheckCache = {}): Promise<DataOrder> {
   const order = await getOrder(env, orderId);
   if (!order) throw new DomainError('Order not found.', 404);
 
@@ -377,29 +487,67 @@ export async function refreshDataOrder(env: Env, orderId: string): Promise<DataO
     return submitToProvider(env, orderId);
   }
 
-  if (order.orderStatus === 'processing' && order.providerOrderId) {
-    try {
-      const p = await elitedata.getOrder(env, order.providerOrderId);
-      const status = mapProviderStatus(p.status);
-      if (p.status !== order.providerStatus) await updateOrder(env, orderId, { providerStatus: p.status });
-      else await updateOrder(env, orderId, {});
-      if (status === 'delivered') return finishDelivered(env, orderId);
-      if (status === 'failed') return failAndRefund(env, orderId, `Provider reported "${p.status}".`);
-    } catch (err) {
-      console.error(`[data] status check for ${orderId} failed:`, err);
-    }
+  if (order.orderStatus === 'processing' && order.providerSubmittedAt) {
+    await checkWithProvider(env, order, cache);
   }
   return (await getOrder(env, orderId))!;
 }
 
-/** Cron: poll the provider for orders still processing (oldest first). */
+/**
+ * The provider POSTed a status change. The body is not signed, so it is
+ * only a hint: we look the order up on the provider and act on what the
+ * provider's API says. If the API can't confirm, a "delivered" hint from
+ * an authenticated webhook is applied (no money moves); a "failed" hint
+ * is flagged for an operator instead of refunding blindly.
+ */
+export async function handleProviderWebhook(
+  env: Env,
+  body: EliteDataWebhook,
+): Promise<{ matched: boolean; orderId?: string; orderStatus?: DataOrderStatus }> {
+  const ref = body.apiReference ?? body.clientReference ?? body.reference ?? null;
+  const providerId = body.orderId ?? body.id ?? null;
+  let order: DataOrder | null = null;
+  if (ref && isDataOrderReference(ref)) order = await getOrder(env, ref);
+  if (!order && providerId) order = await getOrderByProviderOrderId(env, providerId);
+  if (!order && ref) order = await getOrderByReference(env, ref);
+  if (!order) return { matched: false };
+
+  if (!order.providerOrderId && providerId) {
+    await updateOrder(env, order.id, { providerOrderId: providerId });
+    order = (await getOrder(env, order.id))!;
+  }
+  if (order.orderStatus !== 'processing') return { matched: true, orderId: order.id, orderStatus: order.orderStatus };
+
+  const confirmed = await checkWithProvider(env, order);
+  const hint = mapProviderStatus(body.status);
+  if (confirmed === null || confirmed === 'processing') {
+    if (hint === 'delivered' && confirmed === null) {
+      await updateOrder(env, order.id, { providerStatus: body.status ?? 'DELIVERED' });
+      await finishDelivered(env, order.id);
+    } else if (hint === 'failed') {
+      await updateOrder(env, order.id, {
+        needsReview: true,
+        providerStatus: body.status ?? null,
+        providerError: `Network reported "${body.status}" but the provider's API did not confirm it. Check, then refund.`,
+      });
+    }
+  }
+  const after = (await getOrder(env, order.id))!;
+  return { matched: true, orderId: after.id, orderStatus: after.orderStatus };
+}
+
+/**
+ * Cron: ask the provider about orders still pending (oldest first),
+ * including ones whose submission reply was lost.
+ */
 export async function reconcileDataOrders(env: Env, limit = 25): Promise<{ checked: number; delivered: number; failed: number }> {
   const pending = await listOrdersPendingReconciliation(env, 2, limit);
   let delivered = 0;
   let failed = 0;
+  const cache: CheckCache = {};
   for (const o of pending) {
-    if (!o.providerOrderId || o.needsReview) continue;
-    const after = await refreshDataOrder(env, o.id);
+    if (o.refundError) continue;
+    const after = await refreshDataOrder(env, o.id, cache);
     if (after.orderStatus === 'delivered') delivered++;
     if (after.orderStatus === 'failed' || after.orderStatus === 'refunded') failed++;
   }
@@ -420,6 +568,14 @@ export async function retryDataOrder(env: Env, orderId: string): Promise<DataOrd
   }
   if (order.providerOrderId && order.orderStatus === 'processing') {
     throw new DomainError('The provider already accepted this order. Refresh its status instead.', 409);
+  }
+  // Never buy twice: if the provider turns out to have it, follow that.
+  if (order.providerSubmittedAt) {
+    const found = await findOnProvider(env, order).catch(() => null);
+    if (found) {
+      await checkWithProvider(env, order);
+      throw new DomainError('The provider already has this order, so it was not sent again. Its status has been updated.', 409);
+    }
   }
   return submitToProvider(env, orderId, { force: true });
 }

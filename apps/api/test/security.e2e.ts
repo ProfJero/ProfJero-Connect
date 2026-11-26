@@ -389,7 +389,7 @@ await step('a signed webhook with the wrong amount or currency is not credited',
 await step('webhook replay credits exactly once (sequential and concurrent)', async () => {
   const ref = await pendingPayment(alice.token);
   const before = walletOf(alice.pid);
-  const raw = JSON.stringify({ event: 'charge.success', data: { reference: ref, amount: 2000, currency: 'GHS' } });
+  const raw = JSON.stringify({ event: 'charge.success', data: { reference: ref, amount: cloud.gatewayAmounts.get(ref) ?? 2000, currency: 'GHS' } });
   const results = await Promise.all(Array.from({ length: 6 }, () => webhook(raw)));
   assert.ok(results.every((r) => r.status === 200), results.map((r) => r.status).join(','));
   await webhook(raw);

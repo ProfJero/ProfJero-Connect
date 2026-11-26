@@ -580,6 +580,22 @@ await step('everything above left every wallet consistent with its ledger', asyn
 section('Sender IDs: automatic approval and provider verification');
 // =====================================================================
 
+await step('a Sender ID keeps the exact letter case it was registered with; other cases count as the same name', async () => {
+  const D = 'We send order confirmations, delivery updates and receipts to customers of our bakery.';
+  const abena = await h.signUp('abena', 'abena@example.com', 'Abena Bakes');
+  const r = await call('POST', '/customer/sender-ids', { token: abena, body: { value: 'AbenaBakes', purpose: 'Business Notifications', description: D } });
+  assert.equal(r.status, 201, JSON.stringify(r.body));
+  assert.equal(r.body.decision, 'approved');
+  assert.ok(cloud.get('senderIds/AbenaBakes'), 'stored exactly as typed');
+  assert.equal(cloud.get('senderIds/ABENABAKES'), null, 'not upper-cased');
+  const list = await call('GET', '/customer/sender-ids', { token: abena });
+  assert.equal(list.body.senderIds[0].value, 'AbenaBakes');
+  // Someone else asking for "ABENABAKES" is held for a person, not approved instantly.
+  const other = await h.signUp('kwesi', 'kwesi@example.com', 'Kwesi Ventures');
+  const dupe = await call('POST', '/customer/sender-ids', { token: other, body: { value: 'ABENABAKES', purpose: 'Business Notifications', description: D } });
+  assert.equal(dupe.body.decision, 'review', JSON.stringify(dupe.body));
+});
+
 await step('a clean request is approved at once; our provider verification starts on the first send', async () => {
   const kofi = await h.signUp('kofi', 'kofi@example.com', 'Kofi Prints');
   const D = 'We send print job ready alerts and delivery updates to customers of our print shop.';

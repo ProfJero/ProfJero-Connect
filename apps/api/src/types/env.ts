@@ -91,10 +91,17 @@ export interface Env {
    * payloads (same gap as Arkesel). Without this, anyone who knows the
    * webhook path can POST a fake "DELIVERED" event.
    *
-   * Not used in DB1 (no webhook handler yet). Set it now so the secret
-   * is in place when DB3 wires the endpoint.
+   * Webhook URL to give the provider:
+   *   https://<api-host>/webhooks/elitedata?token=<this secret>
    */
   ELITEDATA_WEBHOOK_SECRET?: string;
+
+  /**
+   * Domain for the placeholder email sent to the payment gateway when a
+   * guest buys data without giving an email (the gateway requires one).
+   * Defaults to profjeroconnect.pages.dev.
+   */
+  GUEST_EMAIL_DOMAIN?: string;
 
   /**
    * Provider record ID for logging data bundle calls. Defaults to

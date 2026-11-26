@@ -65,8 +65,20 @@ export const DataOrderSchema = z.object({
   paymentConfirmedAt: z.string().nullable(),
   providerSubmittedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
-  /** Amount charged at checkout, in pesewas (sellPriceGhs × 100). */
+  /** Bundle price the customer saw, in pesewas (sellPriceGhs × 100). */
   amountPesewas: z.number().int().nonnegative().optional(),
+  /**
+   * What the gateway actually charged: price + service charge. Older
+   * orders have none (then it equals amountPesewas).
+   */
+  chargePesewas: z.number().int().nonnegative().optional(),
+  serviceChargePesewas: z.number().int().nonnegative().optional(),
+  /** Gateway access code for the in-page payment window. */
+  accessCode: z.string().nullable().optional(),
+  /** Bought without an account (tracked by order ID or phone number). */
+  guest: z.boolean().optional(),
+  /** Last time we asked the provider about this order. */
+  providerCheckedAt: z.string().nullable().optional(),
   /** Hosted checkout link, kept so a retried request reopens the same checkout. */
   checkoutUrl: z.string().nullable().optional(),
   customerEmail: z.string().nullable().optional(),
@@ -106,6 +118,33 @@ export const CreateDataOrderInputSchema = z.object({
 });
 export type CreateDataOrderInput = z.infer<typeof CreateDataOrderInputSchema>;
 
+/** Buying without an account: same as above plus an optional email for receipts. */
+export const GuestDataOrderInputSchema = CreateDataOrderInputSchema.extend({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(200)
+    .email('Enter a valid email address, or leave it empty.')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+});
+export type GuestDataOrderInput = z.infer<typeof GuestDataOrderInputSchema>;
+
+/** One line of "track my order" results (no payment or provider details). */
+export const TrackedDataOrderSchema = z.object({
+  id: z.string(),
+  bundleLabel: z.string(),
+  network: z.string(),
+  size: z.string(),
+  recipientNumber: z.string(),
+  orderStatus: DataOrderStatusSchema,
+  paymentStatus: DataPaymentStatusSchema,
+  createdAt: z.string(),
+  completedAt: z.string().nullable(),
+});
+export type TrackedDataOrder = z.infer<typeof TrackedDataOrderSchema>;
+
 // ─────────────────────────────────────────────────────────────────────
 // EliteData API response shapes (what the provider sends back)
 // ─────────────────────────────────────────────────────────────────────
@@ -122,11 +161,11 @@ export const EliteDataBalanceResponseSchema = z.object({
 export type EliteDataBalanceResponse = z.infer<typeof EliteDataBalanceResponseSchema>;
 
 export const EliteDataBundleSchema = z.object({
-  bundleId: z.string(),
+  bundleId: z.union([z.string(), z.number()]).transform((v) => String(v)),
   network: z.string(),
-  size: z.string(),
-  price: z.number(),
-  label: z.string(),
+  size: z.union([z.string(), z.number()]).transform((v) => String(v)),
+  price: z.coerce.number(),
+  label: z.string().nullish().transform((v) => v ?? ''),
 });
 export type EliteDataBundle = z.infer<typeof EliteDataBundleSchema>;
 
@@ -135,18 +174,45 @@ export const EliteDataBundleListResponseSchema = z.object({
   bundles: z.array(EliteDataBundleSchema),
 });
 
-export const EliteDataPurchaseResponseSchema = z.object({
-  success: z.literal(true),
-  order: z.object({
-    id: z.string(),
-    clientReference: z.string(),
-    bundleSize: z.string(),
-    pricePaid: z.number(),
-    recipientNumber: z.string(),
-    status: z.string(),
-    createdAt: z.string(),
-  }),
-});
+/**
+ * The provider's order object. Its documentation and its live API differ
+ * (the live API sends a numeric `id` and leaves out bundleSize, pricePaid,
+ * recipientNumber and createdAt), so only the fields we act on are read,
+ * every one is optional, and ids are accepted as strings or numbers.
+ * A reply that can't be read must never be mistaken for a failure.
+ */
+const idLike = z.union([z.string(), z.number()]).transform((v) => String(v));
+const optStr = z.union([z.string(), z.number()]).transform((v) => String(v)).nullish();
+
+export const EliteDataOrderSchema = z
+  .object({
+    id: idLike.nullish(),
+    orderId: idLike.nullish(),
+    clientReference: optStr,
+    apiReference: optStr,
+    reference: optStr,
+    status: optStr,
+    bundleSize: optStr,
+    pricePaid: z.union([z.number(), z.string()]).nullish(),
+    recipientNumber: optStr,
+    createdAt: optStr,
+  })
+  .passthrough()
+  .transform((o) => ({
+    ...o,
+    id: o.id ?? o.orderId ?? null,
+    clientReference: o.clientReference ?? o.apiReference ?? o.reference ?? null,
+    status: o.status ?? null,
+  }));
+export type EliteDataOrder = z.infer<typeof EliteDataOrderSchema>;
+
+export const EliteDataPurchaseResponseSchema = z
+  .object({
+    success: z.boolean().optional(),
+    order: EliteDataOrderSchema.optional(),
+    data: EliteDataOrderSchema.optional(),
+  })
+  .passthrough();
 export type EliteDataPurchaseResponse = z.infer<typeof EliteDataPurchaseResponseSchema>;
 
 export const EliteDataVerifyNumberResponseSchema = z.object({
@@ -156,18 +222,30 @@ export const EliteDataVerifyNumberResponseSchema = z.object({
 });
 export type EliteDataVerifyNumberResponse = z.infer<typeof EliteDataVerifyNumberResponseSchema>;
 
-export const EliteDataOrderStatusResponseSchema = z.object({
-  success: z.literal(true),
-  order: z.object({
-    id: z.string(),
-    clientReference: z.string(),
-    bundleSize: z.string(),
-    pricePaid: z.number(),
-    recipientNumber: z.string(),
-    status: z.string(),
-    createdAt: z.string(),
-  }),
-});
+export const EliteDataOrderStatusResponseSchema = z
+  .object({
+    success: z.boolean().optional(),
+    order: EliteDataOrderSchema.optional(),
+    data: z.union([EliteDataOrderSchema, z.array(EliteDataOrderSchema)]).optional(),
+    orders: z.array(EliteDataOrderSchema).optional(),
+  })
+  .passthrough();
+
+/** Webhook body the provider POSTs when an order's status changes. */
+export const EliteDataWebhookSchema = z
+  .object({
+    orderId: idLike.nullish(),
+    id: idLike.nullish(),
+    apiReference: optStr,
+    clientReference: optStr,
+    reference: optStr,
+    status: optStr,
+    phone: optStr,
+    network: optStr,
+    size: optStr,
+  })
+  .passthrough();
+export type EliteDataWebhook = z.infer<typeof EliteDataWebhookSchema>;
 
 // ─────────────────────────────────────────────────────────────────────
 // Customer-facing shapes (safe projections — no provider cost)

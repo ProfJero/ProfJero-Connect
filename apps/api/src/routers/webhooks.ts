@@ -11,7 +11,8 @@ import { verifyPaystackSignature } from '../providers/paystackClient';
 import { getPaymentByReference } from '../repositories/payments';
 import { notifyProject } from '../services/notifications';
 import { timingSafeEqual } from '../services/apiKeys';
-import { confirmDataPayment, isDataOrderReference, markDataPaymentUnsuccessful } from '../services/dataOrders';
+import { EliteDataWebhookSchema } from '@profjero/shared';
+import { confirmDataPayment, handleProviderWebhook, isDataOrderReference, markDataPaymentUnsuccessful } from '../services/dataOrders';
 import type { Env } from '../types/env';
 
 export const webhooksRouter = new Hono<{ Bindings: Env }>();
@@ -78,6 +79,45 @@ webhooksRouter.post('/arkesel', async (c) => {
     });
   } catch (err) {
     console.error('[arkesel webhook] handler error:', err);
+    return c.json({ ok: false, reason: 'internal_error' }, 200);
+  }
+});
+
+// =================================================================
+// Data provider — order status changes
+// =================================================================
+
+/**
+ * The data provider POSTs here when an order's status changes. It doesn't
+ * sign requests, so (1) a shared token in the URL must match
+ * ELITEDATA_WEBHOOK_SECRET, and (2) the body is only a hint: the order is
+ * re-checked against the provider's API before anything is refunded.
+ * Always answers 200 once authenticated so the provider doesn't retry
+ * forever over an order we don't know.
+ */
+webhooksRouter.post('/elitedata', async (c) => {
+  const secret = c.env.ELITEDATA_WEBHOOK_SECRET;
+  if (!secret) return c.json({ ok: false, reason: 'not_configured' }, 503);
+  if (!timingSafeEqual(c.req.query('token') ?? '', secret)) {
+    console.warn('[elitedata webhook] rejected: bad or missing token');
+    return c.json({ ok: false, reason: 'unauthorized' }, 401);
+  }
+  const raw = await c.req.text();
+  if (raw.length > 20_000) return c.json({ ok: false, reason: 'too_large' }, 413);
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return c.json({ ok: false, reason: 'invalid_json' }, 400);
+  }
+  const parsed = EliteDataWebhookSchema.safeParse(json);
+  if (!parsed.success) return c.json({ ok: false, reason: 'invalid_body' }, 400);
+  try {
+    const result = await handleProviderWebhook(c.env, parsed.data);
+    console.log(`[elitedata webhook] order=${parsed.data.orderId ?? '?'} ref=${parsed.data.apiReference ?? '?'} status=${parsed.data.status ?? '?'} → ${result.matched ? result.orderStatus : 'no match'}`);
+    return c.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[elitedata webhook] handler error:', err);
     return c.json({ ok: false, reason: 'internal_error' }, 200);
   }
 });
@@ -168,14 +208,15 @@ webhooksRouter.post('/paystack', async (c) => {
       if (payment && !payment.walletCreditedAt) {
         const paidAmount = Number(data.amount);
         const paidCurrency = String(data.currency ?? payment.currency).toUpperCase();
-        if (paidAmount !== payment.amountPesewas || paidCurrency !== payment.currency) {
+        const expected = payment.chargePesewas ?? payment.amountPesewas;
+        if (paidAmount !== expected || paidCurrency !== payment.currency) {
           console.error(
-            `[paystack webhook] amount mismatch for ${reference}: expected ${payment.amountPesewas} ${payment.currency}, got ${data.amount} ${data.currency}`,
+            `[paystack webhook] amount mismatch for ${reference}: expected ${expected} ${payment.currency}, got ${data.amount} ${data.currency}`,
           );
           await markPaymentFailed(
             c.env,
             reference,
-            `Amount mismatch: expected ${payment.amountPesewas} ${payment.currency}, gateway reported ${data.amount} ${data.currency}. Not credited — needs review.`,
+            `Amount mismatch: expected ${expected} ${payment.currency}, gateway reported ${data.amount} ${data.currency}. Not credited — needs review.`,
             payload,
           );
           return c.json({ ok: false, reference, reason: 'amount_mismatch' });
