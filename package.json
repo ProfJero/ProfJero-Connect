@@ -1,0 +1,28 @@
+{
+  "name": "profjero-sms",
+  "version": "0.1.0",
+  "scripts": {
+    "test": "echo \"No root test; run tests per workspace\"",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=@profjero/api",
+    "dev:customer": "npm run dev --workspace=apps/customer",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:e2e": "playwright test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "private": "true",
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.5"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0"
+  }
+}

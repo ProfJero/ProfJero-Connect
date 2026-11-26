@@ -1,0 +1,18 @@
+[
+  {
+    "date": "2026-11-26",
+    "items": [
+      "Data Orders and Data Bundles are easier to read, with a plain status and real profit after fees",
+      "Data order status updates itself from the provider (webhook + automatic checks)",
+      "Guest data purchases, Telecel and AirtelTigo bundles, and a service charge setting under Settings → Payments"
+    ]
+  },
+  {
+    "date": "2026-10-12",
+    "items": [
+      "Sender IDs are screened and approved automatically; only doubtful ones reach your queue",
+      "The data provider now shows on Providers, and Pricing has a Data Bundles tab",
+      "Data bundle costs use the provider's API price list"
+    ]
+  }
+]

@@ -1,0 +1,21 @@
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from '../../lib/auth';
+
+export function ProtectedRoute() {
+  const { isAuthenticated, isReady } = useAuth();
+  const location = useLocation();
+
+  if (!isReady) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#f1f5f9]">
+        <div className="w-8 h-8 border-2 border-slate-300 border-t-[#1976d2] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <Outlet />;
+}

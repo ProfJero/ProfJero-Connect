@@ -1,0 +1,42 @@
+import { test, expect, adminLogin, adminNavLink, customerSignup, expectNoHorizontalOverflow, ADMIN_URL, CUSTOMER_URL } from './fixtures';
+
+test.describe('mobile @mobile', () => {
+  test('admin: no sideways scrolling and the menu drawer works @mobile', async ({ page }) => {
+    await adminLogin(page);
+    for (const path of ['/dashboard', '/projects', '/sender-ids', '/sms-logs', '/wallets', '/payments', '/settings?tab=general', '/settings?tab=team', '/settings?tab=system', '/monitoring']) {
+      await page.goto(`${ADMIN_URL}${path}`);
+      await page.waitForLoadState('networkidle');
+      await expectNoHorizontalOverflow(page, `admin ${path}`);
+    }
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await (await adminNavLink(page, 'Payments')).click();
+    await expect(page).toHaveURL(/\/payments/);
+    await expect(page.getByRole('navigation', { name: 'Sidebar Navigation' })).not.toBeInViewport();
+    await page.getByRole('button', { name: /^Alerts/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Alerts' })).toBeInViewport();
+  });
+
+  test('customer: no sideways scrolling and the menu drawer works @mobile', async ({ page }) => {
+    await page.goto(`${CUSTOMER_URL}/signup`);
+    await expectNoHorizontalOverflow(page, 'customer /signup');
+    for (const path of ['/data', '/data/track']) {
+      await page.goto(`${CUSTOMER_URL}${path}`);
+      await page.waitForLoadState('networkidle');
+      await expectNoHorizontalOverflow(page, `customer ${path} (no account)`);
+    }
+    await customerSignup(page, 'Mobile Org');
+    for (const path of ['/dashboard', '/messaging/sms', '/messaging/history', '/contacts', '/wallet', '/wallet/add-funds', '/transactions', '/api', '/notifications', '/developers', '/settings', '/messaging/campaigns', '/services', '/services/data', '/services/data/orders', '/services/airtime']) {
+      await page.goto(`${CUSTOMER_URL}${path}`);
+      await page.waitForLoadState('networkidle');
+      await expectNoHorizontalOverflow(page, `customer ${path}`);
+    }
+    // The Buy menu fits the phone screen.
+    await page.getByRole('button', { name: 'Buy' }).click();
+    const menu = page.getByRole('menu', { name: 'Buy' });
+    await expect(menu).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await page.getByRole('navigation', { name: 'Main Sidebar Navigation' }).getByRole('link', { name: /^Data Bundles/ }).click();
+    await expect(page).toHaveURL(/\/services\/data$/);
+  });
+});

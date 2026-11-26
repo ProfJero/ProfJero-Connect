@@ -1,0 +1,9 @@
+# Public pages are indexable; everything behind sign-in is not.
+User-agent: *
+Allow: /$
+Allow: /signup
+Allow: /login
+Allow: /developers
+Disallow: /
+
+Sitemap: https://profjeroconnect.pages.dev/sitemap.xml

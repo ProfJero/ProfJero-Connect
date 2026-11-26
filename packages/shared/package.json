@@ -1,0 +1,43 @@
+{
+  "name": "@profjero/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./sms-segments": {
+      "types": "./src/lib/smsSegments.ts",
+      "default": "./src/lib/smsSegments.ts"
+    },
+    "./template": {
+      "types": "./src/lib/template.ts",
+      "default": "./src/lib/template.ts"
+    },
+    "./networks": {
+      "types": "./src/lib/networks.ts",
+      "default": "./src/lib/networks.ts"
+    },
+    "./sender-id-check": {
+      "types": "./src/lib/senderIdCheck.ts",
+      "default": "./src/lib/senderIdCheck.ts"
+    },
+    "./email-check": {
+      "types": "./src/lib/emailCheck.ts",
+      "default": "./src/lib/emailCheck.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
