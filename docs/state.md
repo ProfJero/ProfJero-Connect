@@ -1,6 +1,6 @@
 # ProfJero SMS — Project State
 
-_Last updated: 2026-10-02. This is the single source of truth for anyone
+_Last updated: 2026-11-26. This is the single source of truth for anyone
 continuing this project — human developer or AI assistant. If you're picking
 up from a fresh chat, read this file first._
 
@@ -96,6 +96,7 @@ text
 | **Automatic Sender ID approval + provider verification** | ✅ Done (§18) |
 | **Verified sign-ups** (email link, Google, confirmed passwords) | ✅ Done (§18) — Firebase console steps below |
 | **Multi-service dashboard, update notices** | ✅ Done (§18) |
+| **Guest data purchases, order tracking, 3 networks, service charge, real profit** | ✅ Done (§19) |
 | **Test suites** (API, security, features, load, rules, browser, a11y, mobile) | ✅ All passing — see `docs/testing.md` |
 
 ---
@@ -1160,3 +1161,97 @@ Data tabs) and Developers (API keys, API docs) are grouped under Workspace.
 4. Admin → Data Bundles → Sync; Pricing → Data Bundles → check markup.
 5. Admin → Settings → SMS: confirm "Approve Sender IDs automatically".
 
+
+---
+
+## 19. Phase 6 — guest data, automatic status, fees and profit
+
+### Data orders: "Pending", and status straight from the provider
+
+- **Bug fixed:** the provider's live purchase reply has a numeric `id` and
+  leaves out `bundleSize`, `pricePaid`, `recipientNumber` and `createdAt`.
+  Our strict schema rejected it, so orders that *were* bought were flagged
+  "Outcome unknown" with a long JSON error. The provider schemas
+  (`packages/shared/src/schemas/data.ts`) now read only what we act on and
+  accept ids as text or numbers.
+- Customers see **Pending** (not an endless "Sending…" spinner) once the
+  order is paid and handed to the network, with "you don't need to wait
+  on this page". The page then checks every 8–30 s.
+- **Provider webhook:** `POST /webhooks/elitedata?token=<ELITEDATA_WEBHOOK_SECRET>`.
+  The body isn't signed, so it is only a hint: we look the order up on the
+  provider's API and act on that. A forged "REJECTED" can never refund.
+  Set the provider dashboard's Webhook URL to
+  `https://profjero-sms-api-prod.amoakob947.workers.dev/webhooks/elitedata?token=<secret>`.
+- The 15-minute job also follows orders whose reply was lost: it finds
+  them on the provider by our reference (`clientReference`) and clears
+  the review flag by itself. Admin **Resend** checks the provider first and
+  refuses to buy twice.
+- Provider wallet empty (HTTP 402) → customer refunded automatically and
+  admins emailed (Settings → Notifications → provider low balance).
+
+### Buying without an account
+
+- Customer app: `/data` (shop), `/data/orders/:id`, `/data/complete`,
+  `/data/track` (by order ID or phone number). Signed-in users are sent
+  to `/services/data`; signed-out visitors to `/services/data` land on `/data`.
+- API: `/public/data/bundles`, `POST /public/data/orders` (Idempotency-Key,
+  optional `email`), `/public/data/orders/:id[/refresh]`, `/public/data/track?q=`.
+  Rate-limited per IP (8 new checkouts / 10 min, 12 per recipient / hour,
+  30 lookups / 10 min). Tracking by phone lists **paid** orders only and
+  returns no email, cost, payment or provider details.
+- Guest orders use `projectId: "guest"`, `guest: true`. Without an email,
+  the gateway gets `buyer.<0XXXXXXXXX>@<GUEST_EMAIL_DOMAIN>` (default
+  profjeroconnect.pages.dev) because it requires one. With an email, the
+  buyer is emailed on delivery/refund.
+- Firestore index added: `dataOrders(recipientNumber ASC, createdAt DESC)`
+  (tracking falls back to an unordered query until it's deployed).
+
+### Service charge and in-page payment
+
+- Settings → Payments → **Service charge** (default 2%) is added to the
+  amount sent to the gateway for customer data orders and SMS top-ups.
+  Our apps always show the plain price; only the gateway's payment window
+  shows the total. Stored as `chargePesewas` on the order/payment; payment
+  checks compare against it.
+- Checkout opens the gateway's own in-page window (Paystack InlineJS,
+  `resumeTransaction(accessCode)`), so buyers stay on ProfJero Connect.
+  If the script can't load, it falls back to the hosted page (same
+  reference — never charged twice). The logo/name/colour inside that
+  window come from the Paystack dashboard (Settings → Preferences).
+
+### Prices, networks, profit
+
+- `packages/shared/src/lib/dataPricing.ts` has the Nov 2026 price lists
+  for MTN (1–50GB), Telecel (10–100GB) and AirtelTigo (1–30GB).
+  Sync re-prices changed costs with each bundle's own markup (10% default:
+  MTN 1GB → GH₵4.60).
+- **Real profit** per sale = (price + service charge) × (1 − gateway fee)
+  − API price × (1 + provider top-up fee). Defaults 2% / 1.98% / 3%,
+  editable in Settings → Payments. Shown on Data Bundles, Pricing →
+  Data Bundles and Data Orders (MTN 1GB: GH₵0.37).
+- Data Bundles: per-network "Put all on sale", network filter.
+
+### Sender IDs keep their letter case
+
+- "MyShop" is stored and sent as "MyShop" (was upper-cased). Other cases of
+  the same name count as the same name: the same account gets "you already
+  have it"; another account is held for review; a rejected spelling stays
+  rejected. New records carry `valueKey` (upper case) for this check.
+
+### Admin readability
+
+- The admin app is light-only, but Tailwind's default `darkMode: 'media'`
+  switched on the Data pages' `dark:` styles when the device was in dark
+  mode (light text on white cards). `apps/web/tailwind.config.js` now uses
+  `darkMode: 'class'`. Data Orders shows one plain status line; technical
+  detail is under **Details**.
+
+### Deploy checklist (phase 6)
+
+1. Deploy the API (`cd apps/api && npx wrangler deploy --env production`).
+2. Secret `ELITEDATA_WEBHOOK_SECRET`; set the provider dashboard webhook URL above.
+3. Firestore indexes: `cd firebase && npx firebase deploy --only firestore:indexes --project profjero-sms-gateway`.
+4. Merge to `main` so Pages rebuilds both apps.
+5. Admin → Data Bundles → **Sync**, then "Put all on sale" for Telecel and AirtelTigo.
+6. Settings → Payments: check the service charge and the two fees.
+7. Paystack dashboard → Settings → Preferences: business name, logo and brand colour (shown in the payment window).
