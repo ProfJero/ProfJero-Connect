@@ -19,6 +19,11 @@ test.describe('mobile @mobile', () => {
   test('customer: no sideways scrolling and the menu drawer works @mobile', async ({ page }) => {
     await page.goto(`${CUSTOMER_URL}/signup`);
     await expectNoHorizontalOverflow(page, 'customer /signup');
+    for (const path of ['/data', '/data/track']) {
+      await page.goto(`${CUSTOMER_URL}${path}`);
+      await page.waitForLoadState('networkidle');
+      await expectNoHorizontalOverflow(page, `customer ${path} (no account)`);
+    }
     await customerSignup(page, 'Mobile Org');
     for (const path of ['/dashboard', '/messaging/sms', '/messaging/history', '/contacts', '/wallet', '/wallet/add-funds', '/transactions', '/api', '/notifications', '/developers', '/settings', '/messaging/campaigns', '/services', '/services/data', '/services/data/orders', '/services/airtime']) {
       await page.goto(`${CUSTOMER_URL}${path}`);

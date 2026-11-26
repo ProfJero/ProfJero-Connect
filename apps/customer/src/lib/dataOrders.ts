@@ -12,7 +12,8 @@ export function dataOrderStatus(o: DataOrder): { label: string; tone: BadgeTone 
       return { label: 'Refund in progress', tone: 'danger' };
     case 'payment_confirmed':
     case 'processing':
-      return { label: 'Sending', tone: 'info' };
+      // Paid and handed to the network: nothing for the buyer to wait on.
+      return { label: 'Pending', tone: 'warning' };
     case 'pending_payment':
       if (o.paymentStatus === 'failed') return { label: 'Payment failed', tone: 'danger' };
       if (o.paymentStatus === 'abandoned') return { label: 'Not paid', tone: 'neutral' };

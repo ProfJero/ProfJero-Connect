@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, CircleDashed, Clock, CreditCard, Loader2, RotateCcw, Send, Wifi, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, CircleDashed, Clock, Copy, CreditCard, Hourglass, Loader2, RefreshCw, RotateCcw, Wifi, XCircle } from 'lucide-react';
 import { api, errorMessage } from '../../lib/api';
 import { formatDateTime, formatGhs, formatPhone } from '../../lib/format';
 import { networkStyle } from '../../lib/services';
@@ -15,13 +15,19 @@ const FINAL = new Set(['delivered', 'refunded']);
  * (/services/data/complete?reference=…) and as the order detail page.
  * Polls quickly at first, then slows down; stops once the order is final.
  */
-export function DataOrderPage() {
+export function DataOrderPage({ guest = false }: { guest?: boolean }) {
   const { orderId } = useParams();
   const [params] = useSearchParams();
   const id = orderId ?? params.get('reference') ?? params.get('trxref') ?? '';
   const [order, setOrder] = useState<DataOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [manual, setManual] = useState(0);
   const started = useRef(0);
+  const apiBase = guest ? '/public/data' : '/customer/data';
+  const shopPath = guest ? '/data' : '/services/data';
+  const ordersPath = guest ? '/data/track' : '/services/data/orders';
 
   useEffect(() => {
     if (!id) return;
@@ -29,30 +35,48 @@ export function DataOrderPage() {
     let timer: number | undefined;
     started.current = Date.now();
     const tick = async () => {
+      let next: number;
       try {
-        const res = await api.post<{ order: DataOrder }>(`/customer/data/orders/${encodeURIComponent(id)}/refresh`);
+        setChecking(true);
+        const res = await api.post<{ order: DataOrder }>(`${apiBase}/orders/${encodeURIComponent(id)}/refresh`);
         if (cancelled) return;
         setOrder(res.order);
         setError(null);
         const done = FINAL.has(res.order.orderStatus) ||
           (res.order.orderStatus === 'pending_payment' && (res.order.paymentStatus === 'failed' || res.order.paymentStatus === 'abandoned'));
         if (done) return;
+        // Paid and with the network: it's pending — check now and then, not constantly.
+        const pending = res.order.paymentStatus === 'paid';
+        const elapsed = Date.now() - started.current;
+        next = pending ? (elapsed < 60_000 ? 8000 : 30_000) : elapsed < 120_000 ? 3000 : 15_000;
       } catch (err) {
         if (cancelled) return;
         setError(errorMessage(err));
+        next = 15_000;
+      } finally {
+        if (!cancelled) setChecking(false);
       }
-      const elapsed = Date.now() - started.current;
-      timer = window.setTimeout(tick, elapsed < 120_000 ? 3000 : 15_000);
+      timer = window.setTimeout(tick, next);
     };
     void tick();
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [id]);
+  }, [id, apiBase, manual]);
+
+  const copyId = async () => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — the ID is visible to copy by hand */
+    }
+  };
 
   if (!id) {
-    return <Shell><p className="text-sm text-slate-600 dark:text-slate-300">No order was specified. <Link className="text-[#1764e0] dark:text-blue-400 font-semibold" to="/services/data/orders">See your orders</Link>.</p></Shell>;
+    return <Shell><p className="text-sm text-slate-600 dark:text-slate-300">No order was specified. <Link className="text-[#1764e0] dark:text-blue-400 font-semibold" to={ordersPath}>Find your order</Link>.</p></Shell>;
   }
   if (!order) {
     return (
@@ -84,12 +108,12 @@ export function DataOrderPage() {
         : unpaidFinal
           ? 'Payment not completed'
           : sending
-            ? 'Sending your data…'
-            : 'Waiting for payment…';
+            ? 'Order received — pending'
+            : 'Confirming your payment…';
 
   const steps: Array<{ label: string; icon: typeof CreditCard; state: 'done' | 'active' | 'todo' | 'bad' }> = [
-    { label: 'Payment', icon: CreditCard, state: paid ? 'done' : unpaidFinal ? 'bad' : 'active' },
-    { label: 'Sending', icon: Send, state: delivered || failedOrRefunded ? (delivered ? 'done' : 'bad') : sending ? 'active' : 'todo' },
+    { label: 'Paid', icon: CreditCard, state: paid ? 'done' : unpaidFinal ? 'bad' : 'active' },
+    { label: 'Pending', icon: Hourglass, state: delivered || failedOrRefunded ? (delivered ? 'done' : 'bad') : sending ? 'active' : 'todo' },
     { label: order.orderStatus === 'refunded' ? 'Refunded' : 'Delivered', icon: order.orderStatus === 'refunded' ? RotateCcw : Wifi, state: delivered || order.orderStatus === 'refunded' ? 'done' : 'todo' },
   ];
 
@@ -101,11 +125,13 @@ export function DataOrderPage() {
             'w-16 h-16 rounded-full mx-auto flex items-center justify-center',
             delivered ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
               : failedOrRefunded || unpaidFinal ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+              : sending ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
               : 'bg-blue-50 text-[#1764e0] dark:bg-blue-500/15 dark:text-blue-300',
           )}
         >
           {delivered ? <CheckCircle2 className="w-8 h-8" strokeWidth={2} />
             : failedOrRefunded || unpaidFinal ? <XCircle className="w-8 h-8" strokeWidth={2} />
+            : sending ? <Hourglass className="w-8 h-8" strokeWidth={2} />
             : <Loader2 className="w-8 h-8 animate-spin" strokeWidth={2} />}
         </span>
         <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-slate-100">{heading}</h1>
@@ -114,7 +140,21 @@ export function DataOrderPage() {
         </p>
         {order.message && <p className="mt-3 text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto">{order.message}</p>}
         {sending && !order.message && (
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Most bundles arrive within a minute. You can leave this page — we'll notify you.</p>
+          <p className="mt-3 text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto">
+            Your payment is confirmed and the order has been sent to the network. Most bundles arrive within a few minutes.
+            <strong className="font-semibold"> You don’t need to wait on this page</strong>
+            {guest ? ' — keep your order ID to track it.' : ' — we’ll notify you when it’s delivered.'}
+          </p>
+        )}
+        {sending && (
+          <button
+            type="button"
+            onClick={() => setManual((n) => n + 1)}
+            disabled={checking}
+            className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#1764e0] dark:text-blue-400 hover:underline disabled:opacity-60"
+          >
+            <RefreshCw className={cn('w-3 h-3', checking && 'animate-spin')} strokeWidth={2.5} /> {checking ? 'Checking…' : 'Check status now'}
+          </button>
         )}
       </div>
 
@@ -154,22 +194,34 @@ export function DataOrderPage() {
             <dd className="text-right text-slate-700 dark:text-slate-200">{formatDateTime(order.completedAt)}</dd>
           </>
         )}
-        <dt className="text-slate-500 dark:text-slate-400">Reference</dt>
-        <dd className="text-right font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all">{order.id}</dd>
+        <dt className="text-slate-500 dark:text-slate-400">Order ID</dt>
+        <dd className="text-right">
+          <button type="button" onClick={copyId} className="inline-flex items-center gap-1 font-mono text-[11px] text-slate-700 dark:text-slate-200 break-all hover:text-[#1764e0] dark:hover:text-blue-400" aria-label="Copy order ID">
+            {order.id}
+            {copied ? <Check className="w-3 h-3 text-emerald-600 shrink-0" strokeWidth={3} /> : <Copy className="w-3 h-3 shrink-0" strokeWidth={2} />}
+          </button>
+        </dd>
       </dl>
+
+      {guest && (
+        <p className="mt-4 text-[11px] text-center text-slate-500 dark:text-slate-400">
+          Track this order any time at <Link to="/data/track" className="font-semibold text-[#1764e0] dark:text-blue-400 hover:underline">Track order</Link> with the order ID or the phone number.
+          {' '}<Link to="/signup" className="font-semibold text-[#1764e0] dark:text-blue-400 hover:underline">Create a free account</Link> to keep every order in one place.
+        </p>
+      )}
 
       <div className="mt-6 flex flex-col sm:flex-row gap-2 justify-center">
         <Link
-          to={`/services/data?bundle=${encodeURIComponent(order.bundleId)}&number=${encodeURIComponent(order.recipientNumber)}`}
+          to={`${shopPath}?bundle=${encodeURIComponent(order.bundleId)}&number=${encodeURIComponent(order.recipientNumber)}`}
           className="inline-flex items-center justify-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-5 py-2.5 rounded-lg"
         >
           {unpaidFinal ? 'Try again' : 'Buy again'}
         </Link>
-        <Link to="/services/data" className="inline-flex items-center justify-center text-xs font-semibold px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+        <Link to={shopPath} className="inline-flex items-center justify-center text-xs font-semibold px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
           Buy for another number
         </Link>
-        <Link to="/services/data/orders" className="inline-flex items-center justify-center text-xs font-semibold px-5 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-          All orders
+        <Link to={ordersPath} className="inline-flex items-center justify-center text-xs font-semibold px-5 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+          {guest ? 'Track orders' : 'All orders'}
         </Link>
       </div>
     </Shell>

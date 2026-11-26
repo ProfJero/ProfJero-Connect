@@ -79,6 +79,19 @@ export function LoginForm() {
         </Link>
       </div>
 
+      <Link
+        to="/data"
+        className="mb-6 flex items-center gap-3 p-3 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-500/10 hover:bg-emerald-50 dark:hover:bg-emerald-500/15 transition"
+      >
+        <span className="w-9 h-9 rounded-lg bg-emerald-700 text-white flex items-center justify-center shrink-0" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M1.42 9a16 16 0 0 1 21.16 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><line x1="12" y1="20" x2="12.01" y2="20" /></svg>
+        </span>
+        <span className="min-w-0">
+          <span className="block text-sm font-bold text-emerald-900 dark:text-emerald-100">Just buying data?</span>
+          <span className="block text-xs text-emerald-800/80 dark:text-emerald-200/80">No account needed — buy MTN, Telecel or AirtelTigo data now →</span>
+        </span>
+      </Link>
+
       {/* Headings */}
       <div className="mb-8">
         <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
